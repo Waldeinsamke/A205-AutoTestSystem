@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AutoTest.Tests（M6 阶段）。
+  - 目标：.NET Framework 4.8 控制台
+  - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
+  - 通过 <Compile Include> 直接复用被测源：VisaBaseInstrument.cs / SignalGenerator.cs /
+    SignalGeneratorLO.cs / SpectrumAnalyzer.cs / AutoTestEngine.cs / TestItems/ITestItem.cs /
+    TestItems/GainTest.cs / TestItems/BandwidthTest.cs / TestResult.cs / Logger.cs
+    （保持命令实现单一事实源，避免产生重复维护）
+  - FakeVisaInstrument 与 测试断言 共放在本工程内。
+  - **故意不引用** NationalInstruments.Visa.dll，也不 Compile Include
+    NationalInstrumentsVisaTransport.cs，让测试与 NI VISA 驱动解耦。
+  - 引用 Ivi.Visa.dll（仅类型解析使用，不做实际驱动调用）。
+-->
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{E5A1C2D3-4B5F-6A78-9BCD-EF0123456789}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>A205AutoTestSystem.Tests.AutoTestTests</RootNamespace>
+    <AssemblyName>AutoTest.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|AnyCPU' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="Ivi.Visa, Version=7.2.0.0, Culture=neutral, PublicKeyToken=a128c98f1d7717c1, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\bin\Debug\Ivi.Visa.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 被测源（不含 NI VISA 传输实现）-->
+    <Compile Include="..\..\InstrumentControl\VisaBaseInstrument.cs">
+      <Link>InstrumentControl\VisaBaseInstrument.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\SignalGenerator.cs">
+      <Link>InstrumentControl\SignalGenerator.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\SignalGeneratorLO.cs">
+      <Link>InstrumentControl\SignalGeneratorLO.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\SpectrumAnalyzer.cs">
+      <Link>InstrumentControl\SpectrumAnalyzer.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestResult.cs">
+      <Link>InstrumentControl\TestResult.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\AutoTestEngine.cs">
+      <Link>InstrumentControl\AutoTestEngine.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\ITestItem.cs">
+      <Link>InstrumentControl\TestItems\ITestItem.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\GainTest.cs">
+      <Link>InstrumentControl\TestItems\GainTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\BandwidthTest.cs">
+      <Link>InstrumentControl\TestItems\BandwidthTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Common\Logger.cs">
+      <Link>Common\Logger.cs</Link>
+    </Compile>
+    <!-- 测试程序本体 -->
+    <Compile Include="Program.cs" />
+    <Compile Include="Assert.cs" />
+    <Compile Include="FakeVisaInstrument.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>NPOI</id>
+    <version>2.6.0</version>
+    <title>NPOI</title>
+    <authors>Tony Qu,NPOI Contributors</authors>
+    <owners>Nissl Lab</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="file">LICENSE</license>
+    <licenseUrl>https://aka.ms/deprecateLicenseUrl</licenseUrl>
+    <icon>logo\60_60.jpg</icon>
+    <projectUrl>https://github.com/nissl-lab/npoi</projectUrl>
+    <description>.NET port of Apache POI | Contact us on telegram: https://t.me/npoidevs</description>
+    <summary>NPOI can read and write xls (Excel 97-2003), xlsx(Excel 2007+) and docx(Word 2007+)</summary>
+    <releaseNotes>https://github.com/nissl-lab/npoi/discussions/742</releaseNotes>
+    <copyright>Nissl LLC</copyright>
+    <tags>xlsx xls Excel Word docx office ole</tags>
+    <repository type="git" url="https://github.com/nissl-lab/npoi" branch="master" commit="a8fa640c2d980240cd892728dd7cd1e0facce426" />
+    <dependencies>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="SharpZipLib" version="1.3.3" />
+        <dependency id="Enums.NET" version="4.0.0" />
+        <dependency id="SixLabors.ImageSharp" version="2.1.3" />
+        <dependency id="Portable.BouncyCastle" version="1.9.0" />
+        <dependency id="System.Configuration.ConfigurationManager" version="6.0.0" />
+        <dependency id="System.Security.Cryptography.Xml" version="6.0.1" />
+        <dependency id="System.Text.Encoding.CodePages" version="6.0.0" />
+        <dependency id="MathNet.Numerics.Signed" version="4.15.0" />
+        <dependency id="Microsoft.IO.RecyclableMemoryStream" version="2.2.0" />
+        <dependency id="SixLabors.Fonts" version="1.0.0-beta18" />
+      </group>
+      <group targetFramework=".NETStandard2.1">
+        <dependency id="SharpZipLib" version="1.3.3" />
+        <dependency id="Portable.BouncyCastle" version="1.9.0" />
+        <dependency id="Enums.NET" version="4.0.0" />
+        <dependency id="SixLabors.ImageSharp" version="2.1.3" />
+        <dependency id="System.Configuration.ConfigurationManager" version="6.0.0" />
+        <dependency id="System.Security.Cryptography.Xml" version="6.0.1" />
+        <dependency id="System.Text.Encoding.CodePages" version="6.0.0" />
+        <dependency id="MathNet.Numerics.Signed" version="4.15.0" />
+        <dependency id="Microsoft.IO.RecyclableMemoryStream" version="2.2.0" />
+        <dependency id="SixLabors.Fonts" version="1.0.0-beta18" />
+      </group>
+      <group targetFramework=".NETFramework4.7.2">
+        <dependency id="Enums.NET" version="4.0.0" />
+        <dependency id="SixLabors.ImageSharp" version="2.1.3" />
+        <dependency id="Portable.BouncyCastle" version="1.9.0" />
+        <dependency id="MathNet.Numerics.Signed" version="4.15.0" />
+        <dependency id="Microsoft.IO.RecyclableMemoryStream" version="2.2.0" />
+        <dependency id="SixLabors.Fonts" version="1.0.0-beta18" />
+        <dependency id="SharpZipLib" version="1.3.3" />
+      </group>
+      <group targetFramework="net6.0">
+        <dependency id="Enums.NET" version="4.0.0" />
+        <dependency id="SixLabors.ImageSharp" version="2.1.3" />
+        <dependency id="System.Configuration.ConfigurationManager" version="6.0.0" />
+        <dependency id="System.Security.Cryptography.Xml" version="6.0.1" />
+        <dependency id="System.Text.Encoding.CodePages" version="6.0.0" />
+        <dependency id="MathNet.Numerics.Signed" version="4.15.0" />
+        <dependency id="Microsoft.IO.RecyclableMemoryStream" version="2.2.0" />
+        <dependency id="SixLabors.Fonts" version="1.0.0-beta18" />
+        <dependency id="SharpZipLib" version="1.3.3" />
+        <dependency id="Portable.BouncyCastle" version="1.9.0" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>
