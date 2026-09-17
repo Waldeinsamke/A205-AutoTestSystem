@@ -19,6 +19,8 @@ namespace A205AutoTestSystem.UI
     /// <item>测试项面板：列出每个测试项 + 单独运行按钮 + 状态显示</item>
     /// <item>进度与日志区：进度条 + 当前步骤 + RichTextBox 日志 + 清除按钮</item>
     /// </list>
+    /// <para>控件创建已移至 <c>AutoTestPanel.Designer.cs</c> 的 <c>InitializeComponent()</c>，
+    /// 可在 VS 设计器中可视化编辑。</para>
     /// <para>Fake 注入策略（M6 阶段）：</para>
     /// <list type="bullet">
     /// <item>"初始化测试环境"按钮按下时，重置 <c>VisaBaseInstrument.DefaultTransportFactory</c> 为
@@ -28,31 +30,10 @@ namespace A205AutoTestSystem.UI
     ///       M6 阶段 UI 仅在演示路径上覆盖，不持久化。</item>
     /// </list>
     /// </summary>
-    public class AutoTestPanel : UserControl
+    public partial class AutoTestPanel : UserControl
     {
         // ============================================================
-        // 控件字段（按区域分组）
-        // ============================================================
-
-        // ---- 测试配置区
-        private ComboBox _cmbChannel;
-        private ComboBox _cmbMode;
-        private ComboBox _cmbTemp;
-        private Button _btnInitEnv;
-        private Button _btnLoadTests;
-        private Button _btnExportExcel;
-
-        // ---- 测试项面板
-        private TableLayoutPanel _pnlTestsLayout;
-
-        // ---- 进度与日志区
-        private ProgressBar _progressBar;
-        private Label _lblCurrentStep;
-        private RichTextBox _rtbLog;
-        private Button _btnClearLog;
-
-        // ============================================================
-        // 业务对象
+        // 业务对象（保留 _ 前缀；非控件字段，Designer 不感知）
         // ============================================================
         private SignalGenerator _rf;
         private SignalGeneratorLO _lo;
@@ -63,10 +44,14 @@ namespace A205AutoTestSystem.UI
         private readonly List<Button> _runButtons = new List<Button>();
         private readonly List<Label> _statusLabels = new List<Label>();
 
+        // 动态测试项行（绝对定位）：记录 AddTestRow 创建的 5 个控件，便于统一清理
+        private readonly List<Control> _dynamicRowControls = new List<Control>();
+
         // 抑制初始化阶段事件回调（避免在构建控件时立刻触发副作用）
         private bool _initialized;
         private bool _instrumentsReady;
 
+        // 状态颜色常量（不写进 .resx，保持代码可读性）
         private static readonly Color StatusColorReady = Color.Gray;
         private static readonly Color StatusColorRunning = Color.DodgerBlue;
         private static readonly Color StatusColorPass = Color.LimeGreen;
@@ -78,11 +63,9 @@ namespace A205AutoTestSystem.UI
 
         public AutoTestPanel()
         {
-            Dock = DockStyle.Fill;
-            AutoScaleMode = AutoScaleMode.Font;
-            BuildUi();
+            InitializeComponent();        // ← Designer 生成（参见 Designer.cs）
             InitializeDefaults();
-            WireEvents();
+            // WireEvents() 不需要：Designer 内已订阅
             _initialized = true;
 
             // 订阅全局 Logger 与引擎日志
@@ -106,276 +89,37 @@ namespace A205AutoTestSystem.UI
                 _rf = null;
                 _lo = null;
                 _sa = null;
+
+                // Designer 创建的控件容器
+                if (components != null)
+                {
+                    components.Dispose();
+                }
             }
             base.Dispose(disposing);
         }
 
         // ============================================================
-        // UI 构建
-        // ============================================================
-
-        private void BuildUi()
-        {
-            // 顶层布局：3 行 1 列，前两行 AutoSize，最后一行 Fill
-            var root = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 3,
-                AutoSize = false,
-                Padding = new Padding(8)
-            };
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-            root.Controls.Add(BuildConfigGroup(),      0, 0);
-            root.Controls.Add(BuildTestItemsGroup(),   0, 1);
-            root.Controls.Add(BuildProgressLogGroup(), 0, 2);
-
-            Controls.Add(root);
-        }
-
-        // ------------------------------------------------------------
-        // 测试配置区
-        // ------------------------------------------------------------
-        private GroupBox BuildConfigGroup()
-        {
-            var group = new GroupBox
-            {
-                Text = "测试配置",
-                AutoSize = true,
-                Dock = DockStyle.Top,
-                Padding = new Padding(10, 5, 10, 10)
-            };
-
-            var layout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                ColumnCount = 8,
-                RowCount = 2,
-                AutoSize = true
-            };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            // 第 2 行只放「导出 Excel」按钮，需要一个占位的 AutoSize 行
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            // 通道
-            _cmbChannel = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Dock = DockStyle.Fill
-            };
-            for (int ch = 1; ch <= 8; ch++) _cmbChannel.Items.Add("通道" + ch);
-
-            // 模式
-            _cmbMode = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Dock = DockStyle.Fill
-            };
-            _cmbMode.Items.AddRange(new object[] { "Mode1", "Mode2", "Mode3" });
-
-            // 温度
-            _cmbTemp = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Dock = DockStyle.Fill
-            };
-            _cmbTemp.Items.AddRange(new object[] { "常温", "高温", "低温" });
-
-            _btnInitEnv = new Button { Text = "初始化测试环境", Dock = DockStyle.Fill };
-            _btnLoadTests = new Button { Text = "加载所有测试项", Dock = DockStyle.Fill };
-
-            layout.Controls.Add(new Label { Text = "通道：", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 0, 0);
-            layout.Controls.Add(_cmbChannel, 1, 0);
-            layout.Controls.Add(new Label { Text = "模式：", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 2, 0);
-            layout.Controls.Add(_cmbMode, 3, 0);
-            layout.Controls.Add(new Label { Text = "温度：", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 4, 0);
-            layout.Controls.Add(_cmbTemp, 5, 0);
-            layout.Controls.Add(_btnInitEnv, 6, 0);
-            layout.Controls.Add(_btnLoadTests, 7, 0);
-
-            // M7：「导出 Excel」按钮（M7 阶段首版）
-            // 默认禁用——只有出现至少一条测试结果后才启用，避免被误点。
-            // 横跨第 2 行的全部 8 列。
-            _btnExportExcel = new Button
-            {
-                Text = "导出 Excel（M7）",
-                Dock = DockStyle.Fill,
-                Enabled = false
-            };
-            // 通过 SetColumnSpan 让按钮横跨全部 8 列。
-            layout.Controls.Add(_btnExportExcel, 0, 1);
-            layout.SetColumnSpan(_btnExportExcel, 8);
-
-            group.Controls.Add(layout);
-            return group;
-        }
-
-        // ------------------------------------------------------------
-        // 测试项面板
-        // ------------------------------------------------------------
-        private GroupBox BuildTestItemsGroup()
-        {
-            var group = new GroupBox
-            {
-                Text = "测试项目",
-                AutoSize = true,
-                Dock = DockStyle.Top,
-                Padding = new Padding(10, 5, 10, 10)
-            };
-
-            // TableLayoutPanel 5 列：名称 / 操作 / 单位 / 阈值 / 状态
-            _pnlTestsLayout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Top,
-                ColumnCount = 5,
-                RowCount = 1, // 表头 1 行；加载测试项时动态 AddRow
-                AutoSize = true
-            };
-            _pnlTestsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 130F));
-            _pnlTestsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 110F));
-            _pnlTestsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 60F));
-            _pnlTestsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220F));
-            _pnlTestsLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            _pnlTestsLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            // 表头
-            AddHeaderCell(_pnlTestsLayout, "测试项目", 0);
-            AddHeaderCell(_pnlTestsLayout, "操作",     1);
-            AddHeaderCell(_pnlTestsLayout, "单位",     2);
-            AddHeaderCell(_pnlTestsLayout, "阈值区间", 3);
-            AddHeaderCell(_pnlTestsLayout, "状态",     4);
-
-            group.Controls.Add(_pnlTestsLayout);
-            return group;
-        }
-
-        private static void AddHeaderCell(TableLayoutPanel layout, string text, int col)
-        {
-            layout.Controls.Add(new Label
-            {
-                Text = text,
-                Dock = DockStyle.Fill,
-                Font = new Font("Microsoft YaHei", 9F, FontStyle.Bold)
-            }, col, 0);
-        }
-
-        // ------------------------------------------------------------
-        // 进度与日志区
-        // ------------------------------------------------------------
-        private GroupBox BuildProgressLogGroup()
-        {
-            var group = new GroupBox
-            {
-                Text = "进度与日志",
-                Dock = DockStyle.Fill,
-                Padding = new Padding(10, 5, 10, 10)
-            };
-
-            var layout = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 3
-            };
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-
-            _progressBar = new ProgressBar
-            {
-                Dock = DockStyle.Fill,
-                Minimum = 0,
-                Maximum = 100,
-                Value = 0
-            };
-
-            _lblCurrentStep = new Label
-            {
-                Text = "当前步骤：（无）",
-                Dock = DockStyle.Fill,
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Color.DarkBlue
-            };
-
-            var logInner = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 2,
-                RowCount = 1
-            };
-            logInner.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
-            logInner.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 90F));
-
-            _rtbLog = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-                ReadOnly = true,
-                WordWrap = true,
-                BackColor = Color.Black,
-                ForeColor = Color.LightGreen,
-                Font = new Font("Consolas", 9F, FontStyle.Regular),
-                DetectUrls = false
-            };
-
-            var clearHost = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 2
-            };
-            clearHost.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            clearHost.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
-            _btnClearLog = new Button { Text = "清除", Dock = DockStyle.Fill };
-            clearHost.Controls.Add(new Label(), 0, 0);
-            clearHost.Controls.Add(_btnClearLog, 0, 1);
-
-            logInner.Controls.Add(_rtbLog, 0, 0);
-            logInner.Controls.Add(clearHost, 1, 0);
-
-            layout.Controls.Add(_progressBar, 0, 0);
-            layout.Controls.Add(_lblCurrentStep, 0, 1);
-            layout.Controls.Add(logInner, 0, 2);
-
-            group.Controls.Add(layout);
-            return group;
-        }
-
-        // ============================================================
-        // 默认值 & 事件绑定
+        // 默认值（控件字段名已去除 _ 前缀）
         // ============================================================
 
         private void InitializeDefaults()
         {
-            _cmbChannel.SelectedIndex = 0;
-            _cmbMode.SelectedIndex = 0;
-            _cmbTemp.SelectedIndex = 0;
-        }
-
-        private void WireEvents()
-        {
-            _btnInitEnv.Click += OnInitEnvClicked;
-            _btnLoadTests.Click += OnLoadTestsClicked;
-            _btnExportExcel.Click += OnExportExcelClicked;
-            _btnClearLog.Click += (s, e) =>
+            // 通道下拉 8 项（设计器 InitializeComponent 内不允许循环，故在此运行时填充）
+            for (int ch = 1; ch <= 8; ch++)
             {
-                if (_rtbLog != null && !_rtbLog.IsDisposed) _rtbLog.Clear();
-            };
+                cmbChannel.Items.Add("通道" + ch);
+            }
+            cmbChannel.SelectedIndex = 0;
+            // cmbMode / cmbTemp.Items 在运行时填充（依需要放在这里）
+            cmbMode.Items.AddRange(new object[] { "Mode1", "Mode2", "Mode3" });
+            cmbMode.SelectedIndex = 0;
+            cmbTemp.Items.AddRange(new object[] { "常温", "高温", "低温" });
+            cmbTemp.SelectedIndex = 0;
         }
 
         // ============================================================
-        // 事件处理
+        // 事件处理（Designer 中已统一订阅 this.btnXxx.Click += OnXxxClicked;）
         // ============================================================
 
         /// <summary>
@@ -515,26 +259,32 @@ namespace A205AutoTestSystem.UI
                 MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        // ============================================================
+        // 动态测试项行（绝对定位；列坐标与 Designer 中表头 5 列一一对应）
+        // ============================================================
+
+        private const int RowOriginY = 55;          // 第一行顶部 Y
+        private const int RowHeight = 34;           // 行高
+        private const int DesignItemsGroupHeight = 134;
+        private static readonly int[] ColumnX = { 14, 220, 318, 396, 604 };
+        private static readonly int[] ColumnWidth = { 200, 90, 70, 200, 400 };
+        private static readonly Point DesignProgressLocation = new Point(8, 256);
+
         /// <summary>
-        /// 清理所有测试项行（保留表头 row=0）。
+        /// 清理所有测试项行（保留表头），并复位 GroupBox 高度与进度区位置。
         /// </summary>
         private void ClearTestRows()
         {
-            // 清掉表头之后的所有控件
-            for (int r = _pnlTestsLayout.RowCount - 1; r >= 1; r--)
+            foreach (Control c in _dynamicRowControls)
             {
-                _pnlTestsLayout.RowStyles.RemoveAt(r);
-                for (int c = 0; c < _pnlTestsLayout.ColumnCount; c++)
-                {
-                    var ctrl = _pnlTestsLayout.GetControlFromPosition(c, r);
-                    if (ctrl != null)
-                    {
-                        _pnlTestsLayout.Controls.Remove(ctrl);
-                        ctrl.Dispose();
-                    }
-                }
+                grpTestItems.Controls.Remove(c);
+                c.Dispose();
             }
-            _pnlTestsLayout.RowCount = 1;
+            _dynamicRowControls.Clear();
+
+            // 复位为设计器中的初始布局
+            grpTestItems.Height = DesignItemsGroupHeight;
+            grpProgressLog.Location = DesignProgressLocation;
 
             _tests.Clear();
             _runButtons.Clear();
@@ -542,64 +292,77 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 动态新增一行：名称 + 运行按钮 + 单位 + 阈值 + 状态。
+        /// 动态新增一行：名称 + 运行按钮 + 单位 + 阈值 + 状态（绝对定位）。
         /// </summary>
         private void AddTestRow(ITestItem test)
         {
-            int rowIndex = _pnlTestsLayout.RowCount;
-            _pnlTestsLayout.RowCount = rowIndex + 1;
-            _pnlTestsLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            int idx = _tests.IndexOf(test);
-            // 注意：IndexOf 应该总是 -1（添加前）；但传 idx 是数据驱动，捕获正确索引
-            int actualIdx = rowIndex - 1;
+            // 以已存在的运行按钮数作为 0 起始行号（调用顺序保证与 _tests 一致）
+            int rowIndex = _runButtons.Count;
+            int y = RowOriginY + rowIndex * RowHeight;
 
             var lblName = new Label
             {
                 Text = test.TestName,
-                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false
+                AutoSize = false,
+                Location = new Point(ColumnX[0], y + 3),
+                Size = new Size(ColumnWidth[0], 28)
             };
 
             var btnRun = new Button
             {
                 Text = "▶ 运行",
-                Dock = DockStyle.Fill
+                Location = new Point(ColumnX[1], y + 2),
+                Size = new Size(ColumnWidth[1], 28)
             };
-            int captured = actualIdx;
+            int captured = rowIndex;
             btnRun.Click += async (s, args) => await OnRunTestClickedAsync(captured);
             _runButtons.Add(btnRun);
 
             var lblUnit = new Label
             {
                 Text = test.Unit,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
+                Location = new Point(ColumnX[2], y + 3),
+                Size = new Size(ColumnWidth[2], 28)
             };
 
             var lblLimit = new Label
             {
                 Text = FormatLimitText(test),
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
+                Location = new Point(ColumnX[3], y + 3),
+                Size = new Size(ColumnWidth[3], 28)
             };
 
             var lblStatus = new Label
             {
                 Text = "就绪",
-                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
+                AutoSize = false,
                 ForeColor = StatusColorReady,
-                Font = new Font(Font, FontStyle.Bold)
+                Font = new Font(Font, FontStyle.Bold),
+                Location = new Point(ColumnX[4], y + 3),
+                Size = new Size(ColumnWidth[4], 28)
             };
             _statusLabels.Add(lblStatus);
 
-            _pnlTestsLayout.Controls.Add(lblName,   0, rowIndex);
-            _pnlTestsLayout.Controls.Add(btnRun,    1, rowIndex);
-            _pnlTestsLayout.Controls.Add(lblUnit,   2, rowIndex);
-            _pnlTestsLayout.Controls.Add(lblLimit,  3, rowIndex);
-            _pnlTestsLayout.Controls.Add(lblStatus, 4, rowIndex);
+            grpTestItems.Controls.Add(lblName);
+            grpTestItems.Controls.Add(btnRun);
+            grpTestItems.Controls.Add(lblUnit);
+            grpTestItems.Controls.Add(lblLimit);
+            grpTestItems.Controls.Add(lblStatus);
+            _dynamicRowControls.AddRange(new Control[] { lblName, btnRun, lblUnit, lblLimit, lblStatus });
+
+            // 按行数扩展"测试项目"分组高度，并把"进度与日志"分组整体下移
+            int neededHeight = RowOriginY + (rowIndex + 1) * RowHeight + 11;
+            if (neededHeight > grpTestItems.Height)
+            {
+                grpTestItems.Height = neededHeight;
+            }
+            grpProgressLog.Location = new Point(8, grpTestItems.Bottom + 8);
         }
 
         private static string FormatLimitText(ITestItem test)
@@ -690,9 +453,9 @@ namespace A205AutoTestSystem.UI
                     return;
                 }
 
-                if (_btnExportExcel != null && !_btnExportExcel.IsDisposed)
+                if (btnExportExcel != null && !btnExportExcel.IsDisposed)
                 {
-                    _btnExportExcel.Enabled = false;   // 导出后清空按钮，等待下次结果
+                    btnExportExcel.Enabled = false;   // 导出后清空按钮，等待下次结果
                 }
 
                 MessageBox.Show(this,
@@ -715,10 +478,10 @@ namespace A205AutoTestSystem.UI
         /// </summary>
         private void EnableExportButtonIfNeeded()
         {
-            if (_btnExportExcel == null || _btnExportExcel.IsDisposed) return;
+            if (btnExportExcel == null || btnExportExcel.IsDisposed) return;
             if (TestReportManager.Instance.HasPendingResults)
             {
-                _btnExportExcel.Enabled = true;
+                btnExportExcel.Enabled = true;
             }
         }
 
@@ -732,9 +495,9 @@ namespace A205AutoTestSystem.UI
                 BeginInvoke(new Action<int, string>(UpdateProgress), percent, step);
                 return;
             }
-            if (_progressBar != null && !_progressBar.IsDisposed)
+            if (progressBar != null && !progressBar.IsDisposed)
             {
-                _progressBar.Value = Math.Max(0, Math.Min(100, percent));
+                progressBar.Value = Math.Max(0, Math.Min(100, percent));
             }
             UpdateStep(step);
         }
@@ -746,9 +509,9 @@ namespace A205AutoTestSystem.UI
                 BeginInvoke(new Action<string>(UpdateStep), step);
                 return;
             }
-            if (_lblCurrentStep != null && !_lblCurrentStep.IsDisposed && step != null)
+            if (lblCurrentStep != null && !lblCurrentStep.IsDisposed && step != null)
             {
-                _lblCurrentStep.Text = "当前步骤：" + step;
+                lblCurrentStep.Text = "当前步骤：" + step;
             }
         }
 
@@ -764,7 +527,7 @@ namespace A205AutoTestSystem.UI
 
         private void OnLogMessage(string line)
         {
-            if (_rtbLog == null || _rtbLog.IsDisposed)
+            if (rtbLog == null || rtbLog.IsDisposed)
             {
                 return;
             }
@@ -779,13 +542,24 @@ namespace A205AutoTestSystem.UI
             }
 
             // 行数上限保护，避免长时间运行导致内存膨胀
-            if (_rtbLog.Lines.Length > 500)
+            if (rtbLog.Lines.Length > 500)
             {
-                _rtbLog.Clear();
+                rtbLog.Clear();
             }
-            _rtbLog.AppendText(line + Environment.NewLine);
-            _rtbLog.SelectionStart = _rtbLog.Text.Length;
-            _rtbLog.ScrollToCaret();
+            rtbLog.AppendText(line + Environment.NewLine);
+            rtbLog.SelectionStart = rtbLog.Text.Length;
+            rtbLog.ScrollToCaret();
+        }
+
+        /// <summary>
+        /// "清除"按钮：清空通信日志 RichTextBox。
+        /// </summary>
+        private void OnBtnClearLogClicked(object sender, EventArgs e)
+        {
+            if (rtbLog != null && !rtbLog.IsDisposed)
+            {
+                rtbLog.Clear();
+            }
         }
     }
 }
