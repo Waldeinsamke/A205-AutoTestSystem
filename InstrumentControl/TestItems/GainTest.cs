@@ -62,6 +62,27 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _ifFreqHz = ifFreqHz;
         }
 
+        /// <summary>
+        /// 构造重载：由工作模式（1/2/3）与 RF 频率自动计算 LO（推荐使用）。
+        /// <para>规则：1/2 → LO = RF + 3670 MHz；3 → LO = RF + 4350 MHz。
+        /// 详见 <see cref="LoFrequencyRule"/>。</para>
+        /// </summary>
+        public GainTest(
+            SignalGenerator rfGenerator,
+            SignalGeneratorLO loGenerator,
+            SpectrumAnalyzer spectrumAnalyzer,
+            double rfFreqHz,
+            double rfPowerDbm,
+            int mode,
+            double loPowerDbm,
+            double ifFreqHz)
+            : this(rfGenerator, loGenerator, spectrumAnalyzer,
+                   rfFreqHz, rfPowerDbm,
+                   LoFrequencyRule.Calculate(rfFreqHz, mode),
+                   loPowerDbm, ifFreqHz)
+        {
+        }
+
         public string TestName => "线性最大增益";
         public string Unit => "dB";
 

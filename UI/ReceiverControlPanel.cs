@@ -60,6 +60,9 @@ namespace A205AutoTestSystem.UI
             // WireEvents() 不需要：Designer 内已订阅
             _initialized = true;
 
+            // 订阅频段下拉框选中变化事件：选中时隐式切换 RF/LO 信号源频率
+            cmbBand.SelectedIndexChanged += OnBandSelectionChanged;
+
             // 订阅全局 Logger，实时显示通信日志
             Logger.MessageLogged += OnLogMessage;
         }
@@ -556,6 +559,89 @@ namespace A205AutoTestSystem.UI
             {
                 rtbLog.Clear();
             }
+        }
+
+        // -------- 频段下拉框选中变化：隐式切换 RF/LO 信号源频率
+        /// <summary>
+        /// 频段下拉框选中变化时，自动切换 RF/LO 信号源频率（隐式）。
+        /// <para>仅切换频率，不动功率；十六进制命令仍由"设置"按钮（btnBandSet）触发。</para>
+        /// </summary>
+        private void OnBandSelectionChanged(object sender, EventArgs e)
+        {
+            // 初始化阶段不触发（InitializeDefaults 内 RefreshBandCombo 自动选中第一项时不切）
+            if (!_initialized) return;
+
+            // 信号源未连接 → 静默跳过 + 日志
+            if (_rfGenerator == null || !_rfGenerator.IsConnected)
+            {
+                Logger.Log("[UI] RF 信号源未连接，跳过隐式频率切换");
+                return;
+            }
+            if (_loGenerator == null || !_loGenerator.IsConnected)
+            {
+                Logger.Log("[UI] LO 信号源未连接，跳过隐式频率切换");
+                return;
+            }
+
+            // 取当前选中的频段
+            if (cmbBand.SelectedIndex < 0 || _currentBands == null
+                || cmbBand.SelectedIndex >= _currentBands.Count)
+            {
+                Logger.Log("[UI] 频段选择无效，跳过隐式频率切换");
+                return;
+            }
+
+            var band = _currentBands[cmbBand.SelectedIndex];
+            string displayName = band.DisplayName;
+            if (!TryExtractMHzFromDisplayName(displayName, out double rfFreqMHz))
+            {
+                Logger.Log($"[UI] 无法从频段名称 '{displayName}' 提取频率，跳过隐式切换");
+                return;
+            }
+
+            double rfFreqHz = rfFreqMHz * 1_000_000.0;
+
+            // 根据当前模式计算 LO 频率
+            ReceiverMode currentMode;
+            if (rbMode1.Checked) currentMode = ReceiverMode.Mode1;
+            else if (rbMode2.Checked) currentMode = ReceiverMode.Mode2;
+            else currentMode = ReceiverMode.Mode3;
+
+            double loFreqHz = LoFrequencyRule.Calculate(rfFreqHz, (int)currentMode);
+
+            // 切换信号源频率（只切频率，不动功率；各自独立异常处理）
+            try
+            {
+                _rfGenerator.SetFrequency(rfFreqHz);
+                Logger.Log($"[UI] 射频信号源已切换到 {rfFreqMHz:F3} MHz");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] RF 频率切换失败: {ex.Message}");
+            }
+
+            try
+            {
+                _loGenerator.SetFrequency(loFreqHz);
+                double loFreqMHz = loFreqHz / 1_000_000.0;
+                Logger.Log($"[UI] 本振信号源已切换到 {loFreqMHz:F3} MHz");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] LO 频率切换失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 从频段显示名称中提取 MHz 数值（如 "频段108" → 108）。
+        /// </summary>
+        private static bool TryExtractMHzFromDisplayName(string displayName, out double mhz)
+        {
+            mhz = 0;
+            if (string.IsNullOrEmpty(displayName)) return false;
+            string numberPart = displayName.Replace("频段", "").Trim();
+            return double.TryParse(numberPart, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out mhz);
         }
 
         // -------- 日志回调

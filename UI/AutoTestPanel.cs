@@ -223,6 +223,10 @@ namespace A205AutoTestSystem.UI
             _engine.Clear();
             ClearTestRows();
 
+            // M6 阶段首批：模式从 UI 当前选择读取（SelectedIndex 0/1/2 → Mode1/2/3）；
+            // LO 由 LoFrequencyRule 按（RF、模式）动态计算（1/2 → RF+3670MHz，3 → RF+4350MHz）
+            int mode = cmbMode.SelectedIndex + 1;
+
             // 创建两个测试项（M6 阶段首批）
             var gain = new GainTest(
                 rfGenerator: _rf,
@@ -230,7 +234,7 @@ namespace A205AutoTestSystem.UI
                 spectrumAnalyzer: _sa,
                 rfFreqHz: 100e6,
                 rfPowerDbm: -20,
-                loFreqHz: 70e6,
+                mode: mode,
                 loPowerDbm: 0,
                 ifFreqHz: 70e6);
 

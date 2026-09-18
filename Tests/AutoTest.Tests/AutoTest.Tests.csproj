@@ -103,6 +103,10 @@
     <Compile Include="..\..\Common\Logger.cs">
       <Link>Common\Logger.cs</Link>
     </Compile>
+    <!-- LO 频率规则（GainTest.mode 构造重载依赖） -->
+    <Compile Include="..\..\InstrumentControl\LoFrequencyRule.cs">
+      <Link>InstrumentControl\LoFrequencyRule.cs</Link>
+    </Compile>
     <!-- M7：TestReportManager（ExcelExporter）报告链路，GainTest/BandwidthTest.Record 依赖 -->
     <Compile Include="..\..\Common\TestReportManager.cs">
       <Link>Common\TestReportManager.cs</Link>
