@@ -27,6 +27,9 @@ namespace A205AutoTestSystem.UI
 
         // 参数配置区
         private System.Windows.Forms.GroupBox grpParameterConfig;
+        // 温度/模式各用一个无边框 Panel 作为 RadioButton 互斥分组容器（WinForms 按直接父容器分组）
+        private System.Windows.Forms.Panel pnlTempGroup;
+        private System.Windows.Forms.Panel pnlModeGroup;
         private System.Windows.Forms.RadioButton rbTempNormal;
         private System.Windows.Forms.RadioButton rbTempHigh;
         private System.Windows.Forms.RadioButton rbTempLow;
@@ -53,19 +56,16 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.GroupBox grpInstrumentStatus;
         private System.Windows.Forms.Panel pnlRfStatus;
         private System.Windows.Forms.Label lblRf;
-        private System.Windows.Forms.Label lblRfAddr;
         private System.Windows.Forms.TextBox txtRfAddress;
         private System.Windows.Forms.Button btnRfConnect;
         private System.Windows.Forms.Button btnRfDisconnect;
         private System.Windows.Forms.Panel pnlLoStatus;
         private System.Windows.Forms.Label lblLo;
-        private System.Windows.Forms.Label lblLoAddr;
         private System.Windows.Forms.TextBox txtLoAddress;
         private System.Windows.Forms.Button btnLoConnect;
         private System.Windows.Forms.Button btnLoDisconnect;
         private System.Windows.Forms.Panel pnlSaStatus;
         private System.Windows.Forms.Label lblSa;
-        private System.Windows.Forms.Label lblSaAddr;
         private System.Windows.Forms.TextBox txtSaAddress;
         private System.Windows.Forms.Button btnSaConnect;
         private System.Windows.Forms.Button btnSaDisconnect;
@@ -95,6 +95,7 @@ namespace A205AutoTestSystem.UI
             this.btnMatrixDisconnect = new System.Windows.Forms.Button();
             this.grpParameterConfig = new System.Windows.Forms.GroupBox();
             this.lblTempRange = new System.Windows.Forms.Label();
+            this.pnlTempGroup = new System.Windows.Forms.Panel();
             this.rbTempNormal = new System.Windows.Forms.RadioButton();
             this.rbTempHigh = new System.Windows.Forms.RadioButton();
             this.rbTempLow = new System.Windows.Forms.RadioButton();
@@ -103,6 +104,7 @@ namespace A205AutoTestSystem.UI
             this.cmbChannel = new System.Windows.Forms.ComboBox();
             this.lblChannelHint = new System.Windows.Forms.Label();
             this.lblModeSelect = new System.Windows.Forms.Label();
+            this.pnlModeGroup = new System.Windows.Forms.Panel();
             this.rbMode1 = new System.Windows.Forms.RadioButton();
             this.rbMode2 = new System.Windows.Forms.RadioButton();
             this.rbMode3 = new System.Windows.Forms.RadioButton();
@@ -118,19 +120,16 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentStatus = new System.Windows.Forms.GroupBox();
             this.pnlRfStatus = new System.Windows.Forms.Panel();
             this.lblRf = new System.Windows.Forms.Label();
-            this.lblRfAddr = new System.Windows.Forms.Label();
             this.txtRfAddress = new System.Windows.Forms.TextBox();
             this.btnRfConnect = new System.Windows.Forms.Button();
             this.btnRfDisconnect = new System.Windows.Forms.Button();
             this.pnlLoStatus = new System.Windows.Forms.Panel();
             this.lblLo = new System.Windows.Forms.Label();
-            this.lblLoAddr = new System.Windows.Forms.Label();
             this.txtLoAddress = new System.Windows.Forms.TextBox();
             this.btnLoConnect = new System.Windows.Forms.Button();
             this.btnLoDisconnect = new System.Windows.Forms.Button();
             this.pnlSaStatus = new System.Windows.Forms.Panel();
             this.lblSa = new System.Windows.Forms.Label();
-            this.lblSaAddr = new System.Windows.Forms.Label();
             this.txtSaAddress = new System.Windows.Forms.TextBox();
             this.btnSaConnect = new System.Windows.Forms.Button();
             this.btnSaDisconnect = new System.Windows.Forms.Button();
@@ -139,6 +138,8 @@ namespace A205AutoTestSystem.UI
             this.btnLogClear = new System.Windows.Forms.Button();
             this.grpSerialConnection.SuspendLayout();
             this.grpParameterConfig.SuspendLayout();
+            this.pnlTempGroup.SuspendLayout();
+            this.pnlModeGroup.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).BeginInit();
             this.grpInstrumentStatus.SuspendLayout();
             this.grpCommunicationLog.SuspendLayout();
@@ -159,26 +160,26 @@ namespace A205AutoTestSystem.UI
             this.grpSerialConnection.Location = new System.Drawing.Point(8, 8);
             this.grpSerialConnection.Name = "grpSerialConnection";
             this.grpSerialConnection.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpSerialConnection.Size = new System.Drawing.Size(1084, 86);
+            this.grpSerialConnection.Size = new System.Drawing.Size(822, 86);
             this.grpSerialConnection.TabIndex = 0;
             this.grpSerialConnection.TabStop = false;
             this.grpSerialConnection.Text = "串口连接";
             // 
             // lblReceiverSerial
             // 
-            this.lblReceiverSerial.Location = new System.Drawing.Point(14, 28);
+            this.lblReceiverSerial.Location = new System.Drawing.Point(12, 20);
             this.lblReceiverSerial.Name = "lblReceiverSerial";
             this.lblReceiverSerial.Size = new System.Drawing.Size(84, 24);
             this.lblReceiverSerial.TabIndex = 0;
-            this.lblReceiverSerial.Text = "接收机串口：";
+            this.lblReceiverSerial.Text = "接收机串口";
             this.lblReceiverSerial.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbReceiverPort
             // 
             this.cmbReceiverPort.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbReceiverPort.Location = new System.Drawing.Point(102, 27);
+            this.cmbReceiverPort.Location = new System.Drawing.Point(102, 21);
             this.cmbReceiverPort.Name = "cmbReceiverPort";
-            this.cmbReceiverPort.Size = new System.Drawing.Size(150, 23);
+            this.cmbReceiverPort.Size = new System.Drawing.Size(101, 23);
             this.cmbReceiverPort.TabIndex = 1;
             // 
             // cmbReceiverBaud
@@ -190,14 +191,14 @@ namespace A205AutoTestSystem.UI
             "38400",
             "57600",
             "115200"});
-            this.cmbReceiverBaud.Location = new System.Drawing.Point(258, 27);
+            this.cmbReceiverBaud.Location = new System.Drawing.Point(209, 21);
             this.cmbReceiverBaud.Name = "cmbReceiverBaud";
             this.cmbReceiverBaud.Size = new System.Drawing.Size(84, 23);
             this.cmbReceiverBaud.TabIndex = 2;
             // 
             // btnReceiverConnect
             // 
-            this.btnReceiverConnect.Location = new System.Drawing.Point(348, 26);
+            this.btnReceiverConnect.Location = new System.Drawing.Point(299, 20);
             this.btnReceiverConnect.Name = "btnReceiverConnect";
             this.btnReceiverConnect.Size = new System.Drawing.Size(72, 26);
             this.btnReceiverConnect.TabIndex = 3;
@@ -207,7 +208,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnReceiverDisconnect
             // 
-            this.btnReceiverDisconnect.Location = new System.Drawing.Point(426, 26);
+            this.btnReceiverDisconnect.Location = new System.Drawing.Point(377, 20);
             this.btnReceiverDisconnect.Name = "btnReceiverDisconnect";
             this.btnReceiverDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnReceiverDisconnect.TabIndex = 4;
@@ -217,19 +218,19 @@ namespace A205AutoTestSystem.UI
             // 
             // lblMatrixSerial
             // 
-            this.lblMatrixSerial.Location = new System.Drawing.Point(14, 58);
+            this.lblMatrixSerial.Location = new System.Drawing.Point(18, 52);
             this.lblMatrixSerial.Name = "lblMatrixSerial";
-            this.lblMatrixSerial.Size = new System.Drawing.Size(84, 24);
+            this.lblMatrixSerial.Size = new System.Drawing.Size(68, 24);
             this.lblMatrixSerial.TabIndex = 5;
-            this.lblMatrixSerial.Text = "矩阵串口：";
+            this.lblMatrixSerial.Text = "矩阵串口";
             this.lblMatrixSerial.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbMatrixPort
             // 
             this.cmbMatrixPort.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMatrixPort.Location = new System.Drawing.Point(102, 57);
+            this.cmbMatrixPort.Location = new System.Drawing.Point(102, 53);
             this.cmbMatrixPort.Name = "cmbMatrixPort";
-            this.cmbMatrixPort.Size = new System.Drawing.Size(150, 23);
+            this.cmbMatrixPort.Size = new System.Drawing.Size(101, 23);
             this.cmbMatrixPort.TabIndex = 6;
             // 
             // cmbMatrixBaud
@@ -241,14 +242,14 @@ namespace A205AutoTestSystem.UI
             "38400",
             "57600",
             "115200"});
-            this.cmbMatrixBaud.Location = new System.Drawing.Point(258, 57);
+            this.cmbMatrixBaud.Location = new System.Drawing.Point(209, 53);
             this.cmbMatrixBaud.Name = "cmbMatrixBaud";
             this.cmbMatrixBaud.Size = new System.Drawing.Size(84, 23);
             this.cmbMatrixBaud.TabIndex = 7;
             // 
             // btnMatrixConnect
             // 
-            this.btnMatrixConnect.Location = new System.Drawing.Point(348, 56);
+            this.btnMatrixConnect.Location = new System.Drawing.Point(299, 52);
             this.btnMatrixConnect.Name = "btnMatrixConnect";
             this.btnMatrixConnect.Size = new System.Drawing.Size(72, 26);
             this.btnMatrixConnect.TabIndex = 8;
@@ -258,7 +259,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnMatrixDisconnect
             // 
-            this.btnMatrixDisconnect.Location = new System.Drawing.Point(426, 56);
+            this.btnMatrixDisconnect.Location = new System.Drawing.Point(377, 52);
             this.btnMatrixDisconnect.Name = "btnMatrixDisconnect";
             this.btnMatrixDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnMatrixDisconnect.TabIndex = 9;
@@ -269,17 +270,13 @@ namespace A205AutoTestSystem.UI
             // grpParameterConfig
             // 
             this.grpParameterConfig.Controls.Add(this.lblTempRange);
-            this.grpParameterConfig.Controls.Add(this.rbTempNormal);
-            this.grpParameterConfig.Controls.Add(this.rbTempHigh);
-            this.grpParameterConfig.Controls.Add(this.rbTempLow);
+            this.grpParameterConfig.Controls.Add(this.pnlTempGroup);
             this.grpParameterConfig.Controls.Add(this.btnTempSet);
             this.grpParameterConfig.Controls.Add(this.lblChannelSelect);
             this.grpParameterConfig.Controls.Add(this.cmbChannel);
             this.grpParameterConfig.Controls.Add(this.lblChannelHint);
             this.grpParameterConfig.Controls.Add(this.lblModeSelect);
-            this.grpParameterConfig.Controls.Add(this.rbMode1);
-            this.grpParameterConfig.Controls.Add(this.rbMode2);
-            this.grpParameterConfig.Controls.Add(this.rbMode3);
+            this.grpParameterConfig.Controls.Add(this.pnlModeGroup);
             this.grpParameterConfig.Controls.Add(this.btnModeSet);
             this.grpParameterConfig.Controls.Add(this.lblBandSelect);
             this.grpParameterConfig.Controls.Add(this.cmbBand);
@@ -292,24 +289,34 @@ namespace A205AutoTestSystem.UI
             this.grpParameterConfig.Location = new System.Drawing.Point(8, 100);
             this.grpParameterConfig.Name = "grpParameterConfig";
             this.grpParameterConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpParameterConfig.Size = new System.Drawing.Size(1084, 188);
+            this.grpParameterConfig.Size = new System.Drawing.Size(822, 188);
             this.grpParameterConfig.TabIndex = 1;
             this.grpParameterConfig.TabStop = false;
             this.grpParameterConfig.Text = "接收机参数配置";
             // 
             // lblTempRange
             // 
-            this.lblTempRange.Location = new System.Drawing.Point(14, 28);
+            this.lblTempRange.Location = new System.Drawing.Point(18, 28);
             this.lblTempRange.Name = "lblTempRange";
-            this.lblTempRange.Size = new System.Drawing.Size(84, 24);
+            this.lblTempRange.Size = new System.Drawing.Size(82, 24);
             this.lblTempRange.TabIndex = 0;
-            this.lblTempRange.Text = "温度区间：";
+            this.lblTempRange.Text = "温度区间";
             this.lblTempRange.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // pnlTempGroup
+            // 
+            this.pnlTempGroup.Controls.Add(this.rbTempNormal);
+            this.pnlTempGroup.Controls.Add(this.rbTempHigh);
+            this.pnlTempGroup.Controls.Add(this.rbTempLow);
+            this.pnlTempGroup.Location = new System.Drawing.Point(104, 28);
+            this.pnlTempGroup.Name = "pnlTempGroup";
+            this.pnlTempGroup.Size = new System.Drawing.Size(211, 24);
+            this.pnlTempGroup.TabIndex = 20;
             // 
             // rbTempNormal
             // 
             this.rbTempNormal.AutoSize = true;
-            this.rbTempNormal.Location = new System.Drawing.Point(102, 30);
+            this.rbTempNormal.Location = new System.Drawing.Point(5, 2);
             this.rbTempNormal.Name = "rbTempNormal";
             this.rbTempNormal.Size = new System.Drawing.Size(58, 19);
             this.rbTempNormal.TabIndex = 1;
@@ -319,7 +326,7 @@ namespace A205AutoTestSystem.UI
             // rbTempHigh
             // 
             this.rbTempHigh.AutoSize = true;
-            this.rbTempHigh.Location = new System.Drawing.Point(173, 30);
+            this.rbTempHigh.Location = new System.Drawing.Point(76, 2);
             this.rbTempHigh.Name = "rbTempHigh";
             this.rbTempHigh.Size = new System.Drawing.Size(58, 19);
             this.rbTempHigh.TabIndex = 2;
@@ -329,7 +336,7 @@ namespace A205AutoTestSystem.UI
             // rbTempLow
             // 
             this.rbTempLow.AutoSize = true;
-            this.rbTempLow.Location = new System.Drawing.Point(245, 30);
+            this.rbTempLow.Location = new System.Drawing.Point(148, 2);
             this.rbTempLow.Name = "rbTempLow";
             this.rbTempLow.Size = new System.Drawing.Size(58, 19);
             this.rbTempLow.TabIndex = 3;
@@ -338,7 +345,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnTempSet
             // 
-            this.btnTempSet.Location = new System.Drawing.Point(331, 26);
+            this.btnTempSet.Location = new System.Drawing.Point(333, 26);
             this.btnTempSet.Name = "btnTempSet";
             this.btnTempSet.Size = new System.Drawing.Size(72, 26);
             this.btnTempSet.TabIndex = 4;
@@ -348,19 +355,19 @@ namespace A205AutoTestSystem.UI
             // 
             // lblChannelSelect
             // 
-            this.lblChannelSelect.Location = new System.Drawing.Point(14, 60);
+            this.lblChannelSelect.Location = new System.Drawing.Point(18, 59);
             this.lblChannelSelect.Name = "lblChannelSelect";
             this.lblChannelSelect.Size = new System.Drawing.Size(84, 24);
             this.lblChannelSelect.TabIndex = 5;
-            this.lblChannelSelect.Text = "通道选择：";
+            this.lblChannelSelect.Text = "通道选择";
             this.lblChannelSelect.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbChannel
             // 
             this.cmbChannel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbChannel.Location = new System.Drawing.Point(102, 59);
+            this.cmbChannel.Location = new System.Drawing.Point(104, 59);
             this.cmbChannel.Name = "cmbChannel";
-            this.cmbChannel.Size = new System.Drawing.Size(150, 23);
+            this.cmbChannel.Size = new System.Drawing.Size(211, 23);
             this.cmbChannel.TabIndex = 6;
             this.cmbChannel.SelectedIndexChanged += new System.EventHandler(this.OnChannelSelected);
             // 
@@ -368,7 +375,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblChannelHint.AutoSize = true;
             this.lblChannelHint.ForeColor = System.Drawing.Color.Gray;
-            this.lblChannelHint.Location = new System.Drawing.Point(262, 63);
+            this.lblChannelHint.Location = new System.Drawing.Point(330, 65);
             this.lblChannelHint.Name = "lblChannelHint";
             this.lblChannelHint.Size = new System.Drawing.Size(202, 15);
             this.lblChannelHint.TabIndex = 7;
@@ -376,17 +383,27 @@ namespace A205AutoTestSystem.UI
             // 
             // lblModeSelect
             // 
-            this.lblModeSelect.Location = new System.Drawing.Point(14, 92);
+            this.lblModeSelect.Location = new System.Drawing.Point(18, 92);
             this.lblModeSelect.Name = "lblModeSelect";
             this.lblModeSelect.Size = new System.Drawing.Size(84, 24);
             this.lblModeSelect.TabIndex = 8;
-            this.lblModeSelect.Text = "模式选择：";
+            this.lblModeSelect.Text = "模式选择";
             this.lblModeSelect.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // pnlModeGroup
+            // 
+            this.pnlModeGroup.Controls.Add(this.rbMode1);
+            this.pnlModeGroup.Controls.Add(this.rbMode2);
+            this.pnlModeGroup.Controls.Add(this.rbMode3);
+            this.pnlModeGroup.Location = new System.Drawing.Point(104, 92);
+            this.pnlModeGroup.Name = "pnlModeGroup";
+            this.pnlModeGroup.Size = new System.Drawing.Size(223, 24);
+            this.pnlModeGroup.TabIndex = 21;
             // 
             // rbMode1
             // 
             this.rbMode1.AutoSize = true;
-            this.rbMode1.Location = new System.Drawing.Point(102, 94);
+            this.rbMode1.Location = new System.Drawing.Point(4, 2);
             this.rbMode1.Name = "rbMode1";
             this.rbMode1.Size = new System.Drawing.Size(68, 19);
             this.rbMode1.TabIndex = 9;
@@ -397,7 +414,7 @@ namespace A205AutoTestSystem.UI
             // rbMode2
             // 
             this.rbMode2.AutoSize = true;
-            this.rbMode2.Location = new System.Drawing.Point(173, 94);
+            this.rbMode2.Location = new System.Drawing.Point(75, 2);
             this.rbMode2.Name = "rbMode2";
             this.rbMode2.Size = new System.Drawing.Size(68, 19);
             this.rbMode2.TabIndex = 10;
@@ -408,7 +425,7 @@ namespace A205AutoTestSystem.UI
             // rbMode3
             // 
             this.rbMode3.AutoSize = true;
-            this.rbMode3.Location = new System.Drawing.Point(245, 94);
+            this.rbMode3.Location = new System.Drawing.Point(147, 2);
             this.rbMode3.Name = "rbMode3";
             this.rbMode3.Size = new System.Drawing.Size(68, 19);
             this.rbMode3.TabIndex = 11;
@@ -418,7 +435,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnModeSet
             // 
-            this.btnModeSet.Location = new System.Drawing.Point(331, 90);
+            this.btnModeSet.Location = new System.Drawing.Point(333, 90);
             this.btnModeSet.Name = "btnModeSet";
             this.btnModeSet.Size = new System.Drawing.Size(72, 26);
             this.btnModeSet.TabIndex = 12;
@@ -428,24 +445,24 @@ namespace A205AutoTestSystem.UI
             // 
             // lblBandSelect
             // 
-            this.lblBandSelect.Location = new System.Drawing.Point(14, 124);
+            this.lblBandSelect.Location = new System.Drawing.Point(18, 122);
             this.lblBandSelect.Name = "lblBandSelect";
             this.lblBandSelect.Size = new System.Drawing.Size(84, 24);
             this.lblBandSelect.TabIndex = 13;
-            this.lblBandSelect.Text = "频段选择：";
+            this.lblBandSelect.Text = "频段选择";
             this.lblBandSelect.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbBand
             // 
             this.cmbBand.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbBand.Location = new System.Drawing.Point(102, 123);
+            this.cmbBand.Location = new System.Drawing.Point(104, 123);
             this.cmbBand.Name = "cmbBand";
-            this.cmbBand.Size = new System.Drawing.Size(150, 23);
+            this.cmbBand.Size = new System.Drawing.Size(211, 23);
             this.cmbBand.TabIndex = 14;
             // 
             // btnBandSet
             // 
-            this.btnBandSet.Location = new System.Drawing.Point(262, 122);
+            this.btnBandSet.Location = new System.Drawing.Point(333, 123);
             this.btnBandSet.Name = "btnBandSet";
             this.btnBandSet.Size = new System.Drawing.Size(72, 26);
             this.btnBandSet.TabIndex = 15;
@@ -457,7 +474,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblBandHint.AutoSize = true;
             this.lblBandHint.ForeColor = System.Drawing.Color.Gray;
-            this.lblBandHint.Location = new System.Drawing.Point(340, 127);
+            this.lblBandHint.Location = new System.Drawing.Point(411, 129);
             this.lblBandHint.Name = "lblBandHint";
             this.lblBandHint.Size = new System.Drawing.Size(172, 15);
             this.lblBandHint.TabIndex = 16;
@@ -465,11 +482,11 @@ namespace A205AutoTestSystem.UI
             // 
             // lblAgcAtten
             // 
-            this.lblAgcAtten.Location = new System.Drawing.Point(14, 156);
+            this.lblAgcAtten.Location = new System.Drawing.Point(18, 154);
             this.lblAgcAtten.Name = "lblAgcAtten";
             this.lblAgcAtten.Size = new System.Drawing.Size(84, 24);
             this.lblAgcAtten.TabIndex = 17;
-            this.lblAgcAtten.Text = "AGC 衰减：";
+            this.lblAgcAtten.Text = "AGC 衰减";
             this.lblAgcAtten.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // numAgcAtten
@@ -479,19 +496,19 @@ namespace A205AutoTestSystem.UI
             0,
             0,
             0});
-            this.numAgcAtten.Location = new System.Drawing.Point(102, 155);
+            this.numAgcAtten.Location = new System.Drawing.Point(104, 155);
             this.numAgcAtten.Maximum = new decimal(new int[] {
             60,
             0,
             0,
             0});
             this.numAgcAtten.Name = "numAgcAtten";
-            this.numAgcAtten.Size = new System.Drawing.Size(84, 25);
+            this.numAgcAtten.Size = new System.Drawing.Size(211, 25);
             this.numAgcAtten.TabIndex = 18;
             // 
             // btnAgcSet
             // 
-            this.btnAgcSet.Location = new System.Drawing.Point(192, 155);
+            this.btnAgcSet.Location = new System.Drawing.Point(333, 154);
             this.btnAgcSet.Name = "btnAgcSet";
             this.btnAgcSet.Size = new System.Drawing.Size(72, 26);
             this.btnAgcSet.TabIndex = 19;
@@ -503,36 +520,33 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblAgcUnit.AutoSize = true;
             this.lblAgcUnit.ForeColor = System.Drawing.Color.Gray;
-            this.lblAgcUnit.Location = new System.Drawing.Point(270, 159);
+            this.lblAgcUnit.Location = new System.Drawing.Point(411, 160);
             this.lblAgcUnit.Name = "lblAgcUnit";
             this.lblAgcUnit.Size = new System.Drawing.Size(107, 15);
             this.lblAgcUnit.TabIndex = 20;
-            this.lblAgcUnit.Text = " dB（步进 4）";
+            this.lblAgcUnit.Text = "（步进 4 dB）";
             // 
             // grpInstrumentStatus
             // 
             this.grpInstrumentStatus.Controls.Add(this.pnlRfStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblRf);
-            this.grpInstrumentStatus.Controls.Add(this.lblRfAddr);
             this.grpInstrumentStatus.Controls.Add(this.txtRfAddress);
             this.grpInstrumentStatus.Controls.Add(this.btnRfConnect);
             this.grpInstrumentStatus.Controls.Add(this.btnRfDisconnect);
             this.grpInstrumentStatus.Controls.Add(this.pnlLoStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblLo);
-            this.grpInstrumentStatus.Controls.Add(this.lblLoAddr);
             this.grpInstrumentStatus.Controls.Add(this.txtLoAddress);
             this.grpInstrumentStatus.Controls.Add(this.btnLoConnect);
             this.grpInstrumentStatus.Controls.Add(this.btnLoDisconnect);
             this.grpInstrumentStatus.Controls.Add(this.pnlSaStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblSa);
-            this.grpInstrumentStatus.Controls.Add(this.lblSaAddr);
             this.grpInstrumentStatus.Controls.Add(this.txtSaAddress);
             this.grpInstrumentStatus.Controls.Add(this.btnSaConnect);
             this.grpInstrumentStatus.Controls.Add(this.btnSaDisconnect);
             this.grpInstrumentStatus.Location = new System.Drawing.Point(8, 294);
             this.grpInstrumentStatus.Name = "grpInstrumentStatus";
             this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpInstrumentStatus.Size = new System.Drawing.Size(1084, 122);
+            this.grpInstrumentStatus.Size = new System.Drawing.Size(822, 122);
             this.grpInstrumentStatus.TabIndex = 2;
             this.grpInstrumentStatus.TabStop = false;
             this.grpInstrumentStatus.Text = "仪表连接状态";
@@ -551,23 +565,14 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblRf.Location = new System.Drawing.Point(36, 28);
             this.lblRf.Name = "lblRf";
-            this.lblRf.Size = new System.Drawing.Size(76, 24);
+            this.lblRf.Size = new System.Drawing.Size(106, 24);
             this.lblRf.TabIndex = 1;
-            this.lblRf.Text = "RF 信号源：";
+            this.lblRf.Text = "RF信号源地址";
             this.lblRf.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblRfAddr
-            // 
-            this.lblRfAddr.Location = new System.Drawing.Point(118, 28);
-            this.lblRfAddr.Name = "lblRfAddr";
-            this.lblRfAddr.Size = new System.Drawing.Size(70, 24);
-            this.lblRfAddr.TabIndex = 2;
-            this.lblRfAddr.Text = "VISA 地址：";
-            this.lblRfAddr.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // txtRfAddress
             // 
-            this.txtRfAddress.Location = new System.Drawing.Point(192, 28);
+            this.txtRfAddress.Location = new System.Drawing.Point(144, 28);
             this.txtRfAddress.Name = "txtRfAddress";
             this.txtRfAddress.Size = new System.Drawing.Size(280, 25);
             this.txtRfAddress.TabIndex = 3;
@@ -575,7 +580,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnRfConnect
             // 
-            this.btnRfConnect.Location = new System.Drawing.Point(482, 26);
+            this.btnRfConnect.Location = new System.Drawing.Point(434, 26);
             this.btnRfConnect.Name = "btnRfConnect";
             this.btnRfConnect.Size = new System.Drawing.Size(72, 26);
             this.btnRfConnect.TabIndex = 4;
@@ -585,7 +590,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnRfDisconnect
             // 
-            this.btnRfDisconnect.Location = new System.Drawing.Point(560, 26);
+            this.btnRfDisconnect.Location = new System.Drawing.Point(512, 26);
             this.btnRfDisconnect.Name = "btnRfDisconnect";
             this.btnRfDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnRfDisconnect.TabIndex = 5;
@@ -607,23 +612,14 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblLo.Location = new System.Drawing.Point(36, 60);
             this.lblLo.Name = "lblLo";
-            this.lblLo.Size = new System.Drawing.Size(76, 24);
+            this.lblLo.Size = new System.Drawing.Size(106, 24);
             this.lblLo.TabIndex = 7;
-            this.lblLo.Text = "LO 信号源：";
+            this.lblLo.Text = "LO信号源地址";
             this.lblLo.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblLoAddr
-            // 
-            this.lblLoAddr.Location = new System.Drawing.Point(118, 60);
-            this.lblLoAddr.Name = "lblLoAddr";
-            this.lblLoAddr.Size = new System.Drawing.Size(70, 24);
-            this.lblLoAddr.TabIndex = 8;
-            this.lblLoAddr.Text = "VISA 地址：";
-            this.lblLoAddr.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // txtLoAddress
             // 
-            this.txtLoAddress.Location = new System.Drawing.Point(192, 60);
+            this.txtLoAddress.Location = new System.Drawing.Point(144, 60);
             this.txtLoAddress.Name = "txtLoAddress";
             this.txtLoAddress.Size = new System.Drawing.Size(280, 25);
             this.txtLoAddress.TabIndex = 9;
@@ -631,7 +627,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoConnect
             // 
-            this.btnLoConnect.Location = new System.Drawing.Point(482, 58);
+            this.btnLoConnect.Location = new System.Drawing.Point(434, 58);
             this.btnLoConnect.Name = "btnLoConnect";
             this.btnLoConnect.Size = new System.Drawing.Size(72, 26);
             this.btnLoConnect.TabIndex = 10;
@@ -641,7 +637,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoDisconnect
             // 
-            this.btnLoDisconnect.Location = new System.Drawing.Point(560, 58);
+            this.btnLoDisconnect.Location = new System.Drawing.Point(512, 58);
             this.btnLoDisconnect.Name = "btnLoDisconnect";
             this.btnLoDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnLoDisconnect.TabIndex = 11;
@@ -663,23 +659,14 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblSa.Location = new System.Drawing.Point(36, 92);
             this.lblSa.Name = "lblSa";
-            this.lblSa.Size = new System.Drawing.Size(76, 24);
+            this.lblSa.Size = new System.Drawing.Size(106, 24);
             this.lblSa.TabIndex = 13;
-            this.lblSa.Text = "频谱仪：";
+            this.lblSa.Text = "频谱仪地址";
             this.lblSa.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblSaAddr
-            // 
-            this.lblSaAddr.Location = new System.Drawing.Point(118, 92);
-            this.lblSaAddr.Name = "lblSaAddr";
-            this.lblSaAddr.Size = new System.Drawing.Size(70, 24);
-            this.lblSaAddr.TabIndex = 14;
-            this.lblSaAddr.Text = "VISA 地址：";
-            this.lblSaAddr.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // txtSaAddress
             // 
-            this.txtSaAddress.Location = new System.Drawing.Point(192, 92);
+            this.txtSaAddress.Location = new System.Drawing.Point(144, 92);
             this.txtSaAddress.Name = "txtSaAddress";
             this.txtSaAddress.Size = new System.Drawing.Size(280, 25);
             this.txtSaAddress.TabIndex = 15;
@@ -687,7 +674,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaConnect
             // 
-            this.btnSaConnect.Location = new System.Drawing.Point(482, 90);
+            this.btnSaConnect.Location = new System.Drawing.Point(434, 90);
             this.btnSaConnect.Name = "btnSaConnect";
             this.btnSaConnect.Size = new System.Drawing.Size(72, 26);
             this.btnSaConnect.TabIndex = 16;
@@ -697,7 +684,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaDisconnect
             // 
-            this.btnSaDisconnect.Location = new System.Drawing.Point(560, 90);
+            this.btnSaDisconnect.Location = new System.Drawing.Point(512, 90);
             this.btnSaDisconnect.Name = "btnSaDisconnect";
             this.btnSaDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnSaDisconnect.TabIndex = 17;
@@ -712,7 +699,7 @@ namespace A205AutoTestSystem.UI
             this.grpCommunicationLog.Location = new System.Drawing.Point(8, 422);
             this.grpCommunicationLog.Name = "grpCommunicationLog";
             this.grpCommunicationLog.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpCommunicationLog.Size = new System.Drawing.Size(1084, 247);
+            this.grpCommunicationLog.Size = new System.Drawing.Size(822, 250);
             this.grpCommunicationLog.TabIndex = 3;
             this.grpCommunicationLog.TabStop = false;
             this.grpCommunicationLog.Text = "通信日志";
@@ -723,16 +710,16 @@ namespace A205AutoTestSystem.UI
             this.rtbLog.DetectUrls = false;
             this.rtbLog.Font = new System.Drawing.Font("Consolas", 9F);
             this.rtbLog.ForeColor = System.Drawing.Color.LightGreen;
-            this.rtbLog.Location = new System.Drawing.Point(14, 26);
+            this.rtbLog.Location = new System.Drawing.Point(4, 19);
             this.rtbLog.Name = "rtbLog";
             this.rtbLog.ReadOnly = true;
-            this.rtbLog.Size = new System.Drawing.Size(1056, 176);
+            this.rtbLog.Size = new System.Drawing.Size(815, 200);
             this.rtbLog.TabIndex = 0;
             this.rtbLog.Text = "";
             // 
             // btnLogClear
             // 
-            this.btnLogClear.Location = new System.Drawing.Point(1000, 208);
+            this.btnLogClear.Location = new System.Drawing.Point(749, 221);
             this.btnLogClear.Name = "btnLogClear";
             this.btnLogClear.Size = new System.Drawing.Size(70, 26);
             this.btnLogClear.TabIndex = 1;
@@ -749,10 +736,14 @@ namespace A205AutoTestSystem.UI
             this.Controls.Add(this.grpInstrumentStatus);
             this.Controls.Add(this.grpCommunicationLog);
             this.Name = "ReceiverControlPanel";
-            this.Size = new System.Drawing.Size(1100, 672);
+            this.Size = new System.Drawing.Size(844, 672);
             this.grpSerialConnection.ResumeLayout(false);
             this.grpParameterConfig.ResumeLayout(false);
             this.grpParameterConfig.PerformLayout();
+            this.pnlTempGroup.ResumeLayout(false);
+            this.pnlTempGroup.PerformLayout();
+            this.pnlModeGroup.ResumeLayout(false);
+            this.pnlModeGroup.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).EndInit();
             this.grpInstrumentStatus.ResumeLayout(false);
             this.grpInstrumentStatus.PerformLayout();

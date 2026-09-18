@@ -47,7 +47,7 @@ namespace A205AutoTestSystem.UI
             this.tabControl.Location = new System.Drawing.Point(0, 0);
             this.tabControl.Name = "tabControl";
             this.tabControl.SelectedIndex = 0;
-            this.tabControl.Size = new System.Drawing.Size(1114, 713);
+            this.tabControl.Size = new System.Drawing.Size(858, 713);
             this.tabControl.TabIndex = 0;
             // 
             // tabReceiverControl
@@ -56,7 +56,7 @@ namespace A205AutoTestSystem.UI
             this.tabReceiverControl.Location = new System.Drawing.Point(4, 25);
             this.tabReceiverControl.Name = "tabReceiverControl";
             this.tabReceiverControl.Padding = new System.Windows.Forms.Padding(3);
-            this.tabReceiverControl.Size = new System.Drawing.Size(1106, 684);
+            this.tabReceiverControl.Size = new System.Drawing.Size(850, 684);
             this.tabReceiverControl.TabIndex = 0;
             this.tabReceiverControl.Text = "接收机控制";
             this.tabReceiverControl.UseVisualStyleBackColor = true;
@@ -67,7 +67,7 @@ namespace A205AutoTestSystem.UI
             this.tabAutoTest.Location = new System.Drawing.Point(4, 25);
             this.tabAutoTest.Name = "tabAutoTest";
             this.tabAutoTest.Padding = new System.Windows.Forms.Padding(3);
-            this.tabAutoTest.Size = new System.Drawing.Size(1106, 657);
+            this.tabAutoTest.Size = new System.Drawing.Size(1106, 684);
             this.tabAutoTest.TabIndex = 1;
             this.tabAutoTest.Text = "自动测试";
             this.tabAutoTest.UseVisualStyleBackColor = true;
@@ -77,7 +77,7 @@ namespace A205AutoTestSystem.UI
             this.receiverControlPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.receiverControlPanel.Location = new System.Drawing.Point(3, 3);
             this.receiverControlPanel.Name = "receiverControlPanel";
-            this.receiverControlPanel.Size = new System.Drawing.Size(1100, 678);
+            this.receiverControlPanel.Size = new System.Drawing.Size(844, 678);
             this.receiverControlPanel.TabIndex = 0;
             // 
             // autoTestPanel
@@ -85,17 +85,17 @@ namespace A205AutoTestSystem.UI
             this.autoTestPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.autoTestPanel.Location = new System.Drawing.Point(3, 3);
             this.autoTestPanel.Name = "autoTestPanel";
-            this.autoTestPanel.Size = new System.Drawing.Size(1100, 651);
+            this.autoTestPanel.Size = new System.Drawing.Size(1100, 678);
             this.autoTestPanel.TabIndex = 0;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1114, 713);
+            this.ClientSize = new System.Drawing.Size(858, 713);
             this.Controls.Add(this.tabControl);
-            this.MinimumSize = new System.Drawing.Size(912, 639);
             this.Name = "MainForm";
+            this.SizeGripStyle = System.Windows.Forms.SizeGripStyle.Show;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "A205 自动测试系统";
             this.tabControl.ResumeLayout(false);

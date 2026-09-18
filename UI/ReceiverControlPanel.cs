@@ -122,11 +122,11 @@ namespace A205AutoTestSystem.UI
                 Logger.Log($"[UI] 获取串口列表失败：{ex.Message}");
             }
 
-            // 波特率默认 9600（在 Designer 中已添加 Items）
-            int idx9600 = cmbReceiverBaud.Items.IndexOf("9600");
-            if (idx9600 >= 0) cmbReceiverBaud.SelectedIndex = idx9600;
-            idx9600 = cmbMatrixBaud.Items.IndexOf("9600");
-            if (idx9600 >= 0) cmbMatrixBaud.SelectedIndex = idx9600;
+            // 波特率默认 115200（在 Designer 中已添加 Items）
+            int idx115200 = cmbReceiverBaud.Items.IndexOf("115200");
+            if (idx115200 >= 0) cmbReceiverBaud.SelectedIndex = idx115200;
+            idx115200 = cmbMatrixBaud.Items.IndexOf("115200");
+            if (idx115200 >= 0) cmbMatrixBaud.SelectedIndex = idx115200;
 
             // 参数默认
             rbTempNormal.Checked = true;

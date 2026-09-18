@@ -87,7 +87,7 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig.Location = new System.Drawing.Point(8, 8);
             this.grpTestConfig.Name = "grpTestConfig";
             this.grpTestConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestConfig.Size = new System.Drawing.Size(1084, 100);
+            this.grpTestConfig.Size = new System.Drawing.Size(825, 100);
             this.grpTestConfig.TabIndex = 0;
             this.grpTestConfig.TabStop = false;
             this.grpTestConfig.Text = "测试配置";
@@ -96,15 +96,15 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblConfigChannel.Location = new System.Drawing.Point(14, 29);
             this.lblConfigChannel.Name = "lblConfigChannel";
-            this.lblConfigChannel.Size = new System.Drawing.Size(48, 20);
+            this.lblConfigChannel.Size = new System.Drawing.Size(43, 21);
             this.lblConfigChannel.TabIndex = 0;
-            this.lblConfigChannel.Text = "通道：";
+            this.lblConfigChannel.Text = "通道";
             this.lblConfigChannel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbChannel
             // 
             this.cmbChannel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbChannel.Location = new System.Drawing.Point(66, 27);
+            this.cmbChannel.Location = new System.Drawing.Point(63, 27);
             this.cmbChannel.Name = "cmbChannel";
             this.cmbChannel.Size = new System.Drawing.Size(100, 23);
             this.cmbChannel.TabIndex = 1;
@@ -113,15 +113,15 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblConfigMode.Location = new System.Drawing.Point(174, 29);
             this.lblConfigMode.Name = "lblConfigMode";
-            this.lblConfigMode.Size = new System.Drawing.Size(48, 20);
+            this.lblConfigMode.Size = new System.Drawing.Size(44, 20);
             this.lblConfigMode.TabIndex = 2;
-            this.lblConfigMode.Text = "模式：";
+            this.lblConfigMode.Text = "模式";
             this.lblConfigMode.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbMode
             // 
             this.cmbMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMode.Location = new System.Drawing.Point(228, 27);
+            this.cmbMode.Location = new System.Drawing.Point(224, 26);
             this.cmbMode.Name = "cmbMode";
             this.cmbMode.Size = new System.Drawing.Size(100, 23);
             this.cmbMode.TabIndex = 3;
@@ -130,22 +130,22 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblConfigTemp.Location = new System.Drawing.Point(336, 29);
             this.lblConfigTemp.Name = "lblConfigTemp";
-            this.lblConfigTemp.Size = new System.Drawing.Size(48, 20);
+            this.lblConfigTemp.Size = new System.Drawing.Size(38, 21);
             this.lblConfigTemp.TabIndex = 4;
-            this.lblConfigTemp.Text = "温度：";
+            this.lblConfigTemp.Text = "温度";
             this.lblConfigTemp.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbTemp
             // 
             this.cmbTemp.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbTemp.Location = new System.Drawing.Point(390, 27);
+            this.cmbTemp.Location = new System.Drawing.Point(380, 26);
             this.cmbTemp.Name = "cmbTemp";
             this.cmbTemp.Size = new System.Drawing.Size(100, 23);
             this.cmbTemp.TabIndex = 5;
             // 
             // btnInitEnv
             // 
-            this.btnInitEnv.Location = new System.Drawing.Point(510, 26);
+            this.btnInitEnv.Location = new System.Drawing.Point(525, 25);
             this.btnInitEnv.Name = "btnInitEnv";
             this.btnInitEnv.Size = new System.Drawing.Size(120, 28);
             this.btnInitEnv.TabIndex = 6;
@@ -155,7 +155,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoadTests
             // 
-            this.btnLoadTests.Location = new System.Drawing.Point(638, 26);
+            this.btnLoadTests.Location = new System.Drawing.Point(692, 25);
             this.btnLoadTests.Name = "btnLoadTests";
             this.btnLoadTests.Size = new System.Drawing.Size(120, 28);
             this.btnLoadTests.TabIndex = 7;
@@ -168,7 +168,7 @@ namespace A205AutoTestSystem.UI
             this.btnExportExcel.Enabled = false;
             this.btnExportExcel.Location = new System.Drawing.Point(14, 62);
             this.btnExportExcel.Name = "btnExportExcel";
-            this.btnExportExcel.Size = new System.Drawing.Size(1056, 28);
+            this.btnExportExcel.Size = new System.Drawing.Size(798, 28);
             this.btnExportExcel.TabIndex = 8;
             this.btnExportExcel.Text = "导出 Excel（M7）";
             this.btnExportExcel.UseVisualStyleBackColor = true;
@@ -184,7 +184,7 @@ namespace A205AutoTestSystem.UI
             this.grpTestItems.Location = new System.Drawing.Point(8, 114);
             this.grpTestItems.Name = "grpTestItems";
             this.grpTestItems.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestItems.Size = new System.Drawing.Size(1084, 134);
+            this.grpTestItems.Size = new System.Drawing.Size(825, 156);
             this.grpTestItems.TabIndex = 1;
             this.grpTestItems.TabStop = false;
             this.grpTestItems.Text = "测试项目";
@@ -245,27 +245,27 @@ namespace A205AutoTestSystem.UI
             this.grpProgressLog.Controls.Add(this.lblCurrentStep);
             this.grpProgressLog.Controls.Add(this.rtbLog);
             this.grpProgressLog.Controls.Add(this.btnClearLog);
-            this.grpProgressLog.Location = new System.Drawing.Point(8, 256);
+            this.grpProgressLog.Location = new System.Drawing.Point(8, 276);
             this.grpProgressLog.Name = "grpProgressLog";
             this.grpProgressLog.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpProgressLog.Size = new System.Drawing.Size(1084, 387);
+            this.grpProgressLog.Size = new System.Drawing.Size(822, 396);
             this.grpProgressLog.TabIndex = 2;
             this.grpProgressLog.TabStop = false;
             this.grpProgressLog.Text = "进度与日志";
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(14, 27);
+            this.progressBar.Location = new System.Drawing.Point(4, 27);
             this.progressBar.Name = "progressBar";
-            this.progressBar.Size = new System.Drawing.Size(1056, 20);
+            this.progressBar.Size = new System.Drawing.Size(815, 25);
             this.progressBar.TabIndex = 0;
             // 
             // lblCurrentStep
             // 
             this.lblCurrentStep.ForeColor = System.Drawing.Color.DarkBlue;
-            this.lblCurrentStep.Location = new System.Drawing.Point(14, 55);
+            this.lblCurrentStep.Location = new System.Drawing.Point(3, 59);
             this.lblCurrentStep.Name = "lblCurrentStep";
-            this.lblCurrentStep.Size = new System.Drawing.Size(1056, 24);
+            this.lblCurrentStep.Size = new System.Drawing.Size(816, 24);
             this.lblCurrentStep.TabIndex = 1;
             this.lblCurrentStep.Text = "当前步骤：（无）";
             this.lblCurrentStep.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -276,16 +276,16 @@ namespace A205AutoTestSystem.UI
             this.rtbLog.DetectUrls = false;
             this.rtbLog.Font = new System.Drawing.Font("Consolas", 9F);
             this.rtbLog.ForeColor = System.Drawing.Color.LightGreen;
-            this.rtbLog.Location = new System.Drawing.Point(14, 89);
+            this.rtbLog.Location = new System.Drawing.Point(4, 89);
             this.rtbLog.Name = "rtbLog";
             this.rtbLog.ReadOnly = true;
-            this.rtbLog.Size = new System.Drawing.Size(1056, 253);
+            this.rtbLog.Size = new System.Drawing.Size(815, 275);
             this.rtbLog.TabIndex = 2;
             this.rtbLog.Text = "";
             // 
             // btnClearLog
             // 
-            this.btnClearLog.Location = new System.Drawing.Point(1000, 346);
+            this.btnClearLog.Location = new System.Drawing.Point(749, 367);
             this.btnClearLog.Name = "btnClearLog";
             this.btnClearLog.Size = new System.Drawing.Size(70, 26);
             this.btnClearLog.TabIndex = 3;
@@ -301,7 +301,7 @@ namespace A205AutoTestSystem.UI
             this.Controls.Add(this.grpTestItems);
             this.Controls.Add(this.grpProgressLog);
             this.Name = "AutoTestPanel";
-            this.Size = new System.Drawing.Size(1100, 651);
+            this.Size = new System.Drawing.Size(844, 672);
             this.grpTestConfig.ResumeLayout(false);
             this.grpTestItems.ResumeLayout(false);
             this.grpProgressLog.ResumeLayout(false);

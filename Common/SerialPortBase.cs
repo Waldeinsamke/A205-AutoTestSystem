@@ -35,10 +35,10 @@ namespace A205AutoTestSystem.Common
 
         protected SerialPortBase()
         {
-            // 默认基础配置：9600 / 8 / N / 1
+            // 默认基础配置：115200 / 8 / N / 1
             _serialPort = new SerialPort
             {
-                BaudRate = 9600,
+                BaudRate = 115200,
                 DataBits = 8,
                 Parity = Parity.None,
                 StopBits = StopBits.One,
@@ -52,7 +52,7 @@ namespace A205AutoTestSystem.Common
         /// <summary>
         /// 打开指定串口。
         /// </summary>
-        public virtual void Open(string portName, int baudRate = 9600)
+        public virtual void Open(string portName, int baudRate = 115200)
         {
             if (_disposed)
             {
