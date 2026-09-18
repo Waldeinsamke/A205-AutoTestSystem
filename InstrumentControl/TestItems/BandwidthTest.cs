@@ -83,7 +83,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             progress.Report("[BandwidthTest] 配置频谱仪…");
             _sa.SetCenterFrequency(_ifFreqHz);
             _sa.SetSpan(100_000);
-            _sa.SetRbw(1_000);
+            _sa.SetResolutionBandwidth(1.0); // 1 kHz RBW
 
             // 让信号稳定
             await Task.Delay(200, ct).ConfigureAwait(false);

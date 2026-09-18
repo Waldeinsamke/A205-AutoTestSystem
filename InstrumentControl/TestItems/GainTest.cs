@@ -92,7 +92,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             Logger.Log("[GainTest] 配置频谱仪…");
             _sa.SetCenterFrequency(_ifFreqHz);
             _sa.SetSpan(10_000);
-            _sa.SetRbw(1_000);
+            _sa.SetResolutionBandwidth(1.0); // 1 kHz RBW
 
             progress.Report($"[GainTest] 等待信号稳定 {SettleDelayMs}ms…");
             await Task.Delay(SettleDelayMs, ct).ConfigureAwait(false);
