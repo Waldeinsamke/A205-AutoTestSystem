@@ -94,6 +94,7 @@
     <Compile Include="InstrumentControl\SignalGenerator.cs" />
     <Compile Include="InstrumentControl\SignalGeneratorLO.cs" />
     <Compile Include="InstrumentControl\SpectrumAnalyzer.cs" />
+    <Compile Include="InstrumentControl\ODP3063.cs" />
     <!-- 本振频率计算规则（LO 随 RF 动态计算）-->
     <Compile Include="InstrumentControl\LoFrequencyRule.cs" />
     <Compile Include="UI\MainForm.cs">

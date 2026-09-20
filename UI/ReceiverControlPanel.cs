@@ -33,6 +33,11 @@ namespace A205AutoTestSystem.UI
         private SignalGenerator _rfGenerator;
         private SignalGeneratorLO _loGenerator;
         private SpectrumAnalyzer _spectrumAnalyzer;
+        private ODP3063 _powerSupply;
+
+        // 电源输出的软件侧状态：连接时不查询/不设置仪表，默认视为未输出（OFF）；
+        // 每次点击 btnOpenPower 立即翻转并下发 :OUTP2:STAT 命令。
+        private bool _powerOutputOn = false;
 
         // 频段 ComboBox 当前显示列表（依模式动态变化，由 RefreshBandCombo 写入）
         private IReadOnlyList<ModeBandTable.BandInfo> _currentBands;
@@ -51,6 +56,11 @@ namespace A205AutoTestSystem.UI
         private const double SaSpanModeHz = 50_000_000.0;             // 所有模式 Span 均为 50 MHz
         private const double SaCenterFreqMode12Hz = 70_000_000.0;    // Mode1/2 中频 70 MHz
         private const double SaCenterFreqMode3Hz = 750_000_000.0;    // Mode3 中心 750 MHz
+
+        // 模式联动信号源功率（dBm）
+        private const double RfPowerMode13Dbm = -20.0;               // Mode1/Mode3 RF 功率
+        private const double RfPowerMode2Dbm = -10.0;                // Mode2 RF 功率
+        private const double LoPowerModeDbm = 3.0;                   // 三个模式 LO 均为 3 dBm
 
         // ============================================================
         // 构造与生命周期
@@ -87,6 +97,7 @@ namespace A205AutoTestSystem.UI
                 try { _rfGenerator?.Dispose(); } catch { }
                 try { _loGenerator?.Dispose(); } catch { }
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
+                try { _powerSupply?.Dispose(); } catch { }
 
                 // Designer 创建的控件容器（容器内含 ComboBox 等需显式释放的资源）
                 if (components != null)
@@ -151,6 +162,7 @@ namespace A205AutoTestSystem.UI
             pnlRfStatus.BackColor = StatusColorDisconnected;
             pnlLoStatus.BackColor = StatusColorDisconnected;
             pnlSaStatus.BackColor = StatusColorDisconnected;
+            pnlPowerStatus.BackColor = StatusColorDisconnected;
         }
 
         // ============================================================
@@ -291,7 +303,7 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        // -------- 模式切换（联动频段下拉 + 频谱仪中心频率/Span）
+        // -------- 模式切换（联动频段下拉 + 频谱仪中心频率/Span + RF/LO 功率）
         private void OnModeChanged(object sender, EventArgs e)
         {
             if (!_initialized) return;
@@ -304,6 +316,7 @@ namespace A205AutoTestSystem.UI
 
             RefreshBandCombo(mode);
             ApplySpectrumAnalyzerForMode(mode);
+            ApplySignalPowerForMode(mode);
         }
 
         /// <summary>
@@ -332,6 +345,51 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 Logger.Log($"[UI] 频谱仪模式联动设置失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 按当前工作模式联动设置 RF/LO 信号源输出功率：
+        /// Mode1/3 → RF -20 dBm；Mode2 → RF -10 dBm；LO 三个模式均为 3 dBm。
+        /// 仅设置功率，不改变频率与输出开关；单台仪表未连接或设置失败只记录日志，不打断模式切换。
+        /// </summary>
+        private void ApplySignalPowerForMode(ReceiverMode mode)
+        {
+            double rfPowerDbm = mode == ReceiverMode.Mode2
+                ? RfPowerMode2Dbm
+                : RfPowerMode13Dbm;
+
+            if (_rfGenerator == null || !_rfGenerator.IsConnected)
+            {
+                Logger.Log("[UI] RF 信号源未连接，跳过模式联动的 RF 功率设置");
+            }
+            else
+            {
+                try
+                {
+                    _rfGenerator.SetPower(rfPowerDbm);
+                    Logger.Log($"[UI] RF 信号源已按 {mode} 联动设置功率 {rfPowerDbm} dBm");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[UI] RF 信号源模式联动功率设置失败: {ex.Message}");
+                }
+            }
+
+            if (_loGenerator == null || !_loGenerator.IsConnected)
+            {
+                Logger.Log("[UI] LO 信号源未连接，跳过模式联动的 LO 功率设置");
+                return;
+            }
+
+            try
+            {
+                _loGenerator.SetPower(LoPowerModeDbm);
+                Logger.Log($"[UI] LO 信号源已按 {mode} 联动设置功率 {LoPowerModeDbm} dBm");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] LO 信号源模式联动功率设置失败: {ex.Message}");
             }
         }
 
@@ -573,6 +631,86 @@ namespace A205AutoTestSystem.UI
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
                 _spectrumAnalyzer = null;
                 pnlSaStatus.BackColor = StatusColorDisconnected;
+            }
+        }
+
+        private void OnPowerConnectClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_powerSupply != null && _powerSupply.IsConnected)
+                {
+                    MessageBox.Show(this, "电源已连接。", "提示",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                _powerSupply = new ODP3063(txtPowerAddress.Text.Trim());
+                _powerSupply.Connect();
+                pnlPowerStatus.BackColor = StatusColorConnected;
+                // 按约定：连接后不主动发命令，软件侧默认视为未输出（OFF）
+                _powerOutputOn = false;
+                btnOpenPower.Text = "开启供电";
+                Logger.Log("[UI] ODP3063 power supply connected.");
+            }
+            catch (Exception ex)
+            {
+                pnlPowerStatus.BackColor = StatusColorDisconnected;
+                try { _powerSupply?.Dispose(); } catch { }
+                _powerSupply = null;
+                Logger.Log("[Error] 电源连接失败: " + ex.Message);
+                MessageBox.Show(this, "电源连接失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OnPowerDisconnectClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                _powerSupply?.Disconnect();
+                Logger.Log("[UI] ODP3063 power supply disconnected.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Error] 电源断开失败: " + ex.Message);
+            }
+            finally
+            {
+                try { _powerSupply?.Dispose(); } catch { }
+                _powerSupply = null;
+                pnlPowerStatus.BackColor = StatusColorDisconnected;
+                // 下次连接仍按默认 OFF 处理，按钮恢复对应文字
+                _powerOutputOn = false;
+                btnOpenPower.Text = "开启供电";
+            }
+        }
+
+        // -------- 电源输出开关（每次点击立即翻转）
+        private void OnOpenPowerClicked(object sender, EventArgs e)
+        {
+            if (_powerSupply == null || !_powerSupply.IsConnected)
+            {
+                MessageBox.Show(this, "请先连接电源。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            _powerOutputOn = !_powerOutputOn;
+            try
+            {
+                _powerSupply.EnableChannel2Output(_powerOutputOn);
+                btnOpenPower.Text = _powerOutputOn ? "关闭供电" : "开启供电";
+                Logger.Log(_powerOutputOn
+                    ? "[UI] Power output enabled."
+                    : "[UI] Power output disabled.");
+            }
+            catch (Exception ex)
+            {
+                // 命令发送失败：回滚本地状态，保持与硬件一致
+                _powerOutputOn = !_powerOutputOn;
+                Logger.Log("[Error] 电源输出切换失败: " + ex.Message);
+                MessageBox.Show(this, "电源输出切换失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

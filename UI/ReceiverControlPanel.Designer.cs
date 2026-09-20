@@ -69,6 +69,11 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.TextBox txtSaAddress;
         private System.Windows.Forms.Button btnSaConnect;
         private System.Windows.Forms.Button btnSaDisconnect;
+        private System.Windows.Forms.Panel pnlPowerStatus;
+        private System.Windows.Forms.Label lblPower;
+        private System.Windows.Forms.TextBox txtPowerAddress;
+        private System.Windows.Forms.Button btnPowerConnect;
+        private System.Windows.Forms.Button btnPowerDisconnect;
 
         // 通信日志区
         private System.Windows.Forms.GroupBox grpCommunicationLog;
@@ -133,6 +138,11 @@ namespace A205AutoTestSystem.UI
             this.txtSaAddress = new System.Windows.Forms.TextBox();
             this.btnSaConnect = new System.Windows.Forms.Button();
             this.btnSaDisconnect = new System.Windows.Forms.Button();
+            this.pnlPowerStatus = new System.Windows.Forms.Panel();
+            this.lblPower = new System.Windows.Forms.Label();
+            this.txtPowerAddress = new System.Windows.Forms.TextBox();
+            this.btnPowerConnect = new System.Windows.Forms.Button();
+            this.btnPowerDisconnect = new System.Windows.Forms.Button();
             this.grpCommunicationLog = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.btnLogClear = new System.Windows.Forms.Button();
@@ -376,7 +386,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblChannelHint.AutoSize = true;
             this.lblChannelHint.ForeColor = System.Drawing.Color.Gray;
-            this.lblChannelHint.Location = new System.Drawing.Point(330, 65);
+            this.lblChannelHint.Location = new System.Drawing.Point(321, 64);
             this.lblChannelHint.Name = "lblChannelHint";
             this.lblChannelHint.Size = new System.Drawing.Size(202, 15);
             this.lblChannelHint.TabIndex = 7;
@@ -475,7 +485,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblBandHint.AutoSize = true;
             this.lblBandHint.ForeColor = System.Drawing.Color.Gray;
-            this.lblBandHint.Location = new System.Drawing.Point(411, 129);
+            this.lblBandHint.Location = new System.Drawing.Point(413, 129);
             this.lblBandHint.Name = "lblBandHint";
             this.lblBandHint.Size = new System.Drawing.Size(172, 15);
             this.lblBandHint.TabIndex = 16;
@@ -521,7 +531,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.lblAgcUnit.AutoSize = true;
             this.lblAgcUnit.ForeColor = System.Drawing.Color.Gray;
-            this.lblAgcUnit.Location = new System.Drawing.Point(411, 160);
+            this.lblAgcUnit.Location = new System.Drawing.Point(416, 160);
             this.lblAgcUnit.Name = "lblAgcUnit";
             this.lblAgcUnit.Size = new System.Drawing.Size(107, 15);
             this.lblAgcUnit.TabIndex = 20;
@@ -544,6 +554,11 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentStatus.Controls.Add(this.txtSaAddress);
             this.grpInstrumentStatus.Controls.Add(this.btnSaConnect);
             this.grpInstrumentStatus.Controls.Add(this.btnSaDisconnect);
+            this.grpInstrumentStatus.Controls.Add(this.pnlPowerStatus);
+            this.grpInstrumentStatus.Controls.Add(this.lblPower);
+            this.grpInstrumentStatus.Controls.Add(this.txtPowerAddress);
+            this.grpInstrumentStatus.Controls.Add(this.btnPowerConnect);
+            this.grpInstrumentStatus.Controls.Add(this.btnPowerDisconnect);
             this.grpInstrumentStatus.Location = new System.Drawing.Point(0, 294);
             this.grpInstrumentStatus.Name = "grpInstrumentStatus";
             this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
@@ -556,7 +571,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.pnlRfStatus.BackColor = System.Drawing.Color.Red;
             this.pnlRfStatus.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlRfStatus.Location = new System.Drawing.Point(14, 31);
+            this.pnlRfStatus.Location = new System.Drawing.Point(15, 27);
             this.pnlRfStatus.Margin = new System.Windows.Forms.Padding(6);
             this.pnlRfStatus.Name = "pnlRfStatus";
             this.pnlRfStatus.Size = new System.Drawing.Size(16, 16);
@@ -564,7 +579,7 @@ namespace A205AutoTestSystem.UI
             // 
             // lblRf
             // 
-            this.lblRf.Location = new System.Drawing.Point(36, 28);
+            this.lblRf.Location = new System.Drawing.Point(37, 24);
             this.lblRf.Name = "lblRf";
             this.lblRf.Size = new System.Drawing.Size(106, 24);
             this.lblRf.TabIndex = 1;
@@ -573,7 +588,7 @@ namespace A205AutoTestSystem.UI
             // 
             // txtRfAddress
             // 
-            this.txtRfAddress.Location = new System.Drawing.Point(144, 28);
+            this.txtRfAddress.Location = new System.Drawing.Point(145, 24);
             this.txtRfAddress.Name = "txtRfAddress";
             this.txtRfAddress.Size = new System.Drawing.Size(280, 25);
             this.txtRfAddress.TabIndex = 3;
@@ -581,7 +596,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnRfConnect
             // 
-            this.btnRfConnect.Location = new System.Drawing.Point(434, 26);
+            this.btnRfConnect.Location = new System.Drawing.Point(435, 22);
             this.btnRfConnect.Name = "btnRfConnect";
             this.btnRfConnect.Size = new System.Drawing.Size(72, 26);
             this.btnRfConnect.TabIndex = 4;
@@ -591,7 +606,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnRfDisconnect
             // 
-            this.btnRfDisconnect.Location = new System.Drawing.Point(512, 26);
+            this.btnRfDisconnect.Location = new System.Drawing.Point(513, 22);
             this.btnRfDisconnect.Name = "btnRfDisconnect";
             this.btnRfDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnRfDisconnect.TabIndex = 5;
@@ -603,7 +618,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.pnlLoStatus.BackColor = System.Drawing.Color.Red;
             this.pnlLoStatus.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlLoStatus.Location = new System.Drawing.Point(14, 63);
+            this.pnlLoStatus.Location = new System.Drawing.Point(15, 59);
             this.pnlLoStatus.Margin = new System.Windows.Forms.Padding(6);
             this.pnlLoStatus.Name = "pnlLoStatus";
             this.pnlLoStatus.Size = new System.Drawing.Size(16, 16);
@@ -611,7 +626,7 @@ namespace A205AutoTestSystem.UI
             // 
             // lblLo
             // 
-            this.lblLo.Location = new System.Drawing.Point(36, 60);
+            this.lblLo.Location = new System.Drawing.Point(37, 56);
             this.lblLo.Name = "lblLo";
             this.lblLo.Size = new System.Drawing.Size(106, 24);
             this.lblLo.TabIndex = 7;
@@ -620,7 +635,7 @@ namespace A205AutoTestSystem.UI
             // 
             // txtLoAddress
             // 
-            this.txtLoAddress.Location = new System.Drawing.Point(144, 60);
+            this.txtLoAddress.Location = new System.Drawing.Point(145, 56);
             this.txtLoAddress.Name = "txtLoAddress";
             this.txtLoAddress.Size = new System.Drawing.Size(280, 25);
             this.txtLoAddress.TabIndex = 9;
@@ -628,7 +643,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoConnect
             // 
-            this.btnLoConnect.Location = new System.Drawing.Point(434, 58);
+            this.btnLoConnect.Location = new System.Drawing.Point(435, 54);
             this.btnLoConnect.Name = "btnLoConnect";
             this.btnLoConnect.Size = new System.Drawing.Size(72, 26);
             this.btnLoConnect.TabIndex = 10;
@@ -638,7 +653,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoDisconnect
             // 
-            this.btnLoDisconnect.Location = new System.Drawing.Point(512, 58);
+            this.btnLoDisconnect.Location = new System.Drawing.Point(513, 54);
             this.btnLoDisconnect.Name = "btnLoDisconnect";
             this.btnLoDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnLoDisconnect.TabIndex = 11;
@@ -650,7 +665,7 @@ namespace A205AutoTestSystem.UI
             // 
             this.pnlSaStatus.BackColor = System.Drawing.Color.Red;
             this.pnlSaStatus.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pnlSaStatus.Location = new System.Drawing.Point(14, 95);
+            this.pnlSaStatus.Location = new System.Drawing.Point(15, 91);
             this.pnlSaStatus.Margin = new System.Windows.Forms.Padding(6);
             this.pnlSaStatus.Name = "pnlSaStatus";
             this.pnlSaStatus.Size = new System.Drawing.Size(16, 16);
@@ -658,7 +673,7 @@ namespace A205AutoTestSystem.UI
             // 
             // lblSa
             // 
-            this.lblSa.Location = new System.Drawing.Point(36, 92);
+            this.lblSa.Location = new System.Drawing.Point(37, 88);
             this.lblSa.Name = "lblSa";
             this.lblSa.Size = new System.Drawing.Size(106, 24);
             this.lblSa.TabIndex = 13;
@@ -667,7 +682,7 @@ namespace A205AutoTestSystem.UI
             // 
             // txtSaAddress
             // 
-            this.txtSaAddress.Location = new System.Drawing.Point(144, 92);
+            this.txtSaAddress.Location = new System.Drawing.Point(145, 88);
             this.txtSaAddress.Name = "txtSaAddress";
             this.txtSaAddress.Size = new System.Drawing.Size(280, 25);
             this.txtSaAddress.TabIndex = 15;
@@ -675,7 +690,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaConnect
             // 
-            this.btnSaConnect.Location = new System.Drawing.Point(434, 90);
+            this.btnSaConnect.Location = new System.Drawing.Point(435, 86);
             this.btnSaConnect.Name = "btnSaConnect";
             this.btnSaConnect.Size = new System.Drawing.Size(72, 26);
             this.btnSaConnect.TabIndex = 16;
@@ -685,13 +700,59 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaDisconnect
             // 
-            this.btnSaDisconnect.Location = new System.Drawing.Point(512, 90);
+            this.btnSaDisconnect.Location = new System.Drawing.Point(513, 86);
             this.btnSaDisconnect.Name = "btnSaDisconnect";
             this.btnSaDisconnect.Size = new System.Drawing.Size(72, 26);
             this.btnSaDisconnect.TabIndex = 17;
             this.btnSaDisconnect.Text = "断开";
             this.btnSaDisconnect.UseVisualStyleBackColor = true;
             this.btnSaDisconnect.Click += new System.EventHandler(this.OnSaDisconnectClicked);
+            // 
+            // pnlPowerStatus
+            // 
+            this.pnlPowerStatus.BackColor = System.Drawing.Color.Red;
+            this.pnlPowerStatus.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pnlPowerStatus.Location = new System.Drawing.Point(15, 123);
+            this.pnlPowerStatus.Margin = new System.Windows.Forms.Padding(6);
+            this.pnlPowerStatus.Name = "pnlPowerStatus";
+            this.pnlPowerStatus.Size = new System.Drawing.Size(16, 16);
+            this.pnlPowerStatus.TabIndex = 21;
+            // 
+            // lblPower
+            // 
+            this.lblPower.Location = new System.Drawing.Point(37, 120);
+            this.lblPower.Name = "lblPower";
+            this.lblPower.Size = new System.Drawing.Size(106, 24);
+            this.lblPower.TabIndex = 22;
+            this.lblPower.Text = "电源地址";
+            this.lblPower.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            // 
+            // txtPowerAddress
+            // 
+            this.txtPowerAddress.Location = new System.Drawing.Point(145, 120);
+            this.txtPowerAddress.Name = "txtPowerAddress";
+            this.txtPowerAddress.Size = new System.Drawing.Size(280, 25);
+            this.txtPowerAddress.TabIndex = 23;
+            // 
+            // btnPowerConnect
+            // 
+            this.btnPowerConnect.Location = new System.Drawing.Point(435, 118);
+            this.btnPowerConnect.Name = "btnPowerConnect";
+            this.btnPowerConnect.Size = new System.Drawing.Size(72, 26);
+            this.btnPowerConnect.TabIndex = 24;
+            this.btnPowerConnect.Text = "连接";
+            this.btnPowerConnect.UseVisualStyleBackColor = true;
+            this.btnPowerConnect.Click += new System.EventHandler(this.OnPowerConnectClicked);
+            // 
+            // btnPowerDisconnect
+            // 
+            this.btnPowerDisconnect.Location = new System.Drawing.Point(513, 118);
+            this.btnPowerDisconnect.Name = "btnPowerDisconnect";
+            this.btnPowerDisconnect.Size = new System.Drawing.Size(72, 26);
+            this.btnPowerDisconnect.TabIndex = 25;
+            this.btnPowerDisconnect.Text = "断开";
+            this.btnPowerDisconnect.UseVisualStyleBackColor = true;
+            this.btnPowerDisconnect.Click += new System.EventHandler(this.OnPowerDisconnectClicked);
             // 
             // grpCommunicationLog
             // 
@@ -736,6 +797,7 @@ namespace A205AutoTestSystem.UI
             this.btnOpenPower.TabIndex = 22;
             this.btnOpenPower.Text = "开启供电";
             this.btnOpenPower.UseVisualStyleBackColor = true;
+            this.btnOpenPower.Click += new System.EventHandler(this.OnOpenPowerClicked);
             // 
             // ReceiverControlPanel
             // 
