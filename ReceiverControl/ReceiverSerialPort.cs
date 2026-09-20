@@ -32,13 +32,13 @@ namespace A205AutoTestSystem.ReceiverControl
         public int InterSequenceIntervalMs { get; set; } = 100;
 
         /// <summary>
-        /// 发送通道选择命令（单条帧）。
+        /// 发送指定工作模式下的通道选择命令（单条帧）。
         /// </summary>
-        public void SendChannelCommand(int channel)
+        public void SendChannelCommand(int channel, ReceiverMode mode)
         {
-            byte[] frame = _builder.BuildChannelCommand(channel);
+            byte[] frame = _builder.BuildChannelCommand(channel, mode);
             SendBytes(frame);
-            Logger.Log($"[Receiver] SendChannelCommand ch={channel} -> {FormatHex(frame)}");
+            Logger.Log($"[Receiver] SendChannelCommand mode={mode} ch={channel} -> {FormatHex(frame)}");
         }
 
         /// <summary>
@@ -49,6 +49,23 @@ namespace A205AutoTestSystem.ReceiverControl
             byte[][] sequence = _builder.BuildModeCommandSequence(mode);
             Logger.Log($"[Receiver] SendModeCommand mode={mode} ({sequence.Length} frames)");
             SendSequence(sequence);
+        }
+
+        /// <summary>
+        /// 先发送当前模式对应的通道选择命令，按 <see cref="InterSequenceIntervalMs"/> 等待后，
+        /// 再发送工作模式命令序列。
+        /// <para>通道命令发送失败时异常直接向上抛出，模式命令不会继续发送。</para>
+        /// </summary>
+        public void SendChannelThenModeCommand(int channel, ReceiverMode mode)
+        {
+            SendChannelCommand(channel, mode);
+
+            if (InterSequenceIntervalMs > 0)
+            {
+                Thread.Sleep(InterSequenceIntervalMs);
+            }
+
+            SendModeCommand(mode);
         }
 
         /// <summary>

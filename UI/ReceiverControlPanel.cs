@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.IO.Ports;
 using System.Windows.Forms;
@@ -29,7 +28,6 @@ namespace A205AutoTestSystem.UI
         // 业务对象（保留 _ 前缀；非控件字段，Designer 不感知）
         // ============================================================
         private ReceiverSerialPort _receiver;
-        private ChannelLink _channelLink;
         private readonly MatrixSerialPort _matrix = new MatrixSerialPort();
 
         private SignalGenerator _rfGenerator;
@@ -48,6 +46,11 @@ namespace A205AutoTestSystem.UI
 
         // 波特率下拉默认值
         private static readonly int[] BaudRateOptions = { 9600, 19200, 38400, 57600, 115200 };
+
+        // 模式联动频谱仪参数（Hz）
+        private const double SaSpanModeHz = 50_000_000.0;             // 所有模式 Span 均为 50 MHz
+        private const double SaCenterFreqMode12Hz = 70_000_000.0;    // Mode1/2 中频 70 MHz
+        private const double SaCenterFreqMode3Hz = 750_000_000.0;    // Mode3 中心 750 MHz
 
         // ============================================================
         // 构造与生命周期
@@ -204,14 +207,11 @@ namespace A205AutoTestSystem.UI
                 _receiver = new ReceiverSerialPort();
                 _receiver.Open(portName, baudRate);
 
-                // 同步实例化 ChannelLink；桩矩阵先放进去，协议到位后由 M3 替换
-                _channelLink = new ChannelLink(_receiver, _matrix);
-                Logger.Log($"[UI] Receiver connected on {portName} @ {baudRate}, ChannelLink ready.");
+                Logger.Log($"[UI] Receiver connected on {portName} @ {baudRate}.");
             }
             catch (Exception ex)
             {
                 _receiver = null;
-                _channelLink = null;
                 MessageBox.Show(this, "打开串口失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -231,7 +231,6 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _receiver = null;
-                _channelLink = null;
             }
         }
 
@@ -274,32 +273,25 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        // -------- 通道联动
+        // -------- 通道下拉切换（仅切换工装矩阵；接收机通道命令由 btnModeSet 随模式下发）
         private void OnChannelSelected(object sender, EventArgs e)
         {
             if (!_initialized) return; // 初始化阶段不触发切换
-            if (_channelLink == null)
-            {
-                Logger.Log("[UI] 通道变更被忽略：_receiver 未连接。");
-                return;
-            }
 
             int ch = cmbChannel.SelectedIndex + 1; // 0..7 → 1..8
             try
             {
-                var sw = Stopwatch.StartNew();
-                _channelLink.SwitchToAsync(ch).GetAwaiter().GetResult();
-                Logger.Log($"[UI] SwitchToAsync ch={ch} 耗时 {sw.ElapsedMilliseconds}ms");
+                _matrix.SwitchChannel(ch);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "通道切换失败: " + ex.Message, "错误",
+                MessageBox.Show(this, "矩阵通道切换失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
-                Logger.Log("[Error] 通道切换失败: " + ex.Message);
+                Logger.Log("[Error] 矩阵通道切换失败: " + ex.Message);
             }
         }
 
-        // -------- 模式切换（联动频段下拉）
+        // -------- 模式切换（联动频段下拉 + 频谱仪中心频率/Span）
         private void OnModeChanged(object sender, EventArgs e)
         {
             if (!_initialized) return;
@@ -311,6 +303,36 @@ namespace A205AutoTestSystem.UI
             else mode = ReceiverMode.Mode3;
 
             RefreshBandCombo(mode);
+            ApplySpectrumAnalyzerForMode(mode);
+        }
+
+        /// <summary>
+        /// 按当前工作模式联动设置频谱仪中心频率与扫频跨度：
+        /// Mode1/2 → 70 MHz / 50 MHz；Mode3 → 750 MHz / 50 MHz。
+        /// 频谱仪未连接时跳过；设置失败仅记录日志，不打断模式切换。
+        /// </summary>
+        private void ApplySpectrumAnalyzerForMode(ReceiverMode mode)
+        {
+            if (_spectrumAnalyzer == null || !_spectrumAnalyzer.IsConnected)
+            {
+                Logger.Log("[UI] 频谱仪未连接，跳过模式联动的中心频率/Span 设置");
+                return;
+            }
+
+            double centerHz = mode == ReceiverMode.Mode3
+                ? SaCenterFreqMode3Hz
+                : SaCenterFreqMode12Hz;
+
+            try
+            {
+                _spectrumAnalyzer.SetFrequencySpan(centerHz, SaSpanModeHz);
+                double centerMHz = centerHz / 1_000_000.0;
+                Logger.Log($"[UI] 频谱仪已按 {mode} 联动设置：中心 {centerMHz:F0} MHz，Span 50 MHz");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] 频谱仪模式联动设置失败: {ex.Message}");
+            }
         }
 
         // -------- 设置按钮
@@ -349,13 +371,15 @@ namespace A205AutoTestSystem.UI
             if (rbMode1.Checked) mode = ReceiverMode.Mode1;
             else if (rbMode2.Checked) mode = ReceiverMode.Mode2;
             else mode = ReceiverMode.Mode3;
+            int ch = cmbChannel.SelectedIndex + 1; // 0..7 → 1..8
             try
             {
-                _receiver.SendModeCommand(mode);
+                // 先发送当前所选通道的通道切换命令，再发送模式切换命令序列
+                _receiver.SendChannelThenModeCommand(ch, mode);
             }
             catch (Exception ex)
             {
-                Logger.Log("[Error] 模式命令发送失败: " + ex.Message);
+                Logger.Log("[Error] 通道/模式命令发送失败: " + ex.Message);
                 MessageBox.Show(this, ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

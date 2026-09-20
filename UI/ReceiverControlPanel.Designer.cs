@@ -136,6 +136,7 @@ namespace A205AutoTestSystem.UI
             this.grpCommunicationLog = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.btnLogClear = new System.Windows.Forms.Button();
+            this.btnOpenPower = new System.Windows.Forms.Button();
             this.grpSerialConnection.SuspendLayout();
             this.grpParameterConfig.SuspendLayout();
             this.pnlTempGroup.SuspendLayout();
@@ -157,10 +158,10 @@ namespace A205AutoTestSystem.UI
             this.grpSerialConnection.Controls.Add(this.cmbMatrixBaud);
             this.grpSerialConnection.Controls.Add(this.btnMatrixConnect);
             this.grpSerialConnection.Controls.Add(this.btnMatrixDisconnect);
-            this.grpSerialConnection.Location = new System.Drawing.Point(8, 8);
+            this.grpSerialConnection.Location = new System.Drawing.Point(0, 8);
             this.grpSerialConnection.Name = "grpSerialConnection";
             this.grpSerialConnection.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpSerialConnection.Size = new System.Drawing.Size(822, 86);
+            this.grpSerialConnection.Size = new System.Drawing.Size(662, 86);
             this.grpSerialConnection.TabIndex = 0;
             this.grpSerialConnection.TabStop = false;
             this.grpSerialConnection.Text = "串口连接";
@@ -286,10 +287,10 @@ namespace A205AutoTestSystem.UI
             this.grpParameterConfig.Controls.Add(this.numAgcAtten);
             this.grpParameterConfig.Controls.Add(this.btnAgcSet);
             this.grpParameterConfig.Controls.Add(this.lblAgcUnit);
-            this.grpParameterConfig.Location = new System.Drawing.Point(8, 100);
+            this.grpParameterConfig.Location = new System.Drawing.Point(0, 100);
             this.grpParameterConfig.Name = "grpParameterConfig";
             this.grpParameterConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpParameterConfig.Size = new System.Drawing.Size(822, 188);
+            this.grpParameterConfig.Size = new System.Drawing.Size(841, 188);
             this.grpParameterConfig.TabIndex = 1;
             this.grpParameterConfig.TabStop = false;
             this.grpParameterConfig.Text = "接收机参数配置";
@@ -543,10 +544,10 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentStatus.Controls.Add(this.txtSaAddress);
             this.grpInstrumentStatus.Controls.Add(this.btnSaConnect);
             this.grpInstrumentStatus.Controls.Add(this.btnSaDisconnect);
-            this.grpInstrumentStatus.Location = new System.Drawing.Point(8, 294);
+            this.grpInstrumentStatus.Location = new System.Drawing.Point(0, 294);
             this.grpInstrumentStatus.Name = "grpInstrumentStatus";
             this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpInstrumentStatus.Size = new System.Drawing.Size(822, 122);
+            this.grpInstrumentStatus.Size = new System.Drawing.Size(841, 153);
             this.grpInstrumentStatus.TabIndex = 2;
             this.grpInstrumentStatus.TabStop = false;
             this.grpInstrumentStatus.Text = "仪表连接状态";
@@ -576,7 +577,7 @@ namespace A205AutoTestSystem.UI
             this.txtRfAddress.Name = "txtRfAddress";
             this.txtRfAddress.Size = new System.Drawing.Size(280, 25);
             this.txtRfAddress.TabIndex = 3;
-            this.txtRfAddress.Text = "TCPIP0::192.168.1.10::INSTR";
+            this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252683::INSTR";
             // 
             // btnRfConnect
             // 
@@ -623,7 +624,7 @@ namespace A205AutoTestSystem.UI
             this.txtLoAddress.Name = "txtLoAddress";
             this.txtLoAddress.Size = new System.Drawing.Size(280, 25);
             this.txtLoAddress.TabIndex = 9;
-            this.txtLoAddress.Text = "TCPIP0::192.168.1.11::INSTR";
+            this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY59101329::INSTR";
             // 
             // btnLoConnect
             // 
@@ -670,7 +671,7 @@ namespace A205AutoTestSystem.UI
             this.txtSaAddress.Name = "txtSaAddress";
             this.txtSaAddress.Size = new System.Drawing.Size(280, 25);
             this.txtSaAddress.TabIndex = 15;
-            this.txtSaAddress.Text = "TCPIP0::192.168.1.12::INSTR";
+            this.txtSaAddress.Text = "USB0::0x0957::0x0A0B::MY53290027::INSTR";
             // 
             // btnSaConnect
             // 
@@ -696,10 +697,10 @@ namespace A205AutoTestSystem.UI
             // 
             this.grpCommunicationLog.Controls.Add(this.rtbLog);
             this.grpCommunicationLog.Controls.Add(this.btnLogClear);
-            this.grpCommunicationLog.Location = new System.Drawing.Point(8, 422);
+            this.grpCommunicationLog.Location = new System.Drawing.Point(0, 453);
             this.grpCommunicationLog.Name = "grpCommunicationLog";
             this.grpCommunicationLog.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpCommunicationLog.Size = new System.Drawing.Size(822, 250);
+            this.grpCommunicationLog.Size = new System.Drawing.Size(841, 264);
             this.grpCommunicationLog.TabIndex = 3;
             this.grpCommunicationLog.TabStop = false;
             this.grpCommunicationLog.Text = "通信日志";
@@ -713,13 +714,13 @@ namespace A205AutoTestSystem.UI
             this.rtbLog.Location = new System.Drawing.Point(4, 19);
             this.rtbLog.Name = "rtbLog";
             this.rtbLog.ReadOnly = true;
-            this.rtbLog.Size = new System.Drawing.Size(815, 200);
+            this.rtbLog.Size = new System.Drawing.Size(835, 215);
             this.rtbLog.TabIndex = 0;
             this.rtbLog.Text = "";
             // 
             // btnLogClear
             // 
-            this.btnLogClear.Location = new System.Drawing.Point(749, 221);
+            this.btnLogClear.Location = new System.Drawing.Point(769, 234);
             this.btnLogClear.Name = "btnLogClear";
             this.btnLogClear.Size = new System.Drawing.Size(70, 26);
             this.btnLogClear.TabIndex = 1;
@@ -727,16 +728,26 @@ namespace A205AutoTestSystem.UI
             this.btnLogClear.UseVisualStyleBackColor = true;
             this.btnLogClear.Click += new System.EventHandler(this.OnBtnLogClearClicked);
             // 
+            // btnOpenPower
+            // 
+            this.btnOpenPower.Location = new System.Drawing.Point(668, 16);
+            this.btnOpenPower.Name = "btnOpenPower";
+            this.btnOpenPower.Size = new System.Drawing.Size(173, 78);
+            this.btnOpenPower.TabIndex = 22;
+            this.btnOpenPower.Text = "开启供电";
+            this.btnOpenPower.UseVisualStyleBackColor = true;
+            // 
             // ReceiverControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.Controls.Add(this.btnOpenPower);
             this.Controls.Add(this.grpSerialConnection);
             this.Controls.Add(this.grpParameterConfig);
             this.Controls.Add(this.grpInstrumentStatus);
             this.Controls.Add(this.grpCommunicationLog);
             this.Name = "ReceiverControlPanel";
-            this.Size = new System.Drawing.Size(844, 672);
+            this.Size = new System.Drawing.Size(844, 718);
             this.grpSerialConnection.ResumeLayout(false);
             this.grpParameterConfig.ResumeLayout(false);
             this.grpParameterConfig.PerformLayout();
@@ -753,5 +764,7 @@ namespace A205AutoTestSystem.UI
         }
 
         #endregion
+
+        private System.Windows.Forms.Button btnOpenPower;
     }
 }

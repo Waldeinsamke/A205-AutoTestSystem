@@ -81,7 +81,6 @@
     <Compile Include="Common\TestReportManager.cs" />
     <Compile Include="ReceiverControl\ReceiverCommandBuilder.cs" />
     <Compile Include="ReceiverControl\ReceiverSerialPort.cs" />
-    <Compile Include="ReceiverControl\ChannelLink.cs" />
     <Compile Include="MatrixControl\IChannelSwitcher.cs" />
     <Compile Include="MatrixControl\MatrixSerialPort.cs" />
     <Compile Include="InstrumentControl\TestResult.cs" />

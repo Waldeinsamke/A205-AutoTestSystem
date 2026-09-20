@@ -104,24 +104,24 @@ namespace A205AutoTestSystem.Tests.BuilderTests
 
         private static void TestChannels(ReceiverCommandBuilder b)
         {
-            Console.WriteLine("[Test] Channel 1..8");
-            // 期望字节来自 控制命令.md § 通道选择
-            var cases = new Dictionary<int, byte[]>
+            Console.WriteLine("[Test] Channel 1..8 × Mode1/2/3（通道选择参数 P 随模式变化）");
+            // 期望字节来自 控制命令.md § 切换模式N无衰减状态通道选择参数
+            // Mode1: P=0x03；Mode2: P=0x02；Mode3: P=0x04（同一模式下 P 与通道号无关）
+            var modeParams = new Dictionary<ReceiverMode, byte>
             {
-                { 1, new byte[] { 0x0D, 0x11, 0x01, 0x04, 0x00, 0x00, 0x0A } },
-                { 2, new byte[] { 0x0D, 0x11, 0x02, 0x04, 0x00, 0x00, 0x0A } },
-                { 3, new byte[] { 0x0D, 0x11, 0x03, 0x04, 0x00, 0x00, 0x0A } },
-                { 4, new byte[] { 0x0D, 0x11, 0x04, 0x04, 0x00, 0x00, 0x0A } },
-                { 5, new byte[] { 0x0D, 0x11, 0x05, 0x04, 0x00, 0x00, 0x0A } },
-                { 6, new byte[] { 0x0D, 0x11, 0x06, 0x04, 0x00, 0x00, 0x0A } },
-                { 7, new byte[] { 0x0D, 0x11, 0x07, 0x04, 0x00, 0x00, 0x0A } },
-                { 8, new byte[] { 0x0D, 0x11, 0x08, 0x04, 0x00, 0x00, 0x0A } },
+                { ReceiverMode.Mode1, 0x03 },
+                { ReceiverMode.Mode2, 0x02 },
+                { ReceiverMode.Mode3, 0x04 },
             };
 
-            foreach (var kv in cases)
+            foreach (var mp in modeParams)
             {
-                Assert.CurrentTestName = $"Channel={kv.Key}";
-                Assert.Equal(kv.Value, b.BuildChannelCommand(kv.Key));
+                for (int ch = 1; ch <= 8; ch++)
+                {
+                    byte[] expected = Frame(0x11, (byte)ch, mp.Value, 0x00, 0x00);
+                    Assert.CurrentTestName = $"Channel mode={mp.Key} ch={ch}";
+                    Assert.Equal(expected, b.BuildChannelCommand(ch, mp.Key));
+                }
             }
         }
 
@@ -287,10 +287,13 @@ namespace A205AutoTestSystem.Tests.BuilderTests
             Console.WriteLine("[Test] 边界错误（应抛 ArgumentOutOfRangeException）");
 
             Assert.CurrentTestName = "Err Channel=0";
-            Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildChannelCommand(0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildChannelCommand(0, ReceiverMode.Mode1));
 
             Assert.CurrentTestName = "Err Channel=9";
-            Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildChannelCommand(9));
+            Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildChannelCommand(9, ReceiverMode.Mode1));
+
+            Assert.CurrentTestName = "Err Channel mode=(ReceiverMode)99";
+            Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildChannelCommand(1, (ReceiverMode)99));
 
             Assert.CurrentTestName = "Err Attenuation attenDb=1";
             Assert.Throws<ArgumentOutOfRangeException>(() => b.BuildAttenuationCommandSequence(1, 1));

@@ -84,10 +84,10 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig.Controls.Add(this.btnInitEnv);
             this.grpTestConfig.Controls.Add(this.btnLoadTests);
             this.grpTestConfig.Controls.Add(this.btnExportExcel);
-            this.grpTestConfig.Location = new System.Drawing.Point(8, 8);
+            this.grpTestConfig.Location = new System.Drawing.Point(0, 8);
             this.grpTestConfig.Name = "grpTestConfig";
             this.grpTestConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestConfig.Size = new System.Drawing.Size(825, 100);
+            this.grpTestConfig.Size = new System.Drawing.Size(841, 100);
             this.grpTestConfig.TabIndex = 0;
             this.grpTestConfig.TabStop = false;
             this.grpTestConfig.Text = "测试配置";
@@ -181,10 +181,10 @@ namespace A205AutoTestSystem.UI
             this.grpTestItems.Controls.Add(this.lblHeaderUnit);
             this.grpTestItems.Controls.Add(this.lblHeaderLimit);
             this.grpTestItems.Controls.Add(this.lblHeaderStatus);
-            this.grpTestItems.Location = new System.Drawing.Point(8, 114);
+            this.grpTestItems.Location = new System.Drawing.Point(0, 114);
             this.grpTestItems.Name = "grpTestItems";
             this.grpTestItems.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestItems.Size = new System.Drawing.Size(825, 156);
+            this.grpTestItems.Size = new System.Drawing.Size(841, 156);
             this.grpTestItems.TabIndex = 1;
             this.grpTestItems.TabStop = false;
             this.grpTestItems.Text = "测试项目";
@@ -245,10 +245,10 @@ namespace A205AutoTestSystem.UI
             this.grpProgressLog.Controls.Add(this.lblCurrentStep);
             this.grpProgressLog.Controls.Add(this.rtbLog);
             this.grpProgressLog.Controls.Add(this.btnClearLog);
-            this.grpProgressLog.Location = new System.Drawing.Point(8, 276);
+            this.grpProgressLog.Location = new System.Drawing.Point(0, 276);
             this.grpProgressLog.Name = "grpProgressLog";
             this.grpProgressLog.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpProgressLog.Size = new System.Drawing.Size(822, 396);
+            this.grpProgressLog.Size = new System.Drawing.Size(841, 396);
             this.grpProgressLog.TabIndex = 2;
             this.grpProgressLog.TabStop = false;
             this.grpProgressLog.Text = "进度与日志";
@@ -279,7 +279,7 @@ namespace A205AutoTestSystem.UI
             this.rtbLog.Location = new System.Drawing.Point(4, 89);
             this.rtbLog.Name = "rtbLog";
             this.rtbLog.ReadOnly = true;
-            this.rtbLog.Size = new System.Drawing.Size(815, 275);
+            this.rtbLog.Size = new System.Drawing.Size(835, 275);
             this.rtbLog.TabIndex = 2;
             this.rtbLog.Text = "";
             // 
@@ -301,7 +301,7 @@ namespace A205AutoTestSystem.UI
             this.Controls.Add(this.grpTestItems);
             this.Controls.Add(this.grpProgressLog);
             this.Name = "AutoTestPanel";
-            this.Size = new System.Drawing.Size(844, 672);
+            this.Size = new System.Drawing.Size(844, 718);
             this.grpTestConfig.ResumeLayout(false);
             this.grpTestItems.ResumeLayout(false);
             this.grpProgressLog.ResumeLayout(false);

@@ -214,6 +214,18 @@ namespace A205AutoTestSystem.ReceiverControl
                 { ReceiverMode.Mode3, 0x03 },
             };
 
+        // 工作模式 → 0x11 通道选择命令第三字节（无衰减状态通道选择参数）
+        // 同一模式下 8 个通道取值相同，与通道号无关。
+        // 数据源：控制命令.md § 切换模式N无衰减状态通道选择参数
+        // 注：文档中 Mode1 通道1 记录为 0x02，已与需求方确认为笔误，正确值为 0x03。
+        private static readonly Dictionary<ReceiverMode, byte> _channelSelectParamByteMap =
+            new Dictionary<ReceiverMode, byte>
+            {
+                { ReceiverMode.Mode1, 0x03 },
+                { ReceiverMode.Mode2, 0x02 },
+                { ReceiverMode.Mode3, 0x04 },
+            };
+
         // 温度区间 → 0x30 命令第二字节
         // 0=常温 / 1=高温 / 2=低温
         private static readonly Dictionary<TemperatureRange, byte> _temperatureByteMap =
@@ -290,20 +302,31 @@ namespace A205AutoTestSystem.ReceiverControl
         // ---------- 公共命令构建方法 ----------
 
         /// <summary>
-        /// 构建通道选择命令。
-        /// <para>帧格式：<c>0D 11 CH 04 00 00 0A</c>，CH 范围 1~8。</para>
+        /// 构建指定工作模式下的通道选择命令。
+        /// <para>帧格式：<c>0D 11 CH P 00 00 0A</c>，CH 范围 1~8；P 为无衰减状态通道选择参数，
+        /// 随工作模式变化（与通道号无关）：</para>
+        /// <list type="bullet">
+        /// <item>Mode1：<c>P=0x03</c></item>
+        /// <item>Mode2：<c>P=0x02</c></item>
+        /// <item>Mode3：<c>P=0x04</c></item>
+        /// </list>
         /// </summary>
         /// <param name="channel">通道号（1..8）。</param>
+        /// <param name="mode">当前工作模式。</param>
         /// <returns>7 字节命令数组。</returns>
-        /// <exception cref="ArgumentOutOfRangeException">当 channel 不在 1..8 范围时抛出。</exception>
-        public byte[] BuildChannelCommand(int channel)
+        /// <exception cref="ArgumentOutOfRangeException">channel 不在 1..8 或 mode 未知时抛出。</exception>
+        public byte[] BuildChannelCommand(int channel, ReceiverMode mode)
         {
             if (channel < 1 || channel > 8)
             {
                 throw new ArgumentOutOfRangeException(nameof(channel), channel, "通道号必须在 1~8 范围内。");
             }
+            if (!_channelSelectParamByteMap.TryGetValue(mode, out byte param))
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode), mode, "未知的工作模式。");
+            }
 
-            return BuildFrame(0x11, (byte)channel, 0x04, 0x00, 0x00);
+            return BuildFrame(0x11, (byte)channel, param, 0x00, 0x00);
         }
 
         /// <summary>
