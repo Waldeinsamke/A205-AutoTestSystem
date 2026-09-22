@@ -96,3 +96,4 @@ $RECYCLE.BIN/
 *.cache
 *.swp
 *.swo
+migration/commit-msg.txt
