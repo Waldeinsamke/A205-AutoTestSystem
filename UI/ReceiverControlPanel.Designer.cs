@@ -57,23 +57,17 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.Panel pnlRfStatus;
         private System.Windows.Forms.Label lblRf;
         private System.Windows.Forms.TextBox txtRfAddress;
-        private System.Windows.Forms.Button btnRfConnect;
-        private System.Windows.Forms.Button btnRfDisconnect;
         private System.Windows.Forms.Panel pnlLoStatus;
         private System.Windows.Forms.Label lblLo;
         private System.Windows.Forms.TextBox txtLoAddress;
-        private System.Windows.Forms.Button btnLoConnect;
-        private System.Windows.Forms.Button btnLoDisconnect;
         private System.Windows.Forms.Panel pnlSaStatus;
         private System.Windows.Forms.Label lblSa;
         private System.Windows.Forms.TextBox txtSaAddress;
-        private System.Windows.Forms.Button btnSaConnect;
-        private System.Windows.Forms.Button btnSaDisconnect;
         private System.Windows.Forms.Panel pnlPowerStatus;
         private System.Windows.Forms.Label lblPower;
         private System.Windows.Forms.TextBox txtPowerAddress;
-        private System.Windows.Forms.Button btnPowerConnect;
-        private System.Windows.Forms.Button btnPowerDisconnect;
+        private System.Windows.Forms.Button btnConnectAll;
+        private System.Windows.Forms.Button btnDisconnectAll;
 
         // 通信日志区
         private System.Windows.Forms.GroupBox grpCommunicationLog;
@@ -126,23 +120,17 @@ namespace A205AutoTestSystem.UI
             this.pnlRfStatus = new System.Windows.Forms.Panel();
             this.lblRf = new System.Windows.Forms.Label();
             this.txtRfAddress = new System.Windows.Forms.TextBox();
-            this.btnRfConnect = new System.Windows.Forms.Button();
-            this.btnRfDisconnect = new System.Windows.Forms.Button();
             this.pnlLoStatus = new System.Windows.Forms.Panel();
             this.lblLo = new System.Windows.Forms.Label();
             this.txtLoAddress = new System.Windows.Forms.TextBox();
-            this.btnLoConnect = new System.Windows.Forms.Button();
-            this.btnLoDisconnect = new System.Windows.Forms.Button();
             this.pnlSaStatus = new System.Windows.Forms.Panel();
             this.lblSa = new System.Windows.Forms.Label();
             this.txtSaAddress = new System.Windows.Forms.TextBox();
-            this.btnSaConnect = new System.Windows.Forms.Button();
-            this.btnSaDisconnect = new System.Windows.Forms.Button();
             this.pnlPowerStatus = new System.Windows.Forms.Panel();
             this.lblPower = new System.Windows.Forms.Label();
             this.txtPowerAddress = new System.Windows.Forms.TextBox();
-            this.btnPowerConnect = new System.Windows.Forms.Button();
-            this.btnPowerDisconnect = new System.Windows.Forms.Button();
+            this.btnConnectAll = new System.Windows.Forms.Button();
+            this.btnDisconnectAll = new System.Windows.Forms.Button();
             this.grpCommunicationLog = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.btnLogClear = new System.Windows.Forms.Button();
@@ -542,23 +530,17 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentStatus.Controls.Add(this.pnlRfStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblRf);
             this.grpInstrumentStatus.Controls.Add(this.txtRfAddress);
-            this.grpInstrumentStatus.Controls.Add(this.btnRfConnect);
-            this.grpInstrumentStatus.Controls.Add(this.btnRfDisconnect);
             this.grpInstrumentStatus.Controls.Add(this.pnlLoStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblLo);
             this.grpInstrumentStatus.Controls.Add(this.txtLoAddress);
-            this.grpInstrumentStatus.Controls.Add(this.btnLoConnect);
-            this.grpInstrumentStatus.Controls.Add(this.btnLoDisconnect);
             this.grpInstrumentStatus.Controls.Add(this.pnlSaStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblSa);
             this.grpInstrumentStatus.Controls.Add(this.txtSaAddress);
-            this.grpInstrumentStatus.Controls.Add(this.btnSaConnect);
-            this.grpInstrumentStatus.Controls.Add(this.btnSaDisconnect);
             this.grpInstrumentStatus.Controls.Add(this.pnlPowerStatus);
             this.grpInstrumentStatus.Controls.Add(this.lblPower);
             this.grpInstrumentStatus.Controls.Add(this.txtPowerAddress);
-            this.grpInstrumentStatus.Controls.Add(this.btnPowerConnect);
-            this.grpInstrumentStatus.Controls.Add(this.btnPowerDisconnect);
+            this.grpInstrumentStatus.Controls.Add(this.btnConnectAll);
+            this.grpInstrumentStatus.Controls.Add(this.btnDisconnectAll);
             this.grpInstrumentStatus.Location = new System.Drawing.Point(0, 294);
             this.grpInstrumentStatus.Name = "grpInstrumentStatus";
             this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
@@ -594,26 +576,6 @@ namespace A205AutoTestSystem.UI
             this.txtRfAddress.TabIndex = 3;
             this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252683::INSTR";
             // 
-            // btnRfConnect
-            // 
-            this.btnRfConnect.Location = new System.Drawing.Point(435, 22);
-            this.btnRfConnect.Name = "btnRfConnect";
-            this.btnRfConnect.Size = new System.Drawing.Size(72, 26);
-            this.btnRfConnect.TabIndex = 4;
-            this.btnRfConnect.Text = "连接";
-            this.btnRfConnect.UseVisualStyleBackColor = true;
-            this.btnRfConnect.Click += new System.EventHandler(this.OnRfConnectClicked);
-            // 
-            // btnRfDisconnect
-            // 
-            this.btnRfDisconnect.Location = new System.Drawing.Point(513, 22);
-            this.btnRfDisconnect.Name = "btnRfDisconnect";
-            this.btnRfDisconnect.Size = new System.Drawing.Size(72, 26);
-            this.btnRfDisconnect.TabIndex = 5;
-            this.btnRfDisconnect.Text = "断开";
-            this.btnRfDisconnect.UseVisualStyleBackColor = true;
-            this.btnRfDisconnect.Click += new System.EventHandler(this.OnRfDisconnectClicked);
-            // 
             // pnlLoStatus
             // 
             this.pnlLoStatus.BackColor = System.Drawing.Color.Red;
@@ -640,26 +602,6 @@ namespace A205AutoTestSystem.UI
             this.txtLoAddress.Size = new System.Drawing.Size(280, 25);
             this.txtLoAddress.TabIndex = 9;
             this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY59101329::INSTR";
-            // 
-            // btnLoConnect
-            // 
-            this.btnLoConnect.Location = new System.Drawing.Point(435, 54);
-            this.btnLoConnect.Name = "btnLoConnect";
-            this.btnLoConnect.Size = new System.Drawing.Size(72, 26);
-            this.btnLoConnect.TabIndex = 10;
-            this.btnLoConnect.Text = "连接";
-            this.btnLoConnect.UseVisualStyleBackColor = true;
-            this.btnLoConnect.Click += new System.EventHandler(this.OnLoConnectClicked);
-            // 
-            // btnLoDisconnect
-            // 
-            this.btnLoDisconnect.Location = new System.Drawing.Point(513, 54);
-            this.btnLoDisconnect.Name = "btnLoDisconnect";
-            this.btnLoDisconnect.Size = new System.Drawing.Size(72, 26);
-            this.btnLoDisconnect.TabIndex = 11;
-            this.btnLoDisconnect.Text = "断开";
-            this.btnLoDisconnect.UseVisualStyleBackColor = true;
-            this.btnLoDisconnect.Click += new System.EventHandler(this.OnLoDisconnectClicked);
             // 
             // pnlSaStatus
             // 
@@ -688,26 +630,6 @@ namespace A205AutoTestSystem.UI
             this.txtSaAddress.TabIndex = 15;
             this.txtSaAddress.Text = "USB0::0x0957::0x0A0B::MY53290027::INSTR";
             // 
-            // btnSaConnect
-            // 
-            this.btnSaConnect.Location = new System.Drawing.Point(435, 86);
-            this.btnSaConnect.Name = "btnSaConnect";
-            this.btnSaConnect.Size = new System.Drawing.Size(72, 26);
-            this.btnSaConnect.TabIndex = 16;
-            this.btnSaConnect.Text = "连接";
-            this.btnSaConnect.UseVisualStyleBackColor = true;
-            this.btnSaConnect.Click += new System.EventHandler(this.OnSaConnectClicked);
-            // 
-            // btnSaDisconnect
-            // 
-            this.btnSaDisconnect.Location = new System.Drawing.Point(513, 86);
-            this.btnSaDisconnect.Name = "btnSaDisconnect";
-            this.btnSaDisconnect.Size = new System.Drawing.Size(72, 26);
-            this.btnSaDisconnect.TabIndex = 17;
-            this.btnSaDisconnect.Text = "断开";
-            this.btnSaDisconnect.UseVisualStyleBackColor = true;
-            this.btnSaDisconnect.Click += new System.EventHandler(this.OnSaDisconnectClicked);
-            // 
             // pnlPowerStatus
             // 
             this.pnlPowerStatus.BackColor = System.Drawing.Color.Red;
@@ -734,25 +656,25 @@ namespace A205AutoTestSystem.UI
             this.txtPowerAddress.Size = new System.Drawing.Size(280, 25);
             this.txtPowerAddress.TabIndex = 23;
             // 
-            // btnPowerConnect
+            // btnConnectAll
             // 
-            this.btnPowerConnect.Location = new System.Drawing.Point(435, 118);
-            this.btnPowerConnect.Name = "btnPowerConnect";
-            this.btnPowerConnect.Size = new System.Drawing.Size(72, 26);
-            this.btnPowerConnect.TabIndex = 24;
-            this.btnPowerConnect.Text = "连接";
-            this.btnPowerConnect.UseVisualStyleBackColor = true;
-            this.btnPowerConnect.Click += new System.EventHandler(this.OnPowerConnectClicked);
+            this.btnConnectAll.Location = new System.Drawing.Point(431, 23);
+            this.btnConnectAll.Name = "btnConnectAll";
+            this.btnConnectAll.Size = new System.Drawing.Size(80, 121);
+            this.btnConnectAll.TabIndex = 30;
+            this.btnConnectAll.Text = "一键连接";
+            this.btnConnectAll.UseVisualStyleBackColor = true;
+            this.btnConnectAll.Click += new System.EventHandler(this.OnConnectAllClicked);
             // 
-            // btnPowerDisconnect
+            // btnDisconnectAll
             // 
-            this.btnPowerDisconnect.Location = new System.Drawing.Point(513, 118);
-            this.btnPowerDisconnect.Name = "btnPowerDisconnect";
-            this.btnPowerDisconnect.Size = new System.Drawing.Size(72, 26);
-            this.btnPowerDisconnect.TabIndex = 25;
-            this.btnPowerDisconnect.Text = "断开";
-            this.btnPowerDisconnect.UseVisualStyleBackColor = true;
-            this.btnPowerDisconnect.Click += new System.EventHandler(this.OnPowerDisconnectClicked);
+            this.btnDisconnectAll.Location = new System.Drawing.Point(517, 24);
+            this.btnDisconnectAll.Name = "btnDisconnectAll";
+            this.btnDisconnectAll.Size = new System.Drawing.Size(80, 118);
+            this.btnDisconnectAll.TabIndex = 31;
+            this.btnDisconnectAll.Text = "一键断开";
+            this.btnDisconnectAll.UseVisualStyleBackColor = true;
+            this.btnDisconnectAll.Click += new System.EventHandler(this.OnDisconnectAllClicked);
             // 
             // grpCommunicationLog
             // 

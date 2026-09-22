@@ -35,8 +35,9 @@ namespace A205AutoTestSystem.UI
         private SpectrumAnalyzer _spectrumAnalyzer;
         private ODP3063 _powerSupply;
 
-        // 电源输出的软件侧状态：连接时不查询/不设置仪表，默认视为未输出（OFF）；
-        // 每次点击 btnOpenPower 立即翻转并下发 :OUTP2:STAT 命令。
+        // 电源输出的软件侧状态：连接时不查询/不设置仪表，默认视为未输出（OFF）。
+        // btnOpenPower 点击时联动：开机=电源ON→自动连接收机串口→RF/LO :OUTP 1；
+        // 关机=RF/LO :OUTP 0→断开接收机串口→电源OFF。
         private bool _powerOutputOn = false;
 
         // 频段 ComboBox 当前显示列表（依模式动态变化，由 RefreshBandCombo 写入）
@@ -498,21 +499,37 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        // -------- 仪表连接
-        private void OnRfConnectClicked(object sender, EventArgs e)
+        // -------- 仪表连接（一键连接/一键断开编排）
+        //
+        // 约定：
+        // - TryConnectXxx：已连接则跳过并返回 true；连接失败（地址空/异常）只记日志、不弹窗，
+        //   失败时释放半成品对象并置 null、状态灯置红，返回 false，保证一键连接可继续下一台。
+        // - DisconnectXxx：best-effort，异常只记日志，最终置 null、状态灯置红。
+
+        private bool TryConnectRf()
         {
+            if (_rfGenerator != null && _rfGenerator.IsConnected)
+            {
+                Logger.Log("[UI] RF 信号源已连接，跳过。");
+                return true;
+            }
+            if (string.IsNullOrWhiteSpace(txtRfAddress.Text))
+            {
+                pnlRfStatus.BackColor = StatusColorDisconnected;
+                Logger.Log("[Error] RF 连接失败: 地址为空。");
+                return false;
+            }
             try
             {
-                if (_rfGenerator != null && _rfGenerator.IsConnected)
-                {
-                    MessageBox.Show(this, "RF 信号源已连接。", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
                 _rfGenerator = new SignalGenerator(txtRfAddress.Text.Trim());
                 _rfGenerator.Connect();
                 pnlRfStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] RF signal generator connected.");
+                // 连接成功后确保调制输出保持关闭（CW 模式），失败仅日志
+                DisableModulationQuiet("RF",
+                    () => _rfGenerator.EnableModulation(false),
+                    () => _rfGenerator.SetPulseModulation(false));
+                return true;
             }
             catch (Exception ex)
             {
@@ -520,16 +537,16 @@ namespace A205AutoTestSystem.UI
                 try { _rfGenerator?.Dispose(); } catch { }
                 _rfGenerator = null;
                 Logger.Log("[Error] RF 连接失败: " + ex.Message);
-                MessageBox.Show(this, "RF 信号源连接失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
-        private void OnRfDisconnectClicked(object sender, EventArgs e)
+        private void DisconnectRf()
         {
+            if (_rfGenerator == null) return;
             try
             {
-                _rfGenerator?.Disconnect();
+                _rfGenerator.Disconnect();
                 Logger.Log("[UI] RF signal generator disconnected.");
             }
             catch (Exception ex)
@@ -544,20 +561,30 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        private void OnLoConnectClicked(object sender, EventArgs e)
+        private bool TryConnectLo()
         {
+            if (_loGenerator != null && _loGenerator.IsConnected)
+            {
+                Logger.Log("[UI] LO 信号源已连接，跳过。");
+                return true;
+            }
+            if (string.IsNullOrWhiteSpace(txtLoAddress.Text))
+            {
+                pnlLoStatus.BackColor = StatusColorDisconnected;
+                Logger.Log("[Error] LO 连接失败: 地址为空。");
+                return false;
+            }
             try
             {
-                if (_loGenerator != null && _loGenerator.IsConnected)
-                {
-                    MessageBox.Show(this, "LO 信号源已连接。", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
                 _loGenerator = new SignalGeneratorLO(txtLoAddress.Text.Trim());
                 _loGenerator.Connect();
                 pnlLoStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] LO signal generator connected.");
+                // 连接成功后确保调制输出保持关闭（CW 模式），失败仅日志
+                DisableModulationQuiet("LO",
+                    () => _loGenerator.EnableModulation(false),
+                    () => _loGenerator.SetPulseModulation(false));
+                return true;
             }
             catch (Exception ex)
             {
@@ -565,16 +592,16 @@ namespace A205AutoTestSystem.UI
                 try { _loGenerator?.Dispose(); } catch { }
                 _loGenerator = null;
                 Logger.Log("[Error] LO 连接失败: " + ex.Message);
-                MessageBox.Show(this, "LO 信号源连接失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
-        private void OnLoDisconnectClicked(object sender, EventArgs e)
+        private void DisconnectLo()
         {
+            if (_loGenerator == null) return;
             try
             {
-                _loGenerator?.Disconnect();
+                _loGenerator.Disconnect();
                 Logger.Log("[UI] LO signal generator disconnected.");
             }
             catch (Exception ex)
@@ -589,20 +616,26 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        private void OnSaConnectClicked(object sender, EventArgs e)
+        private bool TryConnectSa()
         {
+            if (_spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected)
+            {
+                Logger.Log("[UI] 频谱仪已连接，跳过。");
+                return true;
+            }
+            if (string.IsNullOrWhiteSpace(txtSaAddress.Text))
+            {
+                pnlSaStatus.BackColor = StatusColorDisconnected;
+                Logger.Log("[Error] 频谱仪连接失败: 地址为空。");
+                return false;
+            }
             try
             {
-                if (_spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected)
-                {
-                    MessageBox.Show(this, "频谱仪已连接。", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
                 _spectrumAnalyzer = new SpectrumAnalyzer(txtSaAddress.Text.Trim());
                 _spectrumAnalyzer.Connect();
                 pnlSaStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] Spectrum analyzer connected.");
+                return true;
             }
             catch (Exception ex)
             {
@@ -610,16 +643,16 @@ namespace A205AutoTestSystem.UI
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
                 _spectrumAnalyzer = null;
                 Logger.Log("[Error] 频谱仪连接失败: " + ex.Message);
-                MessageBox.Show(this, "频谱仪连接失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
-        private void OnSaDisconnectClicked(object sender, EventArgs e)
+        private void DisconnectSa()
         {
+            if (_spectrumAnalyzer == null) return;
             try
             {
-                _spectrumAnalyzer?.Disconnect();
+                _spectrumAnalyzer.Disconnect();
                 Logger.Log("[UI] Spectrum analyzer disconnected.");
             }
             catch (Exception ex)
@@ -634,16 +667,21 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        private void OnPowerConnectClicked(object sender, EventArgs e)
+        private bool TryConnectPower()
         {
+            if (_powerSupply != null && _powerSupply.IsConnected)
+            {
+                Logger.Log("[UI] 电源已连接，跳过。");
+                return true;
+            }
+            if (string.IsNullOrWhiteSpace(txtPowerAddress.Text))
+            {
+                pnlPowerStatus.BackColor = StatusColorDisconnected;
+                Logger.Log("[Error] 电源连接失败: 地址为空。");
+                return false;
+            }
             try
             {
-                if (_powerSupply != null && _powerSupply.IsConnected)
-                {
-                    MessageBox.Show(this, "电源已连接。", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
                 _powerSupply = new ODP3063(txtPowerAddress.Text.Trim());
                 _powerSupply.Connect();
                 pnlPowerStatus.BackColor = StatusColorConnected;
@@ -651,6 +689,7 @@ namespace A205AutoTestSystem.UI
                 _powerOutputOn = false;
                 btnOpenPower.Text = "开启供电";
                 Logger.Log("[UI] ODP3063 power supply connected.");
+                return true;
             }
             catch (Exception ex)
             {
@@ -658,16 +697,16 @@ namespace A205AutoTestSystem.UI
                 try { _powerSupply?.Dispose(); } catch { }
                 _powerSupply = null;
                 Logger.Log("[Error] 电源连接失败: " + ex.Message);
-                MessageBox.Show(this, "电源连接失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
             }
         }
 
-        private void OnPowerDisconnectClicked(object sender, EventArgs e)
+        private void DisconnectPower()
         {
+            if (_powerSupply == null) return;
             try
             {
-                _powerSupply?.Disconnect();
+                _powerSupply.Disconnect();
                 Logger.Log("[UI] ODP3063 power supply disconnected.");
             }
             catch (Exception ex)
@@ -685,7 +724,194 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        // -------- 电源输出开关（每次点击立即翻转）
+        /// <summary>
+        /// 一键连接：RF → LO → 频谱仪 → 电源。单台失败只记日志并继续，全程不弹窗。
+        /// </summary>
+        private void OnConnectAllClicked(object sender, EventArgs e)
+        {
+            Logger.Log("[UI] ===== 一键连接开始（RF → LO → 频谱仪 → 电源）=====");
+            bool r1 = TryConnectRf();
+            bool r2 = TryConnectLo();
+            bool r3 = TryConnectSa();
+            bool r4 = TryConnectPower();
+            int ok = (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0) + (r4 ? 1 : 0);
+            Logger.Log($"[UI] ===== 一键连接完成：成功/已连接 {ok} 台，失败 {4 - ok} 台（详见上方日志）=====");
+        }
+
+        /// <summary>
+        /// 一键断开：电源正在供电时弹窗阻止；否则依次断开 4 台（电源最后）。
+        /// 不涉及接收机/矩阵串口（属于"串口连接"组）。
+        /// </summary>
+        private void OnDisconnectAllClicked(object sender, EventArgs e)
+        {
+            if (_powerOutputOn)
+            {
+                MessageBox.Show(this,
+                    "电源当前正在供电输出，请先点击“关闭供电”完成关机后再执行一键断开。",
+                    "操作被阻止", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            Logger.Log("[UI] ===== 一键断开开始 =====");
+            DisconnectRf();
+            DisconnectLo();
+            DisconnectSa();
+            DisconnectPower();
+            Logger.Log("[UI] ===== 一键断开完成 =====");
+        }
+
+        // ============================================================
+        // 供电联动辅助方法
+        // ============================================================
+
+        /// <summary>
+        /// 对单台信号源关闭通用调制（:MOD:STAT 0）与脉冲调制（:PULM:STAT 0）。
+        /// 仪表连接成功后的附加保险动作：失败只记日志，不弹窗、不影响连接状态。
+        /// </summary>
+        private static void DisableModulationQuiet(string tag, Action modOff, Action pulseOff)
+        {
+            try
+            {
+                modOff();
+                Logger.Log($"[UI] {tag} 信号源调制输出已关闭（:MOD:STAT 0）。");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] {tag} 信号源关闭通用调制失败: {ex.Message}");
+            }
+
+            try
+            {
+                pulseOff();
+                Logger.Log($"[UI] {tag} 信号源脉冲调制已关闭（:PULM:STAT 0）。");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] {tag} 信号源关闭脉冲调制失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 批量开/关 RF、LO 射频输出（:OUTP 1/0）。逐台独立容错：
+        /// 未连接则跳过并记日志，单台失败不影响另一台。
+        /// </summary>
+        private void SetSignalOutputs(bool on)
+        {
+            string action = on ? "开启" : "关闭";
+
+            if (_rfGenerator == null || !_rfGenerator.IsConnected)
+            {
+                Logger.Log($"[UI] RF 信号源未连接，跳过{action}射频输出。");
+            }
+            else
+            {
+                try
+                {
+                    _rfGenerator.SetOutputState(on);
+                    Logger.Log($"[UI] RF 信号源射频输出已{action}（:OUTP {(on ? 1 : 0)}）。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[UI] RF 信号源{action}射频输出失败: {ex.Message}");
+                }
+            }
+
+            if (_loGenerator == null || !_loGenerator.IsConnected)
+            {
+                Logger.Log($"[UI] LO 信号源未连接，跳过{action}射频输出。");
+            }
+            else
+            {
+                try
+                {
+                    _loGenerator.SetOutputState(on);
+                    Logger.Log($"[UI] LO 信号源射频输出已{action}（:OUTP {(on ? 1 : 0)}）。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[UI] LO 信号源{action}射频输出失败: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 开机序列使用：按面板下拉（cmbReceiverPort/cmbReceiverBaud）自动连接接收机串口。
+        /// 已连接则跳过；端口无效或打开失败则弹窗提示并返回 false（调用方应中止开机序列）。
+        /// </summary>
+        private bool TryAutoConnectReceiver()
+        {
+            if (_receiver != null && _receiver.IsOpen)
+            {
+                Logger.Log("[UI] 接收机串口已连接，开机序列跳过自动连接。");
+                return true;
+            }
+
+            string portName = cmbReceiverPort.SelectedItem == null ? null : cmbReceiverPort.SelectedItem.ToString();
+            int baudRate;
+            try
+            {
+                baudRate = int.Parse(cmbReceiverBaud.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "接收机波特率无效: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(portName) || portName == "(无)")
+            {
+                MessageBox.Show(this, "请先选择有效的接收机串口。（电源已上电，信号输出未开启）", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            try
+            {
+                _receiver = new ReceiverSerialPort();
+                _receiver.Open(portName, baudRate);
+                Logger.Log($"[UI] 开机序列自动连接接收机串口 {portName} @ {baudRate}。");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _receiver = null;
+                Logger.Log("[Error] 开机序列自动连接接收机串口失败: " + ex.Message);
+                MessageBox.Show(this,
+                    "自动连接接收机串口失败: " + ex.Message + "\n（电源已上电，信号输出未开启，可手动补连或关闭供电后重试）",
+                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 关机序列使用：尽力断开接收机串口，异常只记日志不弹窗，确保关机流程继续。
+        /// </summary>
+        private void BestEffortDisconnectReceiver()
+        {
+            if (_receiver == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _receiver.Close();
+                Logger.Log("[UI] 关机序列已断开接收机串口。");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Error] 关机序列断开接收机串口失败: " + ex.Message);
+            }
+            finally
+            {
+                _receiver = null;
+            }
+        }
+
+        // -------- 电源输出开关（联动接收机串口与 RF/LO 射频输出）
+        // 开机：电源 ON → 自动连接收机串口（失败中止，电源保持上电）→ RF/LO :OUTP 1
+        // 关机：RF/LO :OUTP 0 → 断开接收机串口 → 电源 OFF（各步尽力执行）
         private void OnOpenPowerClicked(object sender, EventArgs e)
         {
             if (_powerSupply == null || !_powerSupply.IsConnected)
@@ -695,22 +921,58 @@ namespace A205AutoTestSystem.UI
                 return;
             }
 
-            _powerOutputOn = !_powerOutputOn;
-            try
+            if (!_powerOutputOn)
             {
-                _powerSupply.EnableChannel2Output(_powerOutputOn);
-                btnOpenPower.Text = _powerOutputOn ? "关闭供电" : "开启供电";
-                Logger.Log(_powerOutputOn
-                    ? "[UI] Power output enabled."
-                    : "[UI] Power output disabled.");
+                // -------- 开机序列 --------
+                // 1) 电源上电；失败则中止，本地状态保持 OFF
+                try
+                {
+                    _powerSupply.EnableChannel2Output(true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Error] 电源开启失败: " + ex.Message);
+                    MessageBox.Show(this, "电源开启失败: " + ex.Message, "错误",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                _powerOutputOn = true;
+                btnOpenPower.Text = "关闭供电";
+                Logger.Log("[UI] Power output enabled.");
+
+                // 2) 自动连接收机串口；失败中止，电源保持上电、信号输出不开启
+                if (!TryAutoConnectReceiver())
+                {
+                    return;
+                }
+
+                // 3) 开启 RF/LO 射频输出（未连接逐台跳过）
+                SetSignalOutputs(true);
             }
-            catch (Exception ex)
+            else
             {
-                // 命令发送失败：回滚本地状态，保持与硬件一致
-                _powerOutputOn = !_powerOutputOn;
-                Logger.Log("[Error] 电源输出切换失败: " + ex.Message);
-                MessageBox.Show(this, "电源输出切换失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // -------- 关机序列（各步尽力执行） --------
+                // 1) 关闭 RF/LO 射频输出
+                SetSignalOutputs(false);
+
+                // 2) 断开接收机串口
+                BestEffortDisconnectReceiver();
+
+                // 3) 电源断电；失败保持"关闭供电"状态，提示用户重试
+                try
+                {
+                    _powerSupply.EnableChannel2Output(false);
+                    _powerOutputOn = false;
+                    btnOpenPower.Text = "开启供电";
+                    Logger.Log("[UI] Power output disabled.");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Error] 电源关闭失败: " + ex.Message);
+                    MessageBox.Show(this,
+                        "电源关闭失败: " + ex.Message + "\n（信号输出已关闭、接收机串口已断开，请排查后重试关闭供电）",
+                        "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
