@@ -2,16 +2,8 @@
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
   <assemblyIdentity version="1.0.0.0" name="A205AutoTestSystem.app" />
 
-  <!-- 高 DPI 支持：
-       PerMonitorV2（Windows 10 1703+）：按显示器真实 DPI 渲染，跨屏动态适配；
-       PerMonitor（Windows 8.1）/ true（Windows 7/8）作为旧系统回退。
-       未声明时进程被视为 DPI 不感知，窗口会被系统位图拉伸导致发虚。 -->
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>
-      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
-    </windowsSettings>
-  </application>
+  <!-- 高 DPI 支持：迁移至 .NET 8 后由 csproj 的 <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+       控制（SDK 风格工程），此处保留 <supportedOS> 兼容性声明即可。 -->
 
   <!-- 兼容性：声明支持的 Windows 版本 -->
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">

@@ -1,20 +1,17 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.UI;
 
 namespace A205自动测试系统
 {
-    static class Program
+    internal static class Program
     {
         /// <summary>
         /// 应用程序的主入口点。
         /// </summary>
         [STAThread]
-        static void Main()
+        private static void Main()
         {
             // 注册生产环境默认 VISA 传输工厂。
             // 测试覆盖：M4 阶段 UnitTest 通过 SetTransport() 注入 FakeVisaInstrument，
@@ -22,8 +19,9 @@ namespace A205自动测试系统
             VisaBaseInstrument.DefaultTransportFactory =
                 address => new NationalInstrumentsVisaTransport(address);
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            // .NET 8 由源生成器 ApplicationConfiguration 自动生成
+            // EnableVisualStyles / SetCompatibleTextRenderingDefault / SetHighDpiMode(PerMonitorV2) 调用。
+            ApplicationConfiguration.Initialize();
             Application.Run(new MainForm());
         }
     }
