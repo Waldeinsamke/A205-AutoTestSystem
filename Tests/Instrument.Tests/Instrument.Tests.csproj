@@ -48,7 +48,7 @@
     <Reference Include="System.Core" />
     <Reference Include="Ivi.Visa, Version=7.2.0.0, Culture=neutral, PublicKeyToken=a128c98f1d7717c1, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\bin\Debug\Ivi.Visa.dll</HintPath>
+      <HintPath>..\..\lib\Ivi.Visa.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>

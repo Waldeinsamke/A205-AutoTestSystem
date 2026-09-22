@@ -36,7 +36,7 @@
   <ItemGroup>
     <Reference Include="Ivi.Visa, Version=7.2.0.0, Culture=neutral, PublicKeyToken=a128c98f1d7717c1, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\2025\TestAuto2\bin\Debug\net8.0\Ivi.Visa.dll</HintPath>
+      <HintPath>lib\Ivi.Visa.dll</HintPath>
     </Reference>
     <Reference Include="NationalInstruments.Visa, Version=25.0.0.49269, Culture=neutral, PublicKeyToken=2eaa5af0834e221d, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
