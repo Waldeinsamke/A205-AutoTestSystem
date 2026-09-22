@@ -662,7 +662,7 @@ namespace A205AutoTestSystem.UI
             this.btnConnectAll.Name = "btnConnectAll";
             this.btnConnectAll.Size = new System.Drawing.Size(80, 121);
             this.btnConnectAll.TabIndex = 30;
-            this.btnConnectAll.Text = "一键连接";
+            this.btnConnectAll.Text = "连接";
             this.btnConnectAll.UseVisualStyleBackColor = true;
             this.btnConnectAll.Click += new System.EventHandler(this.OnConnectAllClicked);
             // 
@@ -672,7 +672,7 @@ namespace A205AutoTestSystem.UI
             this.btnDisconnectAll.Name = "btnDisconnectAll";
             this.btnDisconnectAll.Size = new System.Drawing.Size(80, 118);
             this.btnDisconnectAll.TabIndex = 31;
-            this.btnDisconnectAll.Text = "一键断开";
+            this.btnDisconnectAll.Text = "断开";
             this.btnDisconnectAll.UseVisualStyleBackColor = true;
             this.btnDisconnectAll.Click += new System.EventHandler(this.OnDisconnectAllClicked);
             // 
