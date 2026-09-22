@@ -102,14 +102,14 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
                 lo.Connect();
                 sa.Connect();
 
-                // 预设 SA 响应：CALC:MARK:Y? → "-10.00"
+                // 预设 SA 响应：CALC:MARK1:MAX:PEAK 与 CALC:MARK1:Y? → "-10.00"
                 var transportField = typeof(VisaBaseInstrument).GetField(
                     "_transport",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
                 Assert.NotNull(saTransport, "SA transport 应当是 FakeVisaInstrument");
-                saTransport.SetResponse("CALC:MARK:MAX", "");
-                saTransport.SetResponse("CALC:MARK:Y?", "-10.00");
+                saTransport.SetResponse("CALC:MARK1:MAX:PEAK", "");
+                saTransport.SetResponse("CALC:MARK1:Y?", "-10.00");
 
                 var gain = new GainTest(
                     rf, lo, sa,
@@ -158,8 +158,8 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
                     "_transport",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
-                saTransport.SetResponse("CALC:MARK:MAX", "");
-                saTransport.SetResponse("CALC:MARK:Y?", "-30.00");
+                saTransport.SetResponse("CALC:MARK1:MAX:PEAK", "");
+                saTransport.SetResponse("CALC:MARK1:Y?", "-30.00");
 
                 var gain = new GainTest(
                     rf, lo, sa,
@@ -205,8 +205,8 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
                 Assert.NotNull(saTransport, "SA transport 应当是 FakeVisaInstrument");
-                saTransport.SetResponse("CALC:MARK:MAX", "");
-                saTransport.SetResponse("CALC:MARK:Y?", "-10.00");
+                saTransport.SetResponse("CALC:MARK1:MAX:PEAK", "");
+                saTransport.SetResponse("CALC:MARK1:Y?", "-10.00");
 
                 var bw = new BandwidthTest(
                     rf, sa,
@@ -253,8 +253,8 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
                     "_transport",
                     System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
                 var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
-                saTransport.SetResponse("CALC:MARK:MAX", "");
-                saTransport.SetResponse("CALC:MARK:Y?", "-10.00");
+                saTransport.SetResponse("CALC:MARK1:MAX:PEAK", "");
+                saTransport.SetResponse("CALC:MARK1:Y?", "-10.00");
 
                 var bw = new BandwidthTest(
                     rf, sa,

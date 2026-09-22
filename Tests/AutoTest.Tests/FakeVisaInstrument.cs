@@ -100,7 +100,9 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
         private static string NormalizeKey(string scpi)
         {
             if (scpi == null) return string.Empty;
-            return scpi.Trim().TrimEnd('\r', '\n').TrimEnd(';');
+            // 去掉前导冒号，让测试 SetResponse 时既可写 "CALC:MARK1:Y?" 也可写 ":CALC:MARK1:Y?"
+            // （与 Instrument.Tests 既有的无冒号 SendHistory 断言约定保持一致）
+            return scpi.Trim().TrimStart(':').TrimEnd('\r', '\n').TrimEnd(';');
         }
     }
 

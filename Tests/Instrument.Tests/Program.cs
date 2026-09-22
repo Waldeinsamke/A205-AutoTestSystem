@@ -101,7 +101,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
 
                 sg.SetFrequency(100_000_000.0); // 100 MHz
 
-                Assert.Equal("FREQ 100000000\n", transport.SendHistory[0]);
+                Assert.Equal(":FREQ 100 MHz\n", transport.SendHistory[0]);
                 Assert.True(transport.SendHistory.Count == 1, "应只发出一条命令");
                 Assert.CurrentTestName = "SignalGenerator.SetFrequency(100MHz)";
                 sg.Dispose();
@@ -116,7 +116,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sg.SetFrequency(1_500_000_000.0);
 
                 Assert.CurrentTestName = "SignalGenerator.SetFrequency(1.5GHz)";
-                Assert.Equal("FREQ 1500000000\n", transport.SendHistory[0]);
+                Assert.Equal(":FREQ 1500 MHz\n", transport.SendHistory[0]);
 
                 sg.Dispose();
             }
@@ -130,7 +130,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sg.SetPower(-12.5);
 
                 Assert.CurrentTestName = "SignalGenerator.SetPower(-12.5)";
-                Assert.Equal("POW -12.5\n", transport.SendHistory[0]);
+                Assert.Equal(":POW -12.5 dBm\n", transport.SendHistory[0]);
 
                 sg.Dispose();
             }
@@ -145,8 +145,8 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sg.SetOutputState(false);
 
                 Assert.CurrentTestName = "SignalGenerator.SetOutputState";
-                Assert.Equal("OUTP ON\n", transport.SendHistory[0]);
-                Assert.Equal("OUTP OFF\n", transport.SendHistory[1]);
+                Assert.Equal(":OUTP 1\n", transport.SendHistory[0]);
+                Assert.Equal(":OUTP 0\n", transport.SendHistory[1]);
 
                 sg.Dispose();
             }
@@ -162,9 +162,9 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 lo.SetOutputState(true);
 
                 Assert.CurrentTestName = "SignalGeneratorLO 三连发";
-                Assert.Equal("FREQ 2400000000\n", transport.SendHistory[0]);
-                Assert.Equal("POW 5\n", transport.SendHistory[1]);
-                Assert.Equal("OUTP ON\n", transport.SendHistory[2]);
+                Assert.Equal(":FREQ 2400 MHz\n", transport.SendHistory[0]);
+                Assert.Equal(":POW 5 dBm\n", transport.SendHistory[1]);
+                Assert.Equal(":OUTP 1\n", transport.SendHistory[2]);
 
                 lo.Dispose();
             }
@@ -178,9 +178,9 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sg.ConfigureAndEnable(100e6, -10.0);
 
                 Assert.CurrentTestName = "SignalGenerator.ConfigureAndEnable";
-                Assert.Equal("FREQ 100000000\n", transport.SendHistory[0]);
-                Assert.Equal("POW -10\n", transport.SendHistory[1]);
-                Assert.Equal("OUTP ON\n", transport.SendHistory[2]);
+                Assert.Equal(":FREQ 100 MHz\n", transport.SendHistory[0]);
+                Assert.Equal(":POW -10 dBm\n", transport.SendHistory[1]);
+                Assert.Equal(":OUTP 1\n", transport.SendHistory[2]);
 
                 sg.Dispose();
             }
@@ -194,20 +194,20 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
         {
             Console.WriteLine("[Test] SpectrumAnalyzer 查询路径（Write → ReadString → 解析）");
 
-            // --- ReadPeakAmplitude：先发 CALC:MARK:MAX，再发 CALC:MARK:Y? 并解析返回值
+            // --- ReadPeakAmplitude：先发 CALC:MARK1:MAX:PEAK:SEARCH，再发 CALC:MARK1:Y? 并解析返回值
             {
                 var transport = new FakeVisaInstrument("TCPIP0::spec::INSTR");
                 var sa = new SpectrumAnalyzer("TCPIP0::spec::INSTR");
                 InjectAndConnect(sa, transport);
 
-                transport.SetResponse("CALC:MARK:MAX", "");
-                transport.SetResponse("CALC:MARK:Y?", "-42.75");
+                transport.SetResponse("CALC:MARK1:MAX:PEAK", "");
+                transport.SetResponse("CALC:MARK1:Y?", "-42.75");
 
                 double peak = sa.ReadPeakAmplitude();
 
                 Assert.CurrentTestName = "SpectrumAnalyzer.ReadPeakAmplitude";
-                Assert.Equal("CALC:MARK:MAX\n", transport.SendHistory[0]);
-                Assert.Equal("CALC:MARK:Y?\n", transport.SendHistory[1]);
+                Assert.Equal(":CALC:MARK1:MAX:PEAK:SEARCH\n", transport.SendHistory[2]);
+                Assert.Equal(":CALC:MARK1:Y?\n", transport.SendHistory[3]);
                 Assert.Equal(-42.75, peak);
 
                 sa.Dispose();
@@ -224,9 +224,9 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sa.SetRbw(10_000.0);
 
                 Assert.CurrentTestName = "SpectrumAnalyzer 三连发";
-                Assert.Equal("FREQ:CENT 2450000000\n", transport.SendHistory[0]);
-                Assert.Equal("FREQ:SPAN 1000000\n", transport.SendHistory[1]);
-                Assert.Equal("BAND:RES 10000\n", transport.SendHistory[2]);
+                Assert.Equal(":FREQ:CENT 2450 MHz\n", transport.SendHistory[0]);
+                Assert.Equal(":FREQ:SPAN 1 MHz\n", transport.SendHistory[1]);
+                Assert.Equal(":BWID:RES 10 kHz\n", transport.SendHistory[2]);
 
                 sa.Dispose();
             }
@@ -259,7 +259,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             Assert.CurrentTestName = "Retry: 重试 2 次后成功";
             // 失败调用不会写入 history；只有第 3 次成功调用计入
             Assert.Equal(1, transport.SendHistory.Count);
-            Assert.Equal("FREQ 100000000\n", transport.SendHistory[0]);
+            Assert.Equal(":FREQ 100 MHz\n", transport.SendHistory[0]);
 
             sg.Dispose();
         }

@@ -122,7 +122,8 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
         private static string NormalizeKey(string scpi)
         {
             if (scpi == null) return string.Empty;
-            return scpi.Trim().TrimEnd('\r', '\n').TrimEnd(';');
+            // 去掉前导冒号，让测试 SetResponse 时既可写 "FREQ 100000000" 也可写 ":FREQ 100000000"
+            return scpi.Trim().TrimStart(':').TrimEnd('\r', '\n').TrimEnd(';');
         }
     }
 
