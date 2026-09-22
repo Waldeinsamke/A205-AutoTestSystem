@@ -147,30 +147,30 @@ namespace A205AutoTestSystem.UI
             // 
             this.btnInitEnv.Location = new System.Drawing.Point(486, 24);
             this.btnInitEnv.Name = "btnInitEnv";
-            this.btnInitEnv.Size = new System.Drawing.Size(120, 28);
+            this.btnInitEnv.Size = new System.Drawing.Size(77, 28);
             this.btnInitEnv.TabIndex = 6;
-            this.btnInitEnv.Text = "初始化测试环境";
+            this.btnInitEnv.Text = "初始化";
             this.btnInitEnv.UseVisualStyleBackColor = true;
             this.btnInitEnv.Click += new System.EventHandler(this.OnInitEnvClicked);
             // 
             // btnLoadTests
             // 
-            this.btnLoadTests.Location = new System.Drawing.Point(611, 24);
+            this.btnLoadTests.Location = new System.Drawing.Point(567, 24);
             this.btnLoadTests.Name = "btnLoadTests";
-            this.btnLoadTests.Size = new System.Drawing.Size(120, 28);
+            this.btnLoadTests.Size = new System.Drawing.Size(95, 28);
             this.btnLoadTests.TabIndex = 7;
-            this.btnLoadTests.Text = "加载所有测试项";
+            this.btnLoadTests.Text = "加载测试项";
             this.btnLoadTests.UseVisualStyleBackColor = true;
             this.btnLoadTests.Click += new System.EventHandler(this.OnLoadTestsClicked);
             // 
             // btnExportExcel
             // 
             this.btnExportExcel.Enabled = false;
-            this.btnExportExcel.Location = new System.Drawing.Point(736, 23);
+            this.btnExportExcel.Location = new System.Drawing.Point(668, 25);
             this.btnExportExcel.Name = "btnExportExcel";
-            this.btnExportExcel.Size = new System.Drawing.Size(103, 28);
+            this.btnExportExcel.Size = new System.Drawing.Size(48, 28);
             this.btnExportExcel.TabIndex = 8;
-            this.btnExportExcel.Text = "导出 Excel";
+            this.btnExportExcel.Text = "导出";
             this.btnExportExcel.UseVisualStyleBackColor = true;
             this.btnExportExcel.Click += new System.EventHandler(this.OnExportExcelClicked);
             // 
