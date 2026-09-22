@@ -1,84 +1,44 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  ExcelExporter.Tests（M7 阶段）。
-  - 目标：.NET Framework 4.8 控制台
-  - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
-  - 通过 <Compile Include> 直接复用被测源：
-      Common/Logger.cs、Common/ExcelExporter.cs、Common/TestReportManager.cs、
-      InstrumentControl/TestResult.cs
-  - 故意不引用 NI VISA、不 Compile Include UI 文件，让测试与 UI 完全解耦。
-  - 通过 HintPath 引用 lib/ 下的 NPOI 2.6.0 DLL（与主工程同源）。
--->
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ExcelExporter.Tests（M7 阶段，迁移至 .NET 8）。
+    - 目标：net8.0-windows 控制台
+    - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
+    - 通过 <ProjectReference> 引用主工程，业务代码与生产同源
+  -->
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A205E7C1-B1D2-4001-9001-7E55CA0011E7}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>A205AutoTestSystem.Tests.ExcelExporterTests</RootNamespace>
     <AssemblyName>ExcelExporter.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|AnyCPU' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="NPOI, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <ProjectReference Include="..\..\A205自动测试系统.csproj" />
+  </ItemGroup>
+
+  <!-- NPOI 在主工程以 HintPath 方式引用 lib\ 下的 DLL，不会通过 ProjectReference 传递；
+       这里直接复用主工程同源的 lib\NPOI.dll，保证 ExcelExporter.Tests 编译期可见。 -->
+  <ItemGroup>
+    <Reference Include="NPOI">
       <HintPath>..\..\lib\NPOI.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="NPOI.OOXML, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="NPOI.OOXML">
       <HintPath>..\..\lib\NPOI.OOXML.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="NPOI.OpenXml4Net, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="NPOI.OpenXml4Net">
       <HintPath>..\..\lib\NPOI.OpenXml4Net.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=1.3.3.11, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\..\lib\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <!-- 被测源（只包含 Excel 报告相关的最小集合）-->
-    <Compile Include="..\..\Common\Logger.cs">
-      <Link>Common\Logger.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Common\ExcelExporter.cs">
-      <Link>Common\ExcelExporter.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Common\TestReportManager.cs">
-      <Link>Common\TestReportManager.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\TestResult.cs">
-      <Link>InstrumentControl\TestResult.cs</Link>
-    </Compile>
-    <!-- 测试程序本体 -->
-    <Compile Include="Program.cs" />
-    <Compile Include="Assert.cs" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>

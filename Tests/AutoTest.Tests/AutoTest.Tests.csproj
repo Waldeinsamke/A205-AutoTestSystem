@@ -1,123 +1,44 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  AutoTest.Tests（M6 阶段）。
-  - 目标：.NET Framework 4.8 控制台
-  - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
-  - 通过 <Compile Include> 直接复用被测源：VisaBaseInstrument.cs / SignalGenerator.cs /
-    SignalGeneratorLO.cs / SpectrumAnalyzer.cs / AutoTestEngine.cs / TestItems/ITestItem.cs /
-    TestItems/GainTest.cs / TestItems/BandwidthTest.cs / TestResult.cs / Logger.cs
-    （保持命令实现单一事实源，避免产生重复维护）
-  - FakeVisaInstrument 与 测试断言 共放在本工程内。
-  - **故意不引用** NationalInstruments.Visa.dll，也不 Compile Include
-    NationalInstrumentsVisaTransport.cs，让测试与 NI VISA 驱动解耦。
-  - 引用 Ivi.Visa.dll（仅类型解析使用，不做实际驱动调用）。
--->
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    AutoTest.Tests（M6 阶段，迁移至 .NET 8）。
+    - 目标：net8.0-windows 控制台
+    - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
+    - 通过 <ProjectReference> 引用主工程，业务代码与生产同源
+    - 测试运行时通过 SetTransport() 注入 FakeVisaInstrument，与 NI VISA 驱动解耦
+  -->
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{E5A1C2D3-4B5F-6A78-9BCD-EF0123456789}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>A205AutoTestSystem.Tests.AutoTestTests</RootNamespace>
     <AssemblyName>AutoTest.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|AnyCPU' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="Ivi.Visa, Version=7.2.0.0, Culture=neutral, PublicKeyToken=a128c98f1d7717c1, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\bin\Debug\Ivi.Visa.dll</HintPath>
-    </Reference>
-    <!-- M7：GainTest/BandwidthTest 末尾调用 TestReportManager.Record，
-         需要 NPOI 报告链路（引用方式与 ExcelExporter.Tests 同源） -->
-    <Reference Include="NPOI, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <ProjectReference Include="..\..\A205自动测试系统.csproj" />
+  </ItemGroup>
+
+  <!-- 同 ExcelExporter.Tests：NPOI 不随 ProjectReference 传递，直接复用 lib\NPOI.dll -->
+  <ItemGroup>
+    <Reference Include="NPOI">
       <HintPath>..\..\lib\NPOI.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="NPOI.OOXML, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="NPOI.OOXML">
       <HintPath>..\..\lib\NPOI.OOXML.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="NPOI.OpenXml4Net, Version=2.6.0.0, Culture=neutral, PublicKeyToken=0df73d75b33d1ac5, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="NPOI.OpenXml4Net">
       <HintPath>..\..\lib\NPOI.OpenXml4Net.dll</HintPath>
+      <Private>true</Private>
     </Reference>
-    <Reference Include="ICSharpCode.SharpZipLib, Version=1.3.3.11, Culture=neutral, PublicKeyToken=1b03e6acf1164f73, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\..\lib\ICSharpCode.SharpZipLib.dll</HintPath>
+      <Private>true</Private>
     </Reference>
   </ItemGroup>
-  <ItemGroup>
-    <!-- 被测源（不含 NI VISA 传输实现）-->
-    <Compile Include="..\..\InstrumentControl\VisaBaseInstrument.cs">
-      <Link>InstrumentControl\VisaBaseInstrument.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\SignalGenerator.cs">
-      <Link>InstrumentControl\SignalGenerator.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\SignalGeneratorLO.cs">
-      <Link>InstrumentControl\SignalGeneratorLO.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\SpectrumAnalyzer.cs">
-      <Link>InstrumentControl\SpectrumAnalyzer.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\TestResult.cs">
-      <Link>InstrumentControl\TestResult.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\AutoTestEngine.cs">
-      <Link>InstrumentControl\AutoTestEngine.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\TestItems\ITestItem.cs">
-      <Link>InstrumentControl\TestItems\ITestItem.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\TestItems\GainTest.cs">
-      <Link>InstrumentControl\TestItems\GainTest.cs</Link>
-    </Compile>
-    <Compile Include="..\..\InstrumentControl\TestItems\BandwidthTest.cs">
-      <Link>InstrumentControl\TestItems\BandwidthTest.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Common\Logger.cs">
-      <Link>Common\Logger.cs</Link>
-    </Compile>
-    <!-- LO 频率规则（GainTest.mode 构造重载依赖） -->
-    <Compile Include="..\..\InstrumentControl\LoFrequencyRule.cs">
-      <Link>InstrumentControl\LoFrequencyRule.cs</Link>
-    </Compile>
-    <!-- M7：TestReportManager（ExcelExporter）报告链路，GainTest/BandwidthTest.Record 依赖 -->
-    <Compile Include="..\..\Common\TestReportManager.cs">
-      <Link>Common\TestReportManager.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Common\ExcelExporter.cs">
-      <Link>Common\ExcelExporter.cs</Link>
-    </Compile>
-    <!-- 测试程序本体 -->
-    <Compile Include="Program.cs" />
-    <Compile Include="Assert.cs" />
-    <Compile Include="FakeVisaInstrument.cs" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>

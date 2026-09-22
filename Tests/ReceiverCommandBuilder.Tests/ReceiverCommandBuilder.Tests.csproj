@@ -1,56 +1,23 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-  ReceiverCommandBuilder 参数化单元测试工程（M2 阶段）。
-  - 目标：.NET Framework 4.8 控制台
-  - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
-  - 通过 <Compile Include> 直接复用 ReceiverCommandBuilder.cs 与 ModeBandTable.cs
-    （保持命令实现单一事实源，避免产生重复维护）
--->
-<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    ReceiverCommandBuilder 参数化单元测试工程（M2 阶段，迁移至 .NET 8）。
+    - 目标：net8.0-windows 控制台
+    - 不引入 NUnit / xUnit / MSTest，自建 Assert 静态类
+    - 通过 <ProjectReference> 引用主工程，业务代码与生产同源
+  -->
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{B2F1D9E4-7A40-4D6E-9E2C-AA01FEAAFF01}</ProjectGuid>
     <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <RootNamespace>A205AutoTestSystem.Tests.BuilderTests</RootNamespace>
     <AssemblyName>ReceiverCommandBuilder.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
+    <ProjectReference Include="..\..\A205自动测试系统.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <!-- 被测源：命令构建器（包含 enums + ModeBandTable）-->
-    <Compile Include="..\..\ReceiverControl\ReceiverCommandBuilder.cs">
-      <Link>ReceiverControl\ReceiverCommandBuilder.cs</Link>
-    </Compile>
-    <!-- 测试程序本体 -->
-    <Compile Include="Program.cs" />
-    <Compile Include="Assert.cs" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
 </Project>
