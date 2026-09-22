@@ -87,7 +87,7 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig.Location = new System.Drawing.Point(0, 8);
             this.grpTestConfig.Name = "grpTestConfig";
             this.grpTestConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestConfig.Size = new System.Drawing.Size(841, 100);
+            this.grpTestConfig.Size = new System.Drawing.Size(841, 68);
             this.grpTestConfig.TabIndex = 0;
             this.grpTestConfig.TabStop = false;
             this.grpTestConfig.Text = "测试配置";
@@ -145,7 +145,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnInitEnv
             // 
-            this.btnInitEnv.Location = new System.Drawing.Point(525, 25);
+            this.btnInitEnv.Location = new System.Drawing.Point(486, 24);
             this.btnInitEnv.Name = "btnInitEnv";
             this.btnInitEnv.Size = new System.Drawing.Size(120, 28);
             this.btnInitEnv.TabIndex = 6;
@@ -155,7 +155,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnLoadTests
             // 
-            this.btnLoadTests.Location = new System.Drawing.Point(692, 25);
+            this.btnLoadTests.Location = new System.Drawing.Point(611, 24);
             this.btnLoadTests.Name = "btnLoadTests";
             this.btnLoadTests.Size = new System.Drawing.Size(120, 28);
             this.btnLoadTests.TabIndex = 7;
@@ -166,11 +166,11 @@ namespace A205AutoTestSystem.UI
             // btnExportExcel
             // 
             this.btnExportExcel.Enabled = false;
-            this.btnExportExcel.Location = new System.Drawing.Point(14, 62);
+            this.btnExportExcel.Location = new System.Drawing.Point(736, 23);
             this.btnExportExcel.Name = "btnExportExcel";
-            this.btnExportExcel.Size = new System.Drawing.Size(798, 28);
+            this.btnExportExcel.Size = new System.Drawing.Size(103, 28);
             this.btnExportExcel.TabIndex = 8;
-            this.btnExportExcel.Text = "导出 Excel（M7）";
+            this.btnExportExcel.Text = "导出 Excel";
             this.btnExportExcel.UseVisualStyleBackColor = true;
             this.btnExportExcel.Click += new System.EventHandler(this.OnExportExcelClicked);
             // 
@@ -181,10 +181,10 @@ namespace A205AutoTestSystem.UI
             this.grpTestItems.Controls.Add(this.lblHeaderUnit);
             this.grpTestItems.Controls.Add(this.lblHeaderLimit);
             this.grpTestItems.Controls.Add(this.lblHeaderStatus);
-            this.grpTestItems.Location = new System.Drawing.Point(0, 114);
+            this.grpTestItems.Location = new System.Drawing.Point(0, 82);
             this.grpTestItems.Name = "grpTestItems";
             this.grpTestItems.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpTestItems.Size = new System.Drawing.Size(841, 156);
+            this.grpTestItems.Size = new System.Drawing.Size(841, 301);
             this.grpTestItems.TabIndex = 1;
             this.grpTestItems.TabStop = false;
             this.grpTestItems.Text = "测试项目";
@@ -245,17 +245,17 @@ namespace A205AutoTestSystem.UI
             this.grpProgressLog.Controls.Add(this.lblCurrentStep);
             this.grpProgressLog.Controls.Add(this.rtbLog);
             this.grpProgressLog.Controls.Add(this.btnClearLog);
-            this.grpProgressLog.Location = new System.Drawing.Point(0, 276);
+            this.grpProgressLog.Location = new System.Drawing.Point(0, 389);
             this.grpProgressLog.Name = "grpProgressLog";
             this.grpProgressLog.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpProgressLog.Size = new System.Drawing.Size(841, 396);
+            this.grpProgressLog.Size = new System.Drawing.Size(841, 326);
             this.grpProgressLog.TabIndex = 2;
             this.grpProgressLog.TabStop = false;
-            this.grpProgressLog.Text = "进度与日志";
+            this.grpProgressLog.Text = "日志";
             // 
             // progressBar
             // 
-            this.progressBar.Location = new System.Drawing.Point(4, 27);
+            this.progressBar.Location = new System.Drawing.Point(13, 26);
             this.progressBar.Name = "progressBar";
             this.progressBar.Size = new System.Drawing.Size(815, 25);
             this.progressBar.TabIndex = 0;
@@ -263,7 +263,7 @@ namespace A205AutoTestSystem.UI
             // lblCurrentStep
             // 
             this.lblCurrentStep.ForeColor = System.Drawing.Color.DarkBlue;
-            this.lblCurrentStep.Location = new System.Drawing.Point(3, 59);
+            this.lblCurrentStep.Location = new System.Drawing.Point(12, 58);
             this.lblCurrentStep.Name = "lblCurrentStep";
             this.lblCurrentStep.Size = new System.Drawing.Size(816, 24);
             this.lblCurrentStep.TabIndex = 1;
@@ -276,16 +276,16 @@ namespace A205AutoTestSystem.UI
             this.rtbLog.DetectUrls = false;
             this.rtbLog.Font = new System.Drawing.Font("Consolas", 9F);
             this.rtbLog.ForeColor = System.Drawing.Color.LightGreen;
-            this.rtbLog.Location = new System.Drawing.Point(4, 89);
+            this.rtbLog.Location = new System.Drawing.Point(4, 83);
             this.rtbLog.Name = "rtbLog";
             this.rtbLog.ReadOnly = true;
-            this.rtbLog.Size = new System.Drawing.Size(835, 275);
+            this.rtbLog.Size = new System.Drawing.Size(835, 215);
             this.rtbLog.TabIndex = 2;
             this.rtbLog.Text = "";
             // 
             // btnClearLog
             // 
-            this.btnClearLog.Location = new System.Drawing.Point(749, 367);
+            this.btnClearLog.Location = new System.Drawing.Point(769, 298);
             this.btnClearLog.Name = "btnClearLog";
             this.btnClearLog.Size = new System.Drawing.Size(70, 26);
             this.btnClearLog.TabIndex = 3;

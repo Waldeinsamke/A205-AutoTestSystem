@@ -686,7 +686,7 @@ namespace A205AutoTestSystem.UI
             this.grpCommunicationLog.Size = new System.Drawing.Size(841, 264);
             this.grpCommunicationLog.TabIndex = 3;
             this.grpCommunicationLog.TabStop = false;
-            this.grpCommunicationLog.Text = "通信日志";
+            this.grpCommunicationLog.Text = "日志";
             // 
             // rtbLog
             // 
