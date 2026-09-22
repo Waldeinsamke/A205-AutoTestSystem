@@ -186,8 +186,8 @@ namespace A205AutoTestSystem.UI
             // SignalGenerator：只发命令，无需 ReadString
             // SignalGeneratorLO：同样
 
-            // SpectrumAnalyzer.ReadPeakAmplitude 调用 CALC:MARK:MAX + CALC:MARK:Y?
-            // 默认响应是空字符串；预先注入一个有效的 dBm 值（-10 dBm，符合 RF @ -20 dBm + Gain ≈ 10dB 的预期）
+            // SpectrumAnalyzer.ReadPeakAmplitude 调用 STAT ON / MAX:PEAK / MAX:PEAK:SEARCH / Y?，
+            // 默认响应是空字符串；预先注入一个有效的 dBm 值（-10 dBm，符合 RF @ -20 dBm + Gain ≈ 10dB 的预期）。
             var rfTransport = transportField.GetValue(rf) as FakeVisaInstrument;
             var loTransport = transportField.GetValue(lo) as FakeVisaInstrument;
             var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
@@ -198,11 +198,14 @@ namespace A205AutoTestSystem.UI
             }
             if (saTransport != null)
             {
-                saTransport.SetResponse("CALC:MARK:MAX", "");
+                // SpectrumAnalyzer 实际发出的命令是 MARK1（前缀 CALC:MARK1:MAX:PEAK:SEARCH 与 CALC:MARK1:Y?），
+                // FakeVisaInstrument.ReadString 以"最后一次 Write 的命令"为字典 key，
+                // 这里必须与 SpectrumAnalyzer.MeasureMarkerPeak / ParseMarkerY 发出的命令字串完全一致。
+                saTransport.SetResponse(":CALC:MARK1:MAX:PEAK:SEARCH", "");
                 // 给 SA 一个"合理"幅度响应：
                 //   第一次 ReadPeakAmplitude（GainTest）→ -10 dBm
                 //   后续扫描点（BandwidthTest）→ 也用 -10 dBm；简化版
-                saTransport.SetResponse("CALC:MARK:Y?", "-10.00");
+                saTransport.SetResponse(":CALC:MARK1:Y?", "-10.00");
             }
         }
 
