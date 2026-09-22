@@ -41,4 +41,12 @@
     </Reference>
   </ItemGroup>
 
+  <!--
+    FakeVisaInstrument 使用 Ivi.Visa.VisaException；ProjectReference 传递的 IviFoundation.Visa 8.0.1
+    在编译器侧有效，但 VS 静态分析会找不到 Ivi.Visa 命名空间导致红线。此处显式引用以稳定 IDE 智能感知。
+  -->
+  <ItemGroup>
+    <PackageReference Include="IviFoundation.Visa" Version="8.0.1" />
+  </ItemGroup>
+
 </Project>
