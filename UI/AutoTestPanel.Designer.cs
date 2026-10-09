@@ -3,7 +3,8 @@ namespace A205AutoTestSystem.UI
     /// <summary>
     /// AutoTestPanel 的设计器文件（绝对定位布局）。
     /// 所有控件使用显式 Location/Size，可在 VS 设计器中自由拖拽、缩放调整。
-    /// 动态测试项行由 AutoTestPanel.cs 的 AddTestRow 按固定列坐标添加到 grpTestItems。
+    /// <para>测试项列表已迁移至 DataGridView（自带垂直滚动条），不再有动态标签行；
+    /// 行数据由 AutoTestPanel.cs 的 AddTestRowToGrid 添加。</para>
     /// </summary>
     partial class AutoTestPanel
     {
@@ -22,16 +23,12 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.Label lblConfigTemp;
         private System.Windows.Forms.ComboBox cmbTemp;
         private System.Windows.Forms.Button btnInitEnv;
-        private System.Windows.Forms.Button btnLoadTests;
         private System.Windows.Forms.Button btnExportExcel;
+        private System.Windows.Forms.Button btnRunAll;
 
-        // 测试项面板（表头 5 个标签；动态行直接添加到本 GroupBox）
+        // 测试项面板（DataGridView，自带垂直滚动条；动态测试项以行形式加入）
         private System.Windows.Forms.GroupBox grpTestItems;
-        private System.Windows.Forms.Label lblHeaderName;
-        private System.Windows.Forms.Label lblHeaderAction;
-        private System.Windows.Forms.Label lblHeaderUnit;
-        private System.Windows.Forms.Label lblHeaderLimit;
-        private System.Windows.Forms.Label lblHeaderStatus;
+        private System.Windows.Forms.DataGridView dgvTests;
 
         // 进度与日志区
         private System.Windows.Forms.GroupBox grpProgressLog;
@@ -55,14 +52,10 @@ namespace A205AutoTestSystem.UI
             this.lblConfigTemp = new System.Windows.Forms.Label();
             this.cmbTemp = new System.Windows.Forms.ComboBox();
             this.btnInitEnv = new System.Windows.Forms.Button();
-            this.btnLoadTests = new System.Windows.Forms.Button();
             this.btnExportExcel = new System.Windows.Forms.Button();
+            this.btnRunAll = new System.Windows.Forms.Button();
             this.grpTestItems = new System.Windows.Forms.GroupBox();
-            this.lblHeaderName = new System.Windows.Forms.Label();
-            this.lblHeaderAction = new System.Windows.Forms.Label();
-            this.lblHeaderUnit = new System.Windows.Forms.Label();
-            this.lblHeaderLimit = new System.Windows.Forms.Label();
-            this.lblHeaderStatus = new System.Windows.Forms.Label();
+            this.dgvTests = new System.Windows.Forms.DataGridView();
             this.grpProgressLog = new System.Windows.Forms.GroupBox();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblCurrentStep = new System.Windows.Forms.Label();
@@ -82,8 +75,8 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig.Controls.Add(this.lblConfigTemp);
             this.grpTestConfig.Controls.Add(this.cmbTemp);
             this.grpTestConfig.Controls.Add(this.btnInitEnv);
-            this.grpTestConfig.Controls.Add(this.btnLoadTests);
             this.grpTestConfig.Controls.Add(this.btnExportExcel);
+            this.grpTestConfig.Controls.Add(this.btnRunAll);
             this.grpTestConfig.Location = new System.Drawing.Point(0, 8);
             this.grpTestConfig.Name = "grpTestConfig";
             this.grpTestConfig.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
@@ -153,15 +146,6 @@ namespace A205AutoTestSystem.UI
             this.btnInitEnv.UseVisualStyleBackColor = true;
             this.btnInitEnv.Click += new System.EventHandler(this.OnInitEnvClicked);
             // 
-            // btnLoadTests
-            // 
-            this.btnLoadTests.Location = new System.Drawing.Point(567, 24);
-            this.btnLoadTests.Name = "btnLoadTests";
-            this.btnLoadTests.Size = new System.Drawing.Size(95, 28);
-            this.btnLoadTests.TabIndex = 7;
-            this.btnLoadTests.Text = "加载测试项";
-            this.btnLoadTests.UseVisualStyleBackColor = true;
-            this.btnLoadTests.Click += new System.EventHandler(this.OnLoadTestsClicked);
             // 
             // btnExportExcel
             // 
@@ -173,14 +157,21 @@ namespace A205AutoTestSystem.UI
             this.btnExportExcel.Text = "导出";
             this.btnExportExcel.UseVisualStyleBackColor = true;
             this.btnExportExcel.Click += new System.EventHandler(this.OnExportExcelClicked);
+            //
+            // btnRunAll
+            //
+            this.btnRunAll.Enabled = false;
+            this.btnRunAll.Location = new System.Drawing.Point(722, 25);
+            this.btnRunAll.Name = "btnRunAll";
+            this.btnRunAll.Size = new System.Drawing.Size(105, 28);
+            this.btnRunAll.TabIndex = 9;
+            this.btnRunAll.Text = "一键运行";
+            this.btnRunAll.UseVisualStyleBackColor = true;
+            this.btnRunAll.Click += new System.EventHandler(this.OnRunAllClicked);
             // 
             // grpTestItems
-            // 
-            this.grpTestItems.Controls.Add(this.lblHeaderName);
-            this.grpTestItems.Controls.Add(this.lblHeaderAction);
-            this.grpTestItems.Controls.Add(this.lblHeaderUnit);
-            this.grpTestItems.Controls.Add(this.lblHeaderLimit);
-            this.grpTestItems.Controls.Add(this.lblHeaderStatus);
+            //
+            this.grpTestItems.Controls.Add(this.dgvTests);
             this.grpTestItems.Location = new System.Drawing.Point(0, 82);
             this.grpTestItems.Name = "grpTestItems";
             this.grpTestItems.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
@@ -188,56 +179,25 @@ namespace A205AutoTestSystem.UI
             this.grpTestItems.TabIndex = 1;
             this.grpTestItems.TabStop = false;
             this.grpTestItems.Text = "测试项目";
-            // 
-            // lblHeaderName
-            // 
-            this.lblHeaderName.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold);
-            this.lblHeaderName.Location = new System.Drawing.Point(14, 27);
-            this.lblHeaderName.Name = "lblHeaderName";
-            this.lblHeaderName.Size = new System.Drawing.Size(200, 24);
-            this.lblHeaderName.TabIndex = 0;
-            this.lblHeaderName.Text = "测试项目";
-            this.lblHeaderName.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblHeaderAction
-            // 
-            this.lblHeaderAction.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold);
-            this.lblHeaderAction.Location = new System.Drawing.Point(220, 27);
-            this.lblHeaderAction.Name = "lblHeaderAction";
-            this.lblHeaderAction.Size = new System.Drawing.Size(90, 24);
-            this.lblHeaderAction.TabIndex = 1;
-            this.lblHeaderAction.Text = "操作";
-            this.lblHeaderAction.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblHeaderUnit
-            // 
-            this.lblHeaderUnit.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold);
-            this.lblHeaderUnit.Location = new System.Drawing.Point(318, 27);
-            this.lblHeaderUnit.Name = "lblHeaderUnit";
-            this.lblHeaderUnit.Size = new System.Drawing.Size(70, 24);
-            this.lblHeaderUnit.TabIndex = 2;
-            this.lblHeaderUnit.Text = "单位";
-            this.lblHeaderUnit.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblHeaderLimit
-            // 
-            this.lblHeaderLimit.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold);
-            this.lblHeaderLimit.Location = new System.Drawing.Point(396, 27);
-            this.lblHeaderLimit.Name = "lblHeaderLimit";
-            this.lblHeaderLimit.Size = new System.Drawing.Size(200, 24);
-            this.lblHeaderLimit.TabIndex = 3;
-            this.lblHeaderLimit.Text = "阈值区间";
-            this.lblHeaderLimit.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // lblHeaderStatus
-            // 
-            this.lblHeaderStatus.Font = new System.Drawing.Font("微软雅黑", 9F, System.Drawing.FontStyle.Bold);
-            this.lblHeaderStatus.Location = new System.Drawing.Point(604, 27);
-            this.lblHeaderStatus.Name = "lblHeaderStatus";
-            this.lblHeaderStatus.Size = new System.Drawing.Size(400, 24);
-            this.lblHeaderStatus.TabIndex = 4;
-            this.lblHeaderStatus.Text = "状态";
-            this.lblHeaderStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            //
+            // dgvTests
+            //
+            this.dgvTests.AllowUserToAddRows = false;
+            this.dgvTests.AllowUserToDeleteRows = false;
+            this.dgvTests.AllowUserToResizeRows = false;
+            this.dgvTests.BackgroundColor = System.Drawing.Color.White;
+            this.dgvTests.ColumnHeadersBorderStyle = System.Windows.Forms.DataGridViewHeaderBorderStyle.Single;
+            this.dgvTests.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            this.dgvTests.Location = new System.Drawing.Point(10, 22);
+            this.dgvTests.MultiSelect = false;
+            this.dgvTests.Name = "dgvTests";
+            this.dgvTests.ReadOnly = true;
+            this.dgvTests.RowHeadersVisible = false;
+            this.dgvTests.RowTemplate.Height = 28;
+            this.dgvTests.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
+            this.dgvTests.Size = new System.Drawing.Size(821, 269);
+            this.dgvTests.TabIndex = 0;
+            this.dgvTests.CellContentClick += new System.Windows.Forms.DataGridViewCellEventHandler(this.OnDgvTestsCellContentClick);
             // 
             // grpProgressLog
             // 

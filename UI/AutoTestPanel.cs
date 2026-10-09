@@ -41,15 +41,13 @@ namespace A205AutoTestSystem.UI
         private readonly AutoTestEngine _engine = new AutoTestEngine();
 
         private readonly List<ITestItem> _tests = new List<ITestItem>();
-        private readonly List<Button> _runButtons = new List<Button>();
-        private readonly List<Label> _statusLabels = new List<Label>();
-
-        // 动态测试项行（绝对定位）：记录 AddTestRow 创建的 5 个控件，便于统一清理
-        private readonly List<Control> _dynamicRowControls = new List<Control>();
 
         // 抑制初始化阶段事件回调（避免在构建控件时立刻触发副作用）
         private bool _initialized;
         private bool _instrumentsReady;
+
+        // 是否正在"一键运行"，用于抑制子项的某些交互（如禁用 grpTestConfig 上的非必要按钮）
+        private bool _runAllInProgress;
 
         // 状态颜色常量（不写进 .resx，保持代码可读性）
         private static readonly Color StatusColorReady = Color.Gray;
@@ -65,6 +63,7 @@ namespace A205AutoTestSystem.UI
         {
             InitializeComponent();        // ← Designer 生成（参见 Designer.cs）
             InitializeDefaults();
+            ConfigureDgvColumns();       // DataGridView 列初始化（运行期构造）
             // WireEvents() 不需要：Designer 内已订阅
             _initialized = true;
 
@@ -160,8 +159,13 @@ namespace A205AutoTestSystem.UI
                 // 配置伪传输的常见响应（让 ReadPeakAmplitude 返回合理值）
                 InjectFakeDefaults(_rf, _lo, _sa);
 
+                // 三仪表就绪后立即把默认测试项清单加载到 DataGridView，
+                // 不再需要"加载测试项"按钮。
+                LoadDefaultTestsToGrid();
+
                 MessageBox.Show(this,
-                    "测试环境初始化完成（FakeInstrument）。\r\n可点击『加载所有测试项』。",
+                    "测试环境初始化完成（FakeInstrument）。\r\n" +
+                    $"已默认加载 {_tests.Count} 项测试项，可点击 ▶ 运行或『一键运行』。",
                     "提示",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
@@ -210,168 +214,169 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// "加载所有测试项"按钮。
+        /// 初始化测试环境完成后，加载默认测试项清单到 DataGridView。
+        /// 由 OnInitEnvClicked 在三仪表 Connect() 成功后调用。
         /// </summary>
-        private void OnLoadTestsClicked(object sender, EventArgs e)
+        private void LoadDefaultTestsToGrid()
         {
-            if (!_initialized) return;
-            if (!_instrumentsReady)
-            {
-                MessageBox.Show(this, "请先初始化测试环境。", "提示",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            // 清空旧测试项
             _engine.Clear();
             ClearTestRows();
 
-            // M6 阶段首批：模式从 UI 当前选择读取（SelectedIndex 0/1/2 → Mode1/2/3）；
-            // LO 由 LoFrequencyRule 按（RF、模式）动态计算（1/2 → RF+3670MHz，3 → RF+4350MHz）
-            int mode = cmbMode.SelectedIndex + 1;
+            int mode = cmbMode.SelectedIndex + 1;  // 0/1/2 → 1/2/3
+            var items = TestCatalog.CreateDefault(_rf, _lo, _sa, mode);
 
-            // 创建两个测试项（M6 阶段首批）
-            var gain = new GainTest(
-                rfGenerator: _rf,
-                loGenerator: _lo,
-                spectrumAnalyzer: _sa,
-                rfFreqHz: 100e6,
-                rfPowerDbm: -20,
-                mode: mode,
-                loPowerDbm: 0,
-                ifFreqHz: 70e6);
-
-            var bw = new BandwidthTest(
-                rfGenerator: _rf,
-                spectrumAnalyzer: _sa,
-                centerRfFreqHz: 100e6,
-                rfPowerDbm: -20,
-                ifFreqHz: 70e6,
-                scanPoints: 11);
-
-            _engine.RegisterTest(gain);
-            _engine.RegisterTest(bw);
-
-            _tests.Add(gain);
-            _tests.Add(bw);
-
-            // 动态添加行
-            foreach (var t in _tests)
+            foreach (var t in items)
             {
-                AddTestRow(t);
+                _tests.Add(t);
+                AddTestRowToGrid(t);
+            }
+            foreach (var t in items)
+            {
+                _engine.RegisterTest(t);
             }
 
+            // 加载完成后允许一键运行
+            btnRunAll.Enabled = true;
             UpdateProgress(0, $"已加载 {_tests.Count} 个测试项。");
-            MessageBox.Show(this, $"已加载 {_tests.Count} 个测试项。", "提示",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         // ============================================================
-        // 动态测试项行（绝对定位；列坐标与 Designer 中表头 5 列一一对应）
+        // DataGridView 测试项表（替换原"动态测试项行 + 绝对定位"实现）
         // ============================================================
 
-        private const int RowOriginY = 55;          // 第一行顶部 Y
-        private const int RowHeight = 34;           // 行高
-        private const int DesignItemsGroupHeight = 134;
-        private static readonly int[] ColumnX = { 14, 220, 318, 396, 604 };
-        private static readonly int[] ColumnWidth = { 200, 90, 70, 200, 400 };
-        private static readonly Point DesignProgressLocation = new Point(8, 256);
+        // 列下标常量（与 ConfigureDgvColumns 中加入顺序保持一致）
+        private const int ColIndex = 0;     // #
+        private const int ColName = 1;      // 测试项目
+        private const int ColUnit = 2;      // 单位
+        private const int ColLimit = 3;     // 阈值区间
+        private const int ColAction = 4;    // 操作（按钮列）
+        private const int ColStatus = 5;    // 状态
 
         /// <summary>
-        /// 清理所有测试项行（保留表头），并复位 GroupBox 高度与进度区位置。
+        /// 配置 DataGridView 列。Designer 中只声明了 dgvTests 实例，
+        /// 列与列样式在运行期构造，便于在代码里集中维护。
+        /// </summary>
+        private void ConfigureDgvColumns()
+        {
+            dgvTests.Columns.Clear();
+            dgvTests.AutoGenerateColumns = false;
+            dgvTests.AllowUserToResizeColumns = false;
+
+            // 行高 28px（约可容 9 行可视）
+            dgvTests.RowTemplate.Height = 28;
+
+            // 整体表头字体加粗
+            dgvTests.ColumnHeadersDefaultCellStyle.Font =
+                new Font("微软雅黑", 9F, FontStyle.Bold);
+            dgvTests.ColumnHeadersDefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleCenter;
+
+            // 序号
+            var colIdx = new DataGridViewTextBoxColumn
+            {
+                Name = "colIndex",
+                HeaderText = "#",
+                Width = 40,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colIdx);
+
+            // 测试项目
+            var colName = new DataGridViewTextBoxColumn
+            {
+                Name = "colName",
+                HeaderText = "测试项目",
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colName);
+
+            // 单位
+            var colUnit = new DataGridViewTextBoxColumn
+            {
+                Name = "colUnit",
+                HeaderText = "单位",
+                Width = 60,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colUnit);
+
+            // 阈值区间
+            var colLimit = new DataGridViewTextBoxColumn
+            {
+                Name = "colLimit",
+                HeaderText = "阈值区间",
+                Width = 140,
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colLimit);
+
+            // 操作（按钮列）
+            var colAction = new DataGridViewButtonColumn
+            {
+                Name = "colAction",
+                HeaderText = "操作",
+                Text = "▶ 运行",
+                UseColumnTextForButtonValue = true,
+                Width = 80,
+                FlatStyle = FlatStyle.Standard,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colAction);
+
+            // 状态
+            var colStatus = new DataGridViewTextBoxColumn
+            {
+                Name = "colStatus",
+                HeaderText = "状态",
+                ReadOnly = true,
+                SortMode = DataGridViewColumnSortMode.NotSortable
+            };
+            dgvTests.Columns.Add(colStatus);
+
+            // 列宽策略——剩余空间给项目名和状态列
+            dgvTests.Columns[ColName].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            dgvTests.Columns[ColStatus].AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill;
+            dgvTests.Columns[ColStatus].FillWeight = 150;     // 状态列权重更大
+            dgvTests.Columns[ColName].FillWeight = 100;
+        }
+
+        /// <summary>
+        /// 清理所有测试项行（DGV 行 + _tests 列表）。同时复位一键运行按钮。
         /// </summary>
         private void ClearTestRows()
         {
-            foreach (Control c in _dynamicRowControls)
-            {
-                grpTestItems.Controls.Remove(c);
-                c.Dispose();
-            }
-            _dynamicRowControls.Clear();
-
-            // 复位为设计器中的初始布局
-            grpTestItems.Height = DesignItemsGroupHeight;
-            grpProgressLog.Location = DesignProgressLocation;
-
+            dgvTests.Rows.Clear();
             _tests.Clear();
-            _runButtons.Clear();
-            _statusLabels.Clear();
+            btnRunAll.Enabled = false;
         }
 
         /// <summary>
-        /// 动态新增一行：名称 + 运行按钮 + 单位 + 阈值 + 状态（绝对定位）。
+        /// 向 DataGridView 添加一行测试项。
         /// </summary>
-        private void AddTestRow(ITestItem test)
+        private void AddTestRowToGrid(ITestItem test)
         {
-            // 以已存在的运行按钮数作为 0 起始行号（调用顺序保证与 _tests 一致）
-            int rowIndex = _runButtons.Count;
-            int y = RowOriginY + rowIndex * RowHeight;
-
-            var lblName = new Label
-            {
-                Text = test.TestName,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false,
-                Location = new Point(ColumnX[0], y + 3),
-                Size = new Size(ColumnWidth[0], 28)
-            };
-
-            var btnRun = new Button
-            {
-                Text = "▶ 运行",
-                Location = new Point(ColumnX[1], y + 2),
-                Size = new Size(ColumnWidth[1], 28)
-            };
-            int captured = rowIndex;
-            btnRun.Click += async (s, args) => await OnRunTestClickedAsync(captured);
-            _runButtons.Add(btnRun);
-
-            var lblUnit = new Label
-            {
-                Text = test.Unit,
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false,
-                Location = new Point(ColumnX[2], y + 3),
-                Size = new Size(ColumnWidth[2], 28)
-            };
-
-            var lblLimit = new Label
-            {
-                Text = FormatLimitText(test),
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false,
-                Location = new Point(ColumnX[3], y + 3),
-                Size = new Size(ColumnWidth[3], 28)
-            };
-
-            var lblStatus = new Label
-            {
-                Text = "就绪",
-                TextAlign = ContentAlignment.MiddleLeft,
-                AutoSize = false,
-                ForeColor = StatusColorReady,
-                Font = new Font(Font, FontStyle.Bold),
-                Location = new Point(ColumnX[4], y + 3),
-                Size = new Size(ColumnWidth[4], 28)
-            };
-            _statusLabels.Add(lblStatus);
-
-            grpTestItems.Controls.Add(lblName);
-            grpTestItems.Controls.Add(btnRun);
-            grpTestItems.Controls.Add(lblUnit);
-            grpTestItems.Controls.Add(lblLimit);
-            grpTestItems.Controls.Add(lblStatus);
-            _dynamicRowControls.AddRange(new Control[] { lblName, btnRun, lblUnit, lblLimit, lblStatus });
-
-            // 按行数扩展"测试项目"分组高度，并把"进度与日志"分组整体下移
-            int neededHeight = RowOriginY + (rowIndex + 1) * RowHeight + 11;
-            if (neededHeight > grpTestItems.Height)
-            {
-                grpTestItems.Height = neededHeight;
-            }
-            grpProgressLog.Location = new Point(8, grpTestItems.Bottom + 8);
+            int rowIndex = dgvTests.Rows.Add(
+                (dgvTests.Rows.Count + 1).ToString(CultureInfo.InvariantCulture),  // #
+                test.TestName,                                                     // 测试项目
+                test.Unit,                                                         // 单位
+                FormatLimitText(test),                                             // 阈值区间
+                "▶ 运行",                                                          // 操作（按钮文本）
+                "就绪"                                                             // 状态
+            );
+            var row = dgvTests.Rows[rowIndex];
+            // 状态列默认灰色
+            row.Cells[ColStatus].Style.ForeColor = StatusColorReady;
+            // 把 ITestItem 引用挂到 Tag 上，运行按钮事件回调时通过 Tag 取回
+            row.Tag = test;
         }
 
+        /// <summary>
+        /// 把测试项的阈值区间格式化为 "[下限, 上限]"。
+        /// </summary>
         private static string FormatLimitText(ITestItem test)
         {
             string lo = test.LowerLimit.HasValue
@@ -384,22 +389,34 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 单条测试项的运行按钮回调（异步）。
+        /// DataGridView 单元格点击事件（捕获操作列按钮）。
         /// </summary>
-        private async Task OnRunTestClickedAsync(int testIndex)
+        private async void OnDgvTestsCellContentClick(object sender, DataGridViewCellEventArgs e)
         {
-            if (_tests == null || testIndex >= _tests.Count)
-            {
-                return;
-            }
+            if (e.RowIndex < 0) return;
+            if (e.ColumnIndex != ColAction) return;
+            if (_runAllInProgress) return;     // 一键运行期间忽略手动运行
 
-            var test = _tests[testIndex];
-            var btn = _runButtons[testIndex];
-            var lbl = _statusLabels[testIndex];
+            await RunSingleTestAsync(e.RowIndex);
+        }
 
-            btn.Enabled = false;
-            lbl.Text = "运行中…";
-            lbl.ForeColor = StatusColorRunning;
+        /// <summary>
+        /// 单条测试项的执行逻辑（共用：手动按行触发 + 一键运行逐条调用）。
+        /// <para>入口会修改行内"操作"列与"状态"列文案，运行结束还原。</para>
+        /// </summary>
+        private async Task RunSingleTestAsync(int rowIndex)
+        {
+            if (rowIndex < 0 || rowIndex >= dgvTests.Rows.Count) return;
+            var row = dgvTests.Rows[rowIndex];
+            var test = row.Tag as ITestItem;
+            if (test == null) return;
+
+            var statusCell = row.Cells[ColStatus];
+            var actionCell = row.Cells[ColAction];
+
+            actionCell.Value = "运行中…";
+            statusCell.Value = "运行中…";
+            statusCell.Style.ForeColor = StatusColorRunning;
 
             try
             {
@@ -413,11 +430,11 @@ namespace A205AutoTestSystem.UI
                     string valStr = double.IsNaN(result.Value) || double.IsInfinity(result.Value)
                         ? "N/A"
                         : result.Value.ToString("F2", CultureInfo.InvariantCulture);
-                    lbl.Text = string.Format(
+                    statusCell.Value = string.Format(
                         CultureInfo.InvariantCulture,
                         "{0} ({1} {2})",
                         result.Judgment, valStr, result.Unit);
-                    lbl.ForeColor = result.Judgment == "Pass" ? StatusColorPass : StatusColorFail;
+                    statusCell.Style.ForeColor = result.Judgment == "Pass" ? StatusColorPass : StatusColorFail;
 
                     // M7：测试项 ExecuteAsync 内部已经 Record 到 TestReportManager；
                     // 这里只要 PendingRowCount > 0 就允许导出。
@@ -425,18 +442,51 @@ namespace A205AutoTestSystem.UI
                 }
                 else
                 {
-                    lbl.Text = "异常：结果为 null";
-                    lbl.ForeColor = StatusColorFail;
+                    statusCell.Value = "异常：结果为 null";
+                    statusCell.Style.ForeColor = StatusColorFail;
                 }
             }
             catch (Exception ex)
             {
-                lbl.Text = "异常: " + ex.Message;
-                lbl.ForeColor = StatusColorFail;
+                statusCell.Value = "异常: " + ex.Message;
+                statusCell.Style.ForeColor = StatusColorFail;
             }
             finally
             {
-                btn.Enabled = true;
+                actionCell.Value = "▶ 运行";
+            }
+        }
+
+        /// <summary>
+        /// "一键运行"按钮：依次执行所有测试项，进度条按总项数推进。
+        /// </summary>
+        private async void OnRunAllClicked(object sender, EventArgs e)
+        {
+            if (_runAllInProgress) return;
+            if (dgvTests.Rows.Count == 0) return;
+
+            _runAllInProgress = true;
+            btnRunAll.Enabled = false;
+            btnInitEnv.Enabled = false;
+
+            int total = dgvTests.Rows.Count;
+            try
+            {
+                UpdateProgress(0, $"一键运行：共 {total} 项");
+                for (int i = 0; i < total; i++)
+                {
+                    UpdateProgress(
+                        (int)Math.Round(100.0 * i / total),
+                        $"一键运行 {i + 1}/{total}");
+                    await RunSingleTestAsync(i);
+                }
+                UpdateProgress(100, $"一键运行完成：{total}/{total}");
+            }
+            finally
+            {
+                _runAllInProgress = false;
+                btnRunAll.Enabled = true;
+                btnInitEnv.Enabled = true;
             }
         }
 
