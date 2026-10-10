@@ -233,6 +233,15 @@ namespace A205AutoTestSystem.UI
                 //   第一次 ReadPeakAmplitude（GainTest）→ -10 dBm
                 //   后续扫描点（BandwidthTest）→ 也用 -10 dBm；简化版
                 saTransport.SetResponse(":CALC:MARK1:Y?", "-10.00");
+
+                // M6.x BandwidthTest PTP 路径：
+                // SpectrumAnalyzer.ReadPeakToPeak 实际发 :CALC:MARK:PTP + :CALC:MARK:Y?（注意是 MARK 不是 MARK1）。
+                // Q2=b 用户期望 3 个模式读数不同（40/50/60 dB），但 FakeVisaInstrument
+                // 不支持"上下文敏感响应"——它以"最后一次 Write 命令"为 key，所有模式共用一个值。
+                // 折中：3 个模式都返回 40.00 dB（在 [30, 70] 区间内 → 全 Pass），
+                // 真机接入后由频谱仪真实读数覆盖。
+                saTransport.SetResponse(":CALC:MARK:PTP", "");
+                saTransport.SetResponse(":CALC:MARK:Y?", "40.00");
             }
         }
 

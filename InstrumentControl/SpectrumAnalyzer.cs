@@ -1,5 +1,7 @@
 using System;
 using System.Globalization;
+using System.Threading;
+using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.InstrumentControl
 {
@@ -129,6 +131,20 @@ namespace A205AutoTestSystem.InstrumentControl
         public double ReadMarkerValue()
         {
             return ParseMarkerY(":CALC:MARK1:Y?");
+        }
+
+        /// <summary>
+        /// 频谱仪复位（SCPI 标准 *RST + *CLS）。
+        /// <para>*RST 复位到出厂默认状态；*CLS 清状态字节/错误队列。
+        /// 调用间隔 100ms 让仪表完成内部处理。</para>
+        /// </summary>
+        public void Reset()
+        {
+            SendCommand("*RST");
+            Thread.Sleep(100);
+            SendCommand("*CLS");
+            Thread.Sleep(100);
+            Logger.Log($"[{DateTime.Now:HH:mm:ss.fff}] 频谱仪已复位");
         }
 
         // ====================================================================
