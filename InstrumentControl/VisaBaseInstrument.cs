@@ -70,7 +70,12 @@ namespace A205AutoTestSystem.InstrumentControl
         /// <summary>单次 I/O 操作超时（毫秒）。默认 5000ms。</summary>
         public int TimeoutMs { get; set; } = 5000;
 
-        /// <summary>瞬态错误的最大重试次数。默认 3 次（首次 + 2 次重试）。</summary>
+        /// <summary>
+        /// SCPI 命令的最大<strong>总尝试次数</strong>（含首次成功的那次）。
+        /// 默认 3，即"1 次首发 + 最多 2 次重试"。
+        /// 必须 ≥ 1；若赋成 &lt; 1 会在调用 <see cref="ExecuteWithRetry{T}"/> 时抛
+        /// <see cref="ArgumentOutOfRangeException"/>。
+        /// </summary>
         public int MaxRetry { get; set; } = 3;
 
         /// <summary>连接状态变化事件。参数：true=连接成功，false=断开。</summary>
@@ -231,17 +236,21 @@ namespace A205AutoTestSystem.InstrumentControl
         /// <summary>执行带重试的操作。仅对瞬态 VISA 错误（超时 / 系统错误 / IO / 连接丢失）触发重试。</summary>
         protected T ExecuteWithRetry<T>(Func<T> action)
         {
-            if (action == null            )
+            if (action == null)
             {
                 throw new ArgumentNullException(nameof(action));
             }
+            if (MaxRetry < 1)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(MaxRetry), MaxRetry,
+                    "MaxRetry 必须 ≥ 1（表示总尝试次数）。");
+            }
 
-            int attempt = 0;
             Exception lastEx = null;
 
-            while (attempt < MaxRetry)
+            for (int attempt = 1; attempt <= MaxRetry; attempt++)
             {
-                attempt++;
                 try
                 {
                     return action();
@@ -249,8 +258,9 @@ namespace A205AutoTestSystem.InstrumentControl
                 catch (VisaException vex) when (IsTransientError(vex))
                 {
                     lastEx = vex;
-                    if (attempt >= MaxRetry)
+                    if (attempt == MaxRetry)
                     {
+                        // 最后一次失败，不再 sleep，直接走循环出口
                         break;
                     }
                     int delayMs = (int)(100 * Math.Pow(2, attempt - 1));

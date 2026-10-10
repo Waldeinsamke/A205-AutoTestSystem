@@ -241,23 +241,23 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             Console.WriteLine("[Test] 重试机制：前 2 次瞬态超时 → 第 3 次成功");
 
             // 测试用基类不能在测试程序集直接构造（abstract），所以用 SignalGenerator 子类。
-            // 我们需要让 ExecuteWithRetry 触发，重试至少 3 次。
+            // 我们需要让 ExecuteWithRetry 触发，共尝试 3 次（MaxRetry=3）。
             // 方案：调用 SendCommand；让 Write 在第 1、2 次抛 timeout，第 3 次成功。
             // SendCommand → ExecuteWithRetry(()=>{ LogRawSend; transport.Write(); return true; })
-            // 第 1 次 call index = 1（Open）；第 2 次 = 2（Write attempt 1）；第 3 次 = 3（Write attempt 2）
+            // Open 是 call 1；之后每次 Write 递增 callIndex：第 1 次 Write=2，第 2 次=3，第 3 次=4。
+            // 第 3 次 Write（call 4）成功 → ExecuteWithRetry 直接返回，不抛。
 
             var transport = new FakeVisaInstrument("TCPIP0::x::INSTR");
             var sg = new SignalGenerator("TCPIP0::x::INSTR") { MaxRetry = 3, TimeoutMs = 5000 };
             InjectAndConnect(sg, transport);
 
-            // Open() 是 call 1，Write attempt1 是 call 2，attempt2 是 call 3，attempt3 是 call 4
+            // 注入前 2 次 Write 失败；第 3 次（callIndex=4）成功。
             transport.InjectError(2, FakeVisaException.WithHResult(VisaErrorTimeout, "fake timeout 1"));
             transport.InjectError(3, FakeVisaException.WithHResult(VisaErrorTimeout, "fake timeout 2"));
-            // 第 4 次不应再抛
 
             Assert.DoesNotThrow(() => sg.SetFrequency(100_000_000.0));
-            Assert.CurrentTestName = "Retry: 重试 2 次后成功";
-            // 失败调用不会写入 history；只有第 3 次成功调用计入
+            Assert.CurrentTestName = "Retry: 耗尽到第 3 次后成功";
+            // 失败调用不会写入 history；只有成功的那次计入
             Assert.Equal(1, transport.SendHistory.Count);
             Assert.Equal(":FREQ 100 MHz\n", transport.SendHistory[0]);
 
@@ -282,7 +282,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 var sg = new SignalGenerator("TCPIP0::a::INSTR") { MaxRetry = 3 };
                 InjectAndConnect(sg, transport);
 
-                // InjectError 是 callIndex 触发。Open=1, Write(attempt1)=2
+                // InjectError 按 callIndex 触发。Open=1，第 1 次 Write=2。
                 transport.InjectError(2, FakeVisaException.WithHResult(0x12345678, "fake non-transient"));
 
                 int initialHistoryCount = transport.SendHistory.Count;
@@ -293,9 +293,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 sg.Dispose();
             }
 
-            // (b) 超时耗尽：连续 3 次都超时（超过 MaxRetry=3），最终抛出
-            // 注：VisaBaseInstrument 的循环是 `while (attempt < MaxRetry)`，attempt 从 0 递增，
-            // 即 attempt 1, 2, 3 各尝试一次（MaxRetry=3 时共 3 次）
+            // (b) 超时耗尽：连续 3 次 Write 都超时（MaxRetry=3 → 共尝试 3 次），最后一次失败后抛 lastEx。
             {
                 var transport = new FakeVisaInstrument("TCPIP0::b::INSTR");
                 var sg = new SignalGenerator("TCPIP0::b::INSTR") { MaxRetry = 3 };
@@ -304,7 +302,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 transport.InjectError(2, FakeVisaException.WithHResult(VisaErrorTimeout, "t1"));
                 transport.InjectError(3, FakeVisaException.WithHResult(VisaErrorTimeout, "t2"));
                 transport.InjectError(4, FakeVisaException.WithHResult(VisaErrorTimeout, "t3"));
-                // 第 5 次 Write 会成功，但此时 attempt 已 >= MaxRetry，循环结束 → 抛 lastEx
+                // 第 4 次 Write 失败后 attempt == MaxRetry，循环 break，抛 lastEx（不再 sleep）。
 
                 Assert.Throws<VisaException>(() => sg.SetFrequency(100e6));
                 Assert.CurrentTestName = "NonRetry: 瞬态错误用完 MaxRetry 后抛出";
@@ -319,7 +317,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 InjectAndConnect(sg, transport);
 
                 transport.InjectError(2, FakeVisaException.WithHResult(VisaErrorSystemError, "syserr"));
-                // 第 3 次成功
+                // 第 2 次 Write（callIndex=3）成功
 
                 Assert.DoesNotThrow(() => sg.SetFrequency(100e6));
                 Assert.CurrentTestName = "Retry: System Error 也算瞬态，触发重试";
