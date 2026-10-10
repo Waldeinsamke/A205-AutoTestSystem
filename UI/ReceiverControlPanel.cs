@@ -26,13 +26,14 @@ namespace A205AutoTestSystem.UI
     {
         // ============================================================
         // 业务对象（保留 _ 前缀；非控件字段，Designer 不感知）
+        // M6.x 阶段：字段改为 internal，便于 MainForm / AutoTestPanel 共享资源
         // ============================================================
-        private ReceiverSerialPort _receiver;
+        internal ReceiverSerialPort _receiver;
         private readonly MatrixSerialPort _matrix = new MatrixSerialPort();
 
-        private SignalGenerator _rfGenerator;
-        private SignalGeneratorLO _loGenerator;
-        private SpectrumAnalyzer _spectrumAnalyzer;
+        internal SignalGenerator _rfGenerator;
+        internal SignalGeneratorLO _loGenerator;
+        internal SpectrumAnalyzer _spectrumAnalyzer;
         private ODP3063 _powerSupply;
 
         // 电源输出的软件侧状态：连接时不查询/不设置仪表，默认视为未输出（OFF）。
@@ -164,6 +165,31 @@ namespace A205AutoTestSystem.UI
             pnlLoStatus.BackColor = StatusColorDisconnected;
             pnlSaStatus.BackColor = StatusColorDisconnected;
             pnlPowerStatus.BackColor = StatusColorDisconnected;
+        }
+
+        // ============================================================
+        // 资源就绪状态（M6.x 阶段暴露给 AutoTestPanel 用）
+        // ============================================================
+
+        /// <summary>接收机串口是否已 Open。AutoTestPanel 用来决定走 CreateProduction 还是 CreateDefault。</summary>
+        public bool IsReceiverReady => _receiver != null && _receiver.IsOpen;
+
+        /// <summary>三台仪表（RF/LO/SA）是否都已 Connect。</summary>
+        public bool AreInstrumentsReady =>
+            _rfGenerator != null && _rfGenerator.IsConnected
+            && _loGenerator != null && _loGenerator.IsConnected
+            && _spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected;
+
+        /// <summary>当前 UI 上选中的通道号（1..8）。未选中时返回 1。</summary>
+        public int SelectedChannel
+        {
+            get
+            {
+                if (cmbChannel == null || cmbChannel.SelectedIndex < 0) return 1;
+                int ch = cmbChannel.SelectedIndex + 1;
+                if (ch < 1 || ch > 8) return 1;
+                return ch;
+            }
         }
 
         // ============================================================

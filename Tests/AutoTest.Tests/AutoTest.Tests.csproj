@@ -107,6 +107,16 @@
     <Compile Include="..\..\InstrumentControl\LoFrequencyRule.cs">
       <Link>InstrumentControl\LoFrequencyRule.cs</Link>
     </Compile>
+    <!-- M6.x：GainTest 模式×频点循环重载依赖 ReceiverControl 命名空间下的类型 -->
+    <Compile Include="..\..\ReceiverControl\ReceiverCommandBuilder.cs">
+      <Link>ReceiverControl\ReceiverCommandBuilder.cs</Link>
+    </Compile>
+    <Compile Include="..\..\ReceiverControl\ReceiverSerialPort.cs">
+      <Link>ReceiverControl\ReceiverSerialPort.cs</Link>
+    </Compile>
+    <Compile Include="..\..\Common\SerialPortBase.cs">
+      <Link>Common\SerialPortBase.cs</Link>
+    </Compile>
     <!-- M7：TestReportManager（ExcelExporter）报告链路，GainTest/BandwidthTest.Record 依赖 -->
     <Compile Include="..\..\Common\TestReportManager.cs">
       <Link>Common\TestReportManager.cs</Link>

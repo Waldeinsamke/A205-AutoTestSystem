@@ -55,6 +55,23 @@ namespace A205AutoTestSystem.ReceiverControl
             {
                 return $"{DisplayName}(0x{BandNumber:X2})";
             }
+
+            /// <summary>
+            /// 从 <see cref="DisplayName"/> 中提取射频频率（MHz）。
+            /// <para>例如 "频段108" → 108.0；"频段3500" → 3500.0。提取失败返回 false。</para>
+            /// <para>命名沿用 ReceiverControlPanel.cs 里 TryExtractMHzFromDisplayName 的语义。</para>
+            /// </summary>
+            public bool TryGetRffeatMHz(out double mhz)
+            {
+                mhz = 0;
+                if (string.IsNullOrEmpty(DisplayName)) return false;
+                string numberPart = DisplayName.Replace("频段", "").Trim();
+                return double.TryParse(
+                    numberPart,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out mhz);
+            }
         }
 
         private static readonly Dictionary<ReceiverMode, IReadOnlyList<BandInfo>> _bands =

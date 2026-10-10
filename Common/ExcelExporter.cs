@@ -30,15 +30,16 @@ namespace A205AutoTestSystem.Common
         /// </summary>
         private static readonly string[] Headers =
         {
-            "测试时间",
-            "温度区间",
-            "通道号",
-            "工作模式",
-            "测试项目",
-            "测试值",
-            "单位",
-            "判定结果",
-            "备注"
+            "测试时间",     // 0
+            "温度区间",     // 1
+            "通道号",       // 2
+            "工作模式",     // 3
+            "频段",         // 4  ← 新增（M6.x 阶段）
+            "测试项目",     // 5
+            "测试值",       // 6
+            "单位",         // 7
+            "判定结果",     // 8
+            "备注"          // 9
         };
 
         private XSSFWorkbook _workbook;
@@ -87,8 +88,10 @@ namespace A205AutoTestSystem.Common
             {
                 _sheet.SetColumnWidth(c, 18 * 256);
             }
+            // 频段列稍窄
+            _sheet.SetColumnWidth(4, 14 * 256);
             // 备注列宽一点
-            _sheet.SetColumnWidth(8, 36 * 256);
+            _sheet.SetColumnWidth(9, 36 * 256);
 
             // 冻结首行
             _sheet.CreateFreezePane(0, 1);
@@ -119,15 +122,17 @@ namespace A205AutoTestSystem.Common
             row.CreateCell(2).SetCellValue(result.Channel);
             // 3: 工作模式
             row.CreateCell(3).SetCellValue(SafeStr(result.Mode));
-            // 4: 测试项目
-            row.CreateCell(4).SetCellValue(SafeStr(result.TestItem));
-            // 5: 测试值（double）
-            row.CreateCell(5).SetCellValue(result.Value);
-            // 6: 单位
-            row.CreateCell(6).SetCellValue(SafeStr(result.Unit));
+            // 4: 频段（M6.x 新增；无频段信息时写空字符串）
+            row.CreateCell(4).SetCellValue(SafeStr(result.BandDisplayName));
+            // 5: 测试项目
+            row.CreateCell(5).SetCellValue(SafeStr(result.TestItem));
+            // 6: 测试值（double）
+            row.CreateCell(6).SetCellValue(result.Value);
+            // 7: 单位
+            row.CreateCell(7).SetCellValue(SafeStr(result.Unit));
 
-            // 7: 判定结果 — Pass 绿色，Fail 红色
-            ICell judgmentCell = row.CreateCell(7);
+            // 8: 判定结果 — Pass 绿色，Fail 红色
+            ICell judgmentCell = row.CreateCell(8);
             judgmentCell.SetCellValue(SafeStr(result.Judgment));
             string judgment = SafeStr(result.Judgment);
             if (judgment == "Pass")
@@ -149,8 +154,8 @@ namespace A205AutoTestSystem.Common
                 judgmentCell.CellStyle = failStyle;
             }
 
-            // 8: 备注
-            row.CreateCell(8).SetCellValue(SafeStr(result.Remarks));
+            // 9: 备注
+            row.CreateCell(9).SetCellValue(SafeStr(result.Remarks));
 
             Logger.Log(string.Format(
                 CultureInfo.InvariantCulture,

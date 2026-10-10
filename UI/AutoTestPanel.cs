@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.ReceiverControl;
 
 namespace A205AutoTestSystem.UI
 {
@@ -39,6 +40,11 @@ namespace A205AutoTestSystem.UI
         private SignalGeneratorLO _lo;
         private SpectrumAnalyzer _sa;
         private readonly AutoTestEngine _engine = new AutoTestEngine();
+
+        // M6.x：保存 ReceiverControlPanel 引用，便于在 LoadDefaultTestsToGrid
+        // 中检测 receiver 是否已连接，决定走 CreateProduction（模式×频点遍历）
+        // 还是 CreateDefault（M6 兼容：单点）。
+        private ReceiverControlPanel _receiverPanel;
 
         private readonly List<ITestItem> _tests = new List<ITestItem>();
 
@@ -159,6 +165,23 @@ namespace A205AutoTestSystem.UI
                 // 配置伪传输的常见响应（让 ReadPeakAmplitude 返回合理值）
                 InjectFakeDefaults(_rf, _lo, _sa);
 
+                // M6.x：Fake 流程下构造一个 Mock 接收机注入到 ReceiverControlPanel._receiver，
+                // 让 LoadDefaultTestsToGrid 的资源分支判断能走通（receiver.IsOpen=true 且 IsMock=true），
+                // 从而加载 60 点遍历的 GainTest。
+                if (_receiverPanel != null)
+                {
+                    try { _receiverPanel._receiver?.Close(); } catch { }
+                    try { _receiverPanel._receiver?.Dispose(); } catch { }
+                    var mockReceiver = new ReceiverSerialPort
+                    {
+                        IsMock = true,
+                        SendIntervalMs = 0,           // Mock 模式不真发，省 sleep
+                        InterSequenceIntervalMs = 0
+                    };
+                    _receiverPanel._receiver = mockReceiver;
+                    Logger.Log("[AutoTestPanel] Mock ReceiverSerialPort 已注入（IsMock=true），GainTest 将按 60 点循环跑。");
+                }
+
                 // 三仪表就绪后立即把默认测试项清单加载到 DataGridView，
                 // 不再需要"加载测试项"按钮。
                 LoadDefaultTestsToGrid();
@@ -214,16 +237,51 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
+        /// 由 MainForm.OnLoad 调用，把 ReceiverControlPanel 注入本面板，
+        /// 共享 _receiver / 三仪表 / _matrix 资源。
+        /// <para>在 <see cref="OnInitEnvClicked"/> 的 Fake 初始化路径之前调用；
+        /// 若此时 receiver 串口尚未打开，会自动回退到 M6 兼容单点测试。</para>
+        /// </summary>
+        public void AttachToReceiver(ReceiverControlPanel receiverPanel)
+        {
+            _receiverPanel = receiverPanel;
+        }
+
+        /// <summary>
         /// 初始化测试环境完成后，加载默认测试项清单到 DataGridView。
         /// 由 OnInitEnvClicked 在三仪表 Connect() 成功后调用。
+        /// <para>资源分支：</para>
+        /// <list type="bullet">
+        /// <item>若 <see cref="_receiverPanel"/> 已注入且 receiver 串口已 Open，
+        ///       走 <see cref="TestCatalog.CreateProduction"/>（模式×频点遍历）。</item>
+        /// <item>否则走 <see cref="TestCatalog.CreateDefault"/>（M6 兼容：单点）。</item>
+        /// </list>
         /// </summary>
         private void LoadDefaultTestsToGrid()
         {
             _engine.Clear();
             ClearTestRows();
 
+            IReadOnlyList<ITestItem> items;
             int mode = cmbMode.SelectedIndex + 1;  // 0/1/2 → 1/2/3
-            var items = TestCatalog.CreateDefault(_rf, _lo, _sa, mode);
+
+            // 资源分支：receiver + 三仪表都就绪 → 走全功能；否则单点兼容
+            if (_receiverPanel != null
+                && _receiverPanel._receiver != null
+                && _receiverPanel._receiver.IsOpen
+                && _rf != null && _rf.IsConnected
+                && _lo != null && _lo.IsConnected
+                && _sa != null && _sa.IsConnected)
+            {
+                int channel = _receiverPanel.SelectedChannel;
+                if (channel < 1 || channel > 8) channel = 1;
+                items = TestCatalog.CreateProduction(
+                    _receiverPanel._receiver, _rf, _lo, _sa, channel);
+            }
+            else
+            {
+                items = TestCatalog.CreateDefault(_rf, _lo, _sa, mode);
+            }
 
             foreach (var t in items)
             {

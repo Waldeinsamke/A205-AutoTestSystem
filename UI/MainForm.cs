@@ -20,6 +20,15 @@ namespace A205AutoTestSystem.UI
             tabControl.SelectedIndexChanged += OnSelectedTabChanged;
         }
 
+        /// <summary>
+        /// 接收机控制 Tab 引用。M6.x 阶段由 AutoTestPanel.AttachToReceiver 调用，
+        /// 复用其内部的 _receiver / _matrix / 三仪表资源。
+        /// </summary>
+        public ReceiverControlPanel ReceiverPanel => receiverControlPanel;
+
+        /// <summary>自动测试 Tab 引用。当前阶段未被外部调用，留扩展点。</summary>
+        public AutoTestPanel TestPanel => autoTestPanel;
+
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
@@ -27,6 +36,13 @@ namespace A205AutoTestSystem.UI
             EnableDoubleBuffered(tabControl);
             EnableDoubleBuffered(receiverControlPanel);
             EnableDoubleBuffered(autoTestPanel);
+
+            // M6.x 阶段：把 receiver 控制面板的能力注入到自动测试面板，
+            // 让"测试项 → 频段命令 → 频谱仪"共享同一组资源。
+            if (autoTestPanel != null && receiverControlPanel != null)
+            {
+                autoTestPanel.AttachToReceiver(receiverControlPanel);
+            }
         }
 
         private void OnSelectedTabChanged(object sender, EventArgs e)

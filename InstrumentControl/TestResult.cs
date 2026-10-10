@@ -22,6 +22,19 @@ namespace A205AutoTestSystem.InstrumentControl
         /// <summary>测试项目名称。</summary>
         public string TestItem { get; set; } = string.Empty;
 
+        /// <summary>
+        /// 频段编号（与 <see cref="ReceiverControl.ModeBandTable.BandInfo.BandIndex"/> 对齐）。
+        /// <para>本字段是 <c>int?</c>：<c>null</c> 表示本条结果与频段无关
+        /// （例如带宽测试、未实现 stub 等）。</para>
+        /// </summary>
+        public int? BandIndex { get; set; }
+
+        /// <summary>
+        /// 频段显示名称（如 <c>"频段108"</c>）。
+        /// <para>与 <see cref="BandIndex"/> 一一对应；<c>null</c> 表示本条结果与频段无关。</para>
+        /// </summary>
+        public string BandDisplayName { get; set; }
+
         /// <summary>实际测量值。</summary>
         public double Value { get; set; }
 
