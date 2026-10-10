@@ -63,6 +63,7 @@ namespace A205AutoTestSystem.UI
             this.btnClearLog = new System.Windows.Forms.Button();
             this.grpTestConfig.SuspendLayout();
             this.grpTestItems.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTests)).BeginInit();
             this.grpProgressLog.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -140,26 +141,25 @@ namespace A205AutoTestSystem.UI
             // 
             this.btnInitEnv.Location = new System.Drawing.Point(486, 24);
             this.btnInitEnv.Name = "btnInitEnv";
-            this.btnInitEnv.Size = new System.Drawing.Size(77, 28);
+            this.btnInitEnv.Size = new System.Drawing.Size(149, 28);
             this.btnInitEnv.TabIndex = 6;
             this.btnInitEnv.Text = "初始化";
             this.btnInitEnv.UseVisualStyleBackColor = true;
             this.btnInitEnv.Click += new System.EventHandler(this.OnInitEnvClicked);
             // 
-            // 
             // btnExportExcel
             // 
             this.btnExportExcel.Enabled = false;
-            this.btnExportExcel.Location = new System.Drawing.Point(668, 25);
+            this.btnExportExcel.Location = new System.Drawing.Point(641, 25);
             this.btnExportExcel.Name = "btnExportExcel";
-            this.btnExportExcel.Size = new System.Drawing.Size(48, 28);
+            this.btnExportExcel.Size = new System.Drawing.Size(75, 28);
             this.btnExportExcel.TabIndex = 8;
             this.btnExportExcel.Text = "导出";
             this.btnExportExcel.UseVisualStyleBackColor = true;
             this.btnExportExcel.Click += new System.EventHandler(this.OnExportExcelClicked);
-            //
+            // 
             // btnRunAll
-            //
+            // 
             this.btnRunAll.Enabled = false;
             this.btnRunAll.Location = new System.Drawing.Point(722, 25);
             this.btnRunAll.Name = "btnRunAll";
@@ -170,7 +170,7 @@ namespace A205AutoTestSystem.UI
             this.btnRunAll.Click += new System.EventHandler(this.OnRunAllClicked);
             // 
             // grpTestItems
-            //
+            // 
             this.grpTestItems.Controls.Add(this.dgvTests);
             this.grpTestItems.Location = new System.Drawing.Point(0, 82);
             this.grpTestItems.Name = "grpTestItems";
@@ -179,9 +179,9 @@ namespace A205AutoTestSystem.UI
             this.grpTestItems.TabIndex = 1;
             this.grpTestItems.TabStop = false;
             this.grpTestItems.Text = "测试项目";
-            //
+            // 
             // dgvTests
-            //
+            // 
             this.dgvTests.AllowUserToAddRows = false;
             this.dgvTests.AllowUserToDeleteRows = false;
             this.dgvTests.AllowUserToResizeRows = false;
@@ -193,6 +193,7 @@ namespace A205AutoTestSystem.UI
             this.dgvTests.Name = "dgvTests";
             this.dgvTests.ReadOnly = true;
             this.dgvTests.RowHeadersVisible = false;
+            this.dgvTests.RowHeadersWidth = 51;
             this.dgvTests.RowTemplate.Height = 28;
             this.dgvTests.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
             this.dgvTests.Size = new System.Drawing.Size(821, 269);
@@ -264,6 +265,7 @@ namespace A205AutoTestSystem.UI
             this.Size = new System.Drawing.Size(844, 718);
             this.grpTestConfig.ResumeLayout(false);
             this.grpTestItems.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.dgvTests)).EndInit();
             this.grpProgressLog.ResumeLayout(false);
             this.ResumeLayout(false);
 

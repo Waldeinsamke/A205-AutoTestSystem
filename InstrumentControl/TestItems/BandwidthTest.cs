@@ -143,11 +143,11 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         /// </summary>
         public string Unit => "dB";
 
-        /// <summary>判据下限（dB）。null 表示不设下限。M6.x 占位 30 dB。</summary>
-        public double? LowerLimit { get; set; } = 30.0;
+        /// <summary>判据下限（dB）。null 表示不设下限。信号带宽测试 PTP 越小越好，下限不设。</summary>
+        public double? LowerLimit { get; set; } = null;
 
-        /// <summary>判据上限（dB）。null 表示不设上限。M6.x 占位 70 dB。</summary>
-        public double? UpperLimit { get; set; } = 70.0;
+        /// <summary>判据上限（dB）。null 表示不设上限。M6.x 业务要求：PTP ≤ 3 dB 才 Pass。</summary>
+        public double? UpperLimit { get; set; } = 3.0;
 
         public async Task<TestResult> ExecuteAsync(IProgress<string> progress, CancellationToken ct)
         {

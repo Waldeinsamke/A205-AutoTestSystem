@@ -43,6 +43,28 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private const double RfPowerMode2Dbm = -10.0;
         private const double LoPowerModeDbm = 3.0;
 
+        // 线性最大增益判据（按模式）：
+        //   Mode1: 20 ± 2   → [18.0, 22.0]
+        //   Mode2: 10 ± 1   → [ 9.0, 11.0]
+        //   Mode3: 20 ± 1.5 → [18.5, 21.5]
+        // UI 单行"线性最大增益"的阈值列展示 Mode1；运行中按当前模式各自判定。
+        private const double Mode1Center = 20.0, Mode1Tol = 2.0;   // [18.0, 22.0]
+        private const double Mode2Center = 10.0, Mode2Tol = 1.0;   // [ 9.0, 11.0]
+        private const double Mode3Center = 20.0, Mode3Tol = 1.5;   // [18.5, 21.5]
+
+        /// <summary>取某模式下增益的判据上下限（dB）。不在表内的模式抛异常。</summary>
+        private static (double Lower, double Upper) GetGainLimits(ReceiverMode mode)
+        {
+            switch (mode)
+            {
+                case ReceiverMode.Mode1: return (Mode1Center - Mode1Tol, Mode1Center + Mode1Tol);
+                case ReceiverMode.Mode2: return (Mode2Center - Mode2Tol, Mode2Center + Mode2Tol);
+                case ReceiverMode.Mode3: return (Mode3Center - Mode3Tol, Mode3Center + Mode3Tol);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(mode), mode, "未配置该模式的增益判据。");
+            }
+        }
+
         // 兼容路径（M6 单点模式）字段
         private readonly SignalGenerator _rfSingle;
         private readonly SignalGeneratorLO _loSingle;
@@ -53,6 +75,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private readonly double _loPowerDbmSingle;
         private readonly double _ifFreqHzSingle;
         private readonly int _settleDelayMsSingle;
+        private readonly ReceiverMode _singleMode;   // M6 单点路径使用的模式（用于取 GainLimits）
 
         // M6.x 路径（receiver + 模式×频点循环）字段
         private readonly ReceiverSerialPort _receiver;
@@ -107,6 +130,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _loPowerDbmSingle = loPowerDbm;
             _ifFreqHzSingle = ifFreqHz;
             _settleDelayMsSingle = DefaultSettleDelayMs;
+            _singleMode = ReceiverMode.Mode1;   // 显式未传模式，按 Mode1 取判据（兼容旧调用）
             _isLegacySinglePoint = true;
         }
 
@@ -122,11 +146,24 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             int mode,
             double loPowerDbm,
             double ifFreqHz)
-            : this(rfGenerator, loGenerator, spectrumAnalyzer,
-                   rfFreqHz, rfPowerDbm,
-                   LoFrequencyRule.Calculate(rfFreqHz, mode),
-                   loPowerDbm, ifFreqHz)
         {
+            if (rfGenerator == null) throw new ArgumentNullException(nameof(rfGenerator));
+            if (loGenerator == null) throw new ArgumentNullException(nameof(loGenerator));
+            if (spectrumAnalyzer == null) throw new ArgumentNullException(nameof(spectrumAnalyzer));
+            if (rfFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(rfFreqHz));
+            if (ifFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(ifFreqHz));
+
+            _rfSingle = rfGenerator;
+            _loSingle = loGenerator;
+            _saSingle = spectrumAnalyzer;
+            _rfFreqHzSingle = rfFreqHz;
+            _rfPowerDbmSingle = rfPowerDbm;
+            _loFreqHzSingle = LoFrequencyRule.Calculate(rfFreqHz, mode);
+            _loPowerDbmSingle = loPowerDbm;
+            _ifFreqHzSingle = ifFreqHz;
+            _settleDelayMsSingle = DefaultSettleDelayMs;
+            _singleMode = (ReceiverMode)mode;
+            _isLegacySinglePoint = true;
         }
 
         // ============================================================
@@ -175,11 +212,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         public string TestName => "线性最大增益";
         public string Unit => "dB";
 
-        /// <summary>判据下限（dB）。null 表示不设下限。</summary>
-        public double? LowerLimit { get; set; } = 10.0;
+        // UI 单行展示用：固定返回 Mode1 的判据区间。
+        // 真实判定在 ExecuteSinglePointAsync / ExecuteModeBandSweepAsync 中按当前 mode 查询。
+        private static readonly (double Lower, double Upper) DisplayLimits = GetGainLimits(ReceiverMode.Mode1);
 
-        /// <summary>判据上限（dB）。null 表示不设上限。</summary>
-        public double? UpperLimit { get; set; } = 30.0;
+        /// <summary>判据下限（dB），展示 Mode1 区间。null 表示不设下限。</summary>
+        public double? LowerLimit => DisplayLimits.Lower;
+
+        /// <summary>判据上限（dB），展示 Mode1 区间。null 表示不设上限。</summary>
+        public double? UpperLimit => DisplayLimits.Upper;
 
         public async Task<TestResult> ExecuteAsync(IProgress<string> progress, CancellationToken ct)
         {
@@ -224,15 +265,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             double peakDbm = _saSingle.ReadPeakAmplitude();
             double gain = peakDbm - _rfPowerDbmSingle;
 
+            var limits = GetGainLimits(_singleMode);
             string msg = string.Format(
                 CultureInfo.InvariantCulture,
-                "[GainTest] peak={0:F2} dBm, gain={1:F2} dB",
-                peakDbm, gain);
+                "[GainTest] mode={0} peak={1:F2} dBm, gain={2:F2} dB (limit=[{3:F2},{4:F2}])",
+                _singleMode, peakDbm, gain, limits.Lower, limits.Upper);
             progress.Report(msg);
             Logger.Log(msg);
 
-            bool pass = (!LowerLimit.HasValue || gain >= LowerLimit.Value)
-                     && (!UpperLimit.HasValue || gain <= UpperLimit.Value);
+            bool pass = gain >= limits.Lower && gain <= limits.Upper;
 
             TestResult result = new TestResult
             {
@@ -243,7 +284,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 Judgment = pass ? "Pass" : "Fail",
                 Remarks = string.Format(
                     CultureInfo.InvariantCulture,
-                    "RF={0:F3}MHz@{1}dBm, IF={2:F3}MHz, IFpeak={3:F2}dBm",
+                    "{0}, RF={1:F3}MHz@{2}dBm, IF={3:F3}MHz, IFpeak={4:F2}dBm",
+                    _singleMode,
                     _rfFreqHzSingle / 1e6, _rfPowerDbmSingle, _ifFreqHzSingle / 1e6, peakDbm)
             };
             TestReportManager.Instance.Record(result);
@@ -340,8 +382,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     }
                     double gain = peakDbm - rfPowerDbm;
 
-                    bool pass = (!LowerLimit.HasValue || gain >= LowerLimit.Value)
-                             && (!UpperLimit.HasValue || gain <= UpperLimit.Value);
+                    // 按当前模式取判据
+                    var modeLimits = GetGainLimits(mode);
+                    bool pass = gain >= modeLimits.Lower && gain <= modeLimits.Upper;
 
                     TestResult result = new TestResult
                     {

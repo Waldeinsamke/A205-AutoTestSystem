@@ -236,12 +236,11 @@ namespace A205AutoTestSystem.UI
 
                 // M6.x BandwidthTest PTP 路径：
                 // SpectrumAnalyzer.ReadPeakToPeak 实际发 :CALC:MARK:PTP + :CALC:MARK:Y?（注意是 MARK 不是 MARK1）。
-                // Q2=b 用户期望 3 个模式读数不同（40/50/60 dB），但 FakeVisaInstrument
-                // 不支持"上下文敏感响应"——它以"最后一次 Write 命令"为 key，所有模式共用一个值。
-                // 折中：3 个模式都返回 40.00 dB（在 [30, 70] 区间内 → 全 Pass），
-                // 真机接入后由频谱仪真实读数覆盖。
+                // Q4=b 3 个模式共用一个注入值（不扩展 FakeVisaInstrument）：
+                //   注入 2.0 dB（< 3.0 dB 上限）→ 3 个模式都 Pass，
+                //   真机接入后由频谱仪真实读数覆盖。
                 saTransport.SetResponse(":CALC:MARK:PTP", "");
-                saTransport.SetResponse(":CALC:MARK:Y?", "40.00");
+                saTransport.SetResponse(":CALC:MARK:Y?", "2.00");
             }
         }
 
@@ -338,6 +337,17 @@ namespace A205AutoTestSystem.UI
             dgvTests.ColumnHeadersDefaultCellStyle.Alignment =
                 DataGridViewContentAlignment.MiddleCenter;
 
+            // 文本列统一居中对齐（单元格 + 表头）
+            var centerTextStyle = new DataGridViewCellStyle
+            {
+                Alignment = DataGridViewContentAlignment.MiddleCenter
+            };
+            var centerHeaderStyle = new DataGridViewCellStyle
+            {
+                Alignment = DataGridViewContentAlignment.MiddleCenter,
+                Font = new Font("微软雅黑", 9F, FontStyle.Bold)
+            };
+
             // 序号
             var colIdx = new DataGridViewTextBoxColumn
             {
@@ -345,7 +355,9 @@ namespace A205AutoTestSystem.UI
                 HeaderText = "#",
                 Width = 40,
                 ReadOnly = true,
-                SortMode = DataGridViewColumnSortMode.NotSortable
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                DefaultCellStyle = centerTextStyle,
+                HeaderCell = { Style = centerHeaderStyle }
             };
             dgvTests.Columns.Add(colIdx);
 
@@ -355,7 +367,9 @@ namespace A205AutoTestSystem.UI
                 Name = "colName",
                 HeaderText = "测试项目",
                 ReadOnly = true,
-                SortMode = DataGridViewColumnSortMode.NotSortable
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                DefaultCellStyle = centerTextStyle,
+                HeaderCell = { Style = centerHeaderStyle }
             };
             dgvTests.Columns.Add(colName);
 
@@ -366,7 +380,9 @@ namespace A205AutoTestSystem.UI
                 HeaderText = "单位",
                 Width = 60,
                 ReadOnly = true,
-                SortMode = DataGridViewColumnSortMode.NotSortable
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                DefaultCellStyle = centerTextStyle,
+                HeaderCell = { Style = centerHeaderStyle }
             };
             dgvTests.Columns.Add(colUnit);
 
@@ -377,7 +393,9 @@ namespace A205AutoTestSystem.UI
                 HeaderText = "阈值区间",
                 Width = 140,
                 ReadOnly = true,
-                SortMode = DataGridViewColumnSortMode.NotSortable
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                DefaultCellStyle = centerTextStyle,
+                HeaderCell = { Style = centerHeaderStyle }
             };
             dgvTests.Columns.Add(colLimit);
 
@@ -400,7 +418,9 @@ namespace A205AutoTestSystem.UI
                 Name = "colStatus",
                 HeaderText = "状态",
                 ReadOnly = true,
-                SortMode = DataGridViewColumnSortMode.NotSortable
+                SortMode = DataGridViewColumnSortMode.NotSortable,
+                DefaultCellStyle = centerTextStyle,
+                HeaderCell = { Style = centerHeaderStyle }
             };
             dgvTests.Columns.Add(colStatus);
 
