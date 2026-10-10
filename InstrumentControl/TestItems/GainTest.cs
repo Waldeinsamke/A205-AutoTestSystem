@@ -300,7 +300,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     _receiver.SendBandCommand(mode, band.BandIndex);
 
                     // b) 设置 RF 频率（按频段名解析 MHz）
-                    if (!band.TryGetRffeatMHz(out double rfFreqMHz))
+                    if (!band.TryGetRfFreqMHz(out double rfFreqMHz))
                     {
                         string err = $"无法从频段名 '{band.DisplayName}' 解析 RF 频率，跳过该频点。";
                         progress.Report("[GainTest] " + err);

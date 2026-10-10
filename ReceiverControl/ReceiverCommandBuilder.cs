@@ -61,7 +61,7 @@ namespace A205AutoTestSystem.ReceiverControl
             /// <para>例如 "频段108" → 108.0；"频段3500" → 3500.0。提取失败返回 false。</para>
             /// <para>命名沿用 ReceiverControlPanel.cs 里 TryExtractMHzFromDisplayName 的语义。</para>
             /// </summary>
-            public bool TryGetRffeatMHz(out double mhz)
+            public bool TryGetRfFreqMHz(out double mhz)
             {
                 mhz = 0;
                 if (string.IsNullOrEmpty(DisplayName)) return false;
