@@ -47,6 +47,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         //   Mode1: 20 ± 2   → [18.0, 22.0]
         //   Mode2: 10 ± 1   → [ 9.0, 11.0]
         //   Mode3: 20 ± 1.5 → [18.5, 21.5]
+        // 报表 Value = 原始 gain（即 peakDbm - rfPowerDbm），不加任何偏置。
+        // 用户原话"指标 = 20 + 实测值"指的是"指标中心 20 dB + 实测 gain"，即判据区间按 20 ± 2 取，
+        // 不是 Value 字段再加 20 dB。
         // UI 单行"线性最大增益"的阈值列展示 Mode1；运行中按当前模式各自判定。
         private const double Mode1Center = 20.0, Mode1Tol = 2.0;   // [18.0, 22.0]
         private const double Mode2Center = 10.0, Mode2Tol = 1.0;   // [ 9.0, 11.0]
@@ -63,6 +66,12 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 default:
                     throw new ArgumentOutOfRangeException(nameof(mode), mode, "未配置该模式的增益判据。");
             }
+        }
+
+        /// <summary>把原始 gain 转成报表 Value。透传，不加任何偏置。</summary>
+        private static double ToReportValue(ReceiverMode mode, double gain)
+        {
+            return gain;
         }
 
         // 兼容路径（M6 单点模式）字段
@@ -99,7 +108,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         // M6.x 时序常量（每频点总时长 ~1s；模式切换 2s；读 peak 后 200ms 余量给 SA 扫下一帧）
         private const int RfLoStableMs = 200;        // RF/LO 频率切换 + PLL 锁相稳定
         private const int BandStableMs = 500;        // 频段命令后等 0.5s 再读 peak（推测 9 + Q2）
-        private const int ModeStableMs = 2000;       // 模式切换后稳定（按 M6.x 用户要求 2s）
+        private const int ModeStableMs = 1500;       // 模式切换后稳定（按 M6.x 用户要求 1.5s）
         private const int PostReadDelayMs = 200;     // 读 peak 后等频谱仪扫到下一帧（Q5=b）
 
         /// <summary>频谱仪参考电平（dBm）。推测 2：峰 -10 dBm 占满 0-10 dBm 量程。</summary>
@@ -288,14 +297,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             {
                 TestTime = DateTime.Now,
                 TestItem = TestName,
-                Value = gain,
+                Value = ToReportValue(_singleMode, gain),
                 Unit = Unit,
                 Judgment = pass ? "Pass" : "Fail",
                 Remarks = string.Format(
                     CultureInfo.InvariantCulture,
-                    "{0}, RF={1:F3}MHz@{2}dBm, IF={3:F3}MHz, IFpeak={4:F2}dBm",
+                    "{0}, RF={1:F3}MHz@{2}dBm, IF={3:F3}MHz, IFpeak={4:F2}dBm, gain={5:F2}dB",
                     _singleMode,
-                    _rfFreqHzSingle / 1e6, _rfPowerDbmSingle, _ifFreqHzSingle / 1e6, peakDbm)
+                    _rfFreqHzSingle / 1e6, _rfPowerDbmSingle, _ifFreqHzSingle / 1e6, peakDbm, gain)
             };
             TestReportManager.Instance.Record(result);
             return result;
@@ -431,14 +440,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                             BandIndex = band.BandIndex,
                             BandDisplayName = band.DisplayName,
                             TestItem = TestName,
-                            Value = gain,
+                            Value = ToReportValue(mode, gain),
                             Unit = Unit,
                             Judgment = pass ? "Pass" : "Fail",
                             Remarks = string.Format(
                                 CultureInfo.InvariantCulture,
-                                "RF={0:F3}MHz@{1}dBm, LO={2:F3}MHz, IF={3:F3}MHz, IFpeak={4:F2}dBm",
+                                "RF={0:F3}MHz@{1}dBm, LO={2:F3}MHz, IF={3:F3}MHz, IFpeak={4:F2}dBm, gain={5:F2}dB",
                                 rfFreqMHz, rfPowerDbm,
-                                loFreqHz / 1e6, ifFreqHz / 1e6, peakDbm)
+                                loFreqHz / 1e6, ifFreqHz / 1e6, peakDbm, gain)
                         };
                         TestReportManager.Instance.Record(result);
                         lastResult = result;
