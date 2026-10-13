@@ -1163,6 +1163,12 @@ namespace A205AutoTestSystem.UI
                 btnSaTraceAvg.Text = "Trace平均";
                 _saMinHoldOn = false;
                 btnSaMinHold.Text = "轨迹最小保持";
+
+                // 复位后立即开启连续扫描（*RST 默认是单次，手动恢复为连续模式）。
+                // 注：UI 上当前未保留“连续扫描”按钮与本地 Toggle 状态，
+                // 因此此处只发 SCPI 命令、不修改任何字段。
+                _spectrumAnalyzer.SetContinuousScan(true);
+                Logger.Log("[UI] 频谱仪复位后已开启连续扫描");
             }
             catch (Exception ex)
             {
@@ -1192,24 +1198,7 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        /// <summary>清除显示（:DISP:WIND:TRAC:CLE），不影响 Max Hold 等模式。</summary>
-        private void OnSaClearDisplayClicked(object sender, EventArgs e)
-        {
-            if (!EnsureSpectrumAnalyzerConnected()) return;
-            try
-            {
-                _spectrumAnalyzer.ClearDisplay();
-                Logger.Log("[UI] 频谱仪显示已清除");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("[UI] 清除显示失败: " + ex.Message);
-                MessageBox.Show(this, "清除显示失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>峰值自动搜索 Toggle。点击切换 CALC:MARK:MAX:AUTO，按钮文字同步。</summary>
+        /// <summary>峰值自动搜索 Toggle。点击切换 CALC:MARK:CPS，按钮文字同步。</summary>
         private void OnSaPeakAutoClicked(object sender, EventArgs e)
         {
             if (!EnsureSpectrumAnalyzerConnected()) return;
@@ -1247,7 +1236,7 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        /// <summary>Trace平均模式切换（:TRAC:MODE 1,AVG / 1,WRIT）。Toggle，按钮文字同步。</summary>
+        /// <summary>Trace平均模式切换（:TRAC:TYPE AVER / WRIT）。Toggle，按钮文字同步。</summary>
         private void OnSaTraceAvgClicked(object sender, EventArgs e)
         {
             if (!EnsureSpectrumAnalyzerConnected()) return;
@@ -1326,6 +1315,47 @@ namespace A205AutoTestSystem.UI
                 Logger.Log("[UI] 进入谐波测试模式失败: " + ex.Message);
                 MessageBox.Show(this, "进入谐波测试模式失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// 参考电平 +5 dBm。
+        /// <para>读到当前参考电平（:DISP:WIND:TRAC:Y:RLEV?）+ 5 dBm 后再下发设置。
+        /// 读失败或设置失败仅记日志、不弹窗，避免打断调试。</para>
+        /// </summary>
+        private void OnSaRefLevelUpClicked(object sender, EventArgs e)
+        {
+            AdjustReferenceLevel(+5.0);
+        }
+
+        /// <summary>
+        /// 参考电平 -5 dBm。
+        /// <para>读到当前参考电平（:DISP:WIND:TRAC:Y:RLEV?）- 5 dBm 后再下发设置。
+        /// 读失败或设置失败仅记日志、不弹窗，避免打断调试。</para>
+        /// </summary>
+        private void OnSaRefLevelDownClicked(object sender, EventArgs e)
+        {
+            AdjustReferenceLevel(-5.0);
+        }
+
+        /// <summary>
+        /// 通用"参考电平按步进调整"辅助：读当前 → 叠加步进 → 设置。
+        /// 所有异常仅记日志，不弹窗、不改变本地状态。
+        /// </summary>
+        private void AdjustReferenceLevel(double stepDbm)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                double current = _spectrumAnalyzer.QueryReferenceLevel();
+                double next = current + stepDbm;
+                _spectrumAnalyzer.SetReferenceLevel(next);
+                Logger.Log(
+                    $"[UI] 参考电平已调整：{current:F2} dBm → {next:F2} dBm（步进 {stepDbm:+0.0;-0.0;0} dBm）");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] 参考电平调整失败（步进 {stepDbm:+0.0;-0.0;0} dBm）：{ex.Message}");
             }
         }
 

@@ -182,15 +182,15 @@
 
 | SCPI 命令 | C# 方法 | 用途 |
 |-----------|---------|------|
-| `:TRAC:MODE 1,AVG` / `:TRAC:MODE 1,WRIT` | `SetAverageMode(bool enable)` | 设置平均模式/清除 |
+| `:TRAC:TYPE AVER` / `:TRAC:TYPE WRIT` | `SetAverageMode(bool enable)` | 设置平均模式/清除 |
 | `:TRACE1:MODE MAXH` / `:TRACE1:MODE WRIT` | `SetMaxHold(bool enable)` | 最大保持模式 |
-| `:DISP:WIND:TRAC:CLE` | `ClearDisplay()` | 清除显示 |
+
 | `:DISP:WIND:TRAC:Y:RLEV {level} dBm` | `SetReferenceLevel(double leveldBm)` | 设置参考电平 |
 | `:DISP:WIND:TRAC:Y:RLEV:OFFS {offset}` | `SetReferenceLevelOffset(double offsetdBm)` | 设置参考电平偏移 |
 | `:SWE:TIME {seconds} s` | `SetSweepTime(double seconds)` | 设置扫描时间 |
 | `:TRIG:SOUR VID` + `:TRIG:LEV:AUTO ON` | `EnableVideoTrigger()` | 启用视频触发 |
 | `:INIT:CONT ON` / `:INIT:CONT OFF` | `SetContinuousScan(bool continuous)` | 连续/单次扫描切换 |
-| `:CALC:MARK:MAX:AUTO ON` | `EnablePeakAutoSearch()` | 峰值自动搜索 |
+| `:CALC:MARK:CPS ON` | `EnablePeakAutoSearch()` | 峰值自动搜索 |
 
 #### 谐波测试
 

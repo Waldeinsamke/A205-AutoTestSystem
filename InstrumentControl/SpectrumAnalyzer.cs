@@ -193,10 +193,10 @@ namespace A205AutoTestSystem.InstrumentControl
         // 显示与触发
         // ====================================================================
 
-        /// <summary>设置平均模式开关。文档：TRAC:MODE 1,AVG / 1,WRIT</summary>
+        /// <summary>设置平均模式开关。文档：:TRAC:TYPE AVER / WRIT</summary>
         public void SetAverageMode(bool enable)
         {
-            SendCommand(enable ? ":TRAC:MODE 1,AVG" : ":TRAC:MODE 1,WRIT");
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":TRAC:TYPE {0}", enable ? "AVER" : "WRIT"));
         }
 
         /// <summary>设置最大保持模式开关。文档：TRACE1:MODE MAXH / WRIT</summary>
@@ -221,6 +221,26 @@ namespace A205AutoTestSystem.InstrumentControl
         public void SetReferenceLevel(double leveldBm)
         {
             SendCommand(string.Format(CultureInfo.InvariantCulture, ":DISP:WIND:TRAC:Y:RLEV {0} dBm", leveldBm));
+        }
+
+        /// <summary>
+        /// 读取当前参考电平（dBm）。文档：:DISP:WIND:TRAC:Y:RLEV?
+        /// <para>响应为空或非数值时抛 InvalidOperationException；调用方应捕获并仅记日志。</para>
+        /// </summary>
+        public double QueryReferenceLevel()
+        {
+            string resp = QueryString(":DISP:WIND:TRAC:Y:RLEV?");
+            if (string.IsNullOrWhiteSpace(resp))
+            {
+                throw new InvalidOperationException(
+                    "频谱仪参考电平查询返回空响应（命令：:DISP:WIND:TRAC:Y:RLEV?）。");
+            }
+            if (!double.TryParse(resp, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                throw new InvalidOperationException(
+                    $"频谱仪参考电平查询响应无法解析为数值：'{resp}'。");
+            }
+            return value;
         }
 
         /// <summary>设置参考电平偏移（dB）。</summary>
@@ -254,10 +274,10 @@ namespace A205AutoTestSystem.InstrumentControl
             SetPeakAutoSearch(true);
         }
 
-        /// <summary>设置峰值自动搜索开关（:CALC:MARK:MAX:AUTO ON / OFF）。</summary>
+        /// <summary>设置峰值自动搜索开关（:CALC:MARK:CPS ON / OFF）。</summary>
         public void SetPeakAutoSearch(bool enable)
         {
-            SendCommand(string.Format(CultureInfo.InvariantCulture, ":CALC:MARK:MAX:AUTO {0}", enable ? "ON" : "OFF"));
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":CALC:MARK:CPS {0}", enable ? "ON" : "OFF"));
         }
 
         // ====================================================================

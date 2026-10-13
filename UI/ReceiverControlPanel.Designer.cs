@@ -137,13 +137,14 @@ namespace A205AutoTestSystem.UI
             this.btnSaMarkerAllOff = new System.Windows.Forms.Button();
             this.btnSaReset = new System.Windows.Forms.Button();
             this.btnSaMaxHold = new System.Windows.Forms.Button();
-            this.btnSaClearDisplay = new System.Windows.Forms.Button();
             this.btnSaPeakAuto = new System.Windows.Forms.Button();
             this.btnSaBwAuto = new System.Windows.Forms.Button();
             this.btnSaTraceAvg = new System.Windows.Forms.Button();
             this.btnSaMinHold = new System.Windows.Forms.Button();
             this.btnSaDeltaMarker = new System.Windows.Forms.Button();
             this.btnSaHarmonics = new System.Windows.Forms.Button();
+            this.btnSaRefLevelUp = new System.Windows.Forms.Button();
+            this.btnSaRefLevelDown = new System.Windows.Forms.Button();
             this.grpSerialConnection.SuspendLayout();
             this.grpParameterConfig.SuspendLayout();
             this.pnlTempGroup.SuspendLayout();
@@ -551,7 +552,7 @@ namespace A205AutoTestSystem.UI
             this.txtRfAddress.Name = "txtRfAddress";
             this.txtRfAddress.Size = new System.Drawing.Size(209, 25);
             this.txtRfAddress.TabIndex = 3;
-            this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252929::INSTR";
+            this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252683::INSTR";
             // 
             // pnlLoStatus
             // 
@@ -578,7 +579,7 @@ namespace A205AutoTestSystem.UI
             this.txtLoAddress.Name = "txtLoAddress";
             this.txtLoAddress.Size = new System.Drawing.Size(209, 25);
             this.txtLoAddress.TabIndex = 9;
-            this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY62150252::INSTR";
+            this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY59101329::INSTR";
             // 
             // pnlSaStatus
             // 
@@ -605,7 +606,7 @@ namespace A205AutoTestSystem.UI
             this.txtSaAddress.Name = "txtSaAddress";
             this.txtSaAddress.Size = new System.Drawing.Size(209, 25);
             this.txtSaAddress.TabIndex = 15;
-            this.txtSaAddress.Text = "USB0::0x2A8D::0x0A0B::MY50200999::INSTR";
+            this.txtSaAddress.Text = "USB0::0x0957::0x0A0B::MY53290027::INSTR";
             // 
             // pnlPowerStatus
             // 
@@ -632,7 +633,7 @@ namespace A205AutoTestSystem.UI
             this.txtPowerAddress.Name = "txtPowerAddress";
             this.txtPowerAddress.Size = new System.Drawing.Size(209, 25);
             this.txtPowerAddress.TabIndex = 23;
-            this.txtPowerAddress.Text = "USB0::0x5345::0x1234::2243129::INSTR";
+            this.txtPowerAddress.Text = "USB0::0x5345::0x1234::2312386::INSTR";
             // 
             // btnConnectAll
             // 
@@ -656,7 +657,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnRealConnect
             // 
-            this.btnRealConnect.Location = new System.Drawing.Point(6, 24);
+            this.btnRealConnect.Location = new System.Drawing.Point(105, 24);
             this.btnRealConnect.Name = "btnRealConnect";
             this.btnRealConnect.Size = new System.Drawing.Size(80, 49);
             this.btnRealConnect.TabIndex = 32;
@@ -701,7 +702,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnOpenPower
             // 
-            this.btnOpenPower.Location = new System.Drawing.Point(92, 24);
+            this.btnOpenPower.Location = new System.Drawing.Point(17, 24);
             this.btnOpenPower.Name = "btnOpenPower";
             this.btnOpenPower.Size = new System.Drawing.Size(80, 49);
             this.btnOpenPower.TabIndex = 22;
@@ -717,13 +718,14 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentControl.Controls.Add(this.btnSaMarkerAllOff);
             this.grpInstrumentControl.Controls.Add(this.btnSaReset);
             this.grpInstrumentControl.Controls.Add(this.btnSaMaxHold);
-            this.grpInstrumentControl.Controls.Add(this.btnSaClearDisplay);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakAuto);
             this.grpInstrumentControl.Controls.Add(this.btnSaBwAuto);
             this.grpInstrumentControl.Controls.Add(this.btnSaTraceAvg);
             this.grpInstrumentControl.Controls.Add(this.btnSaMinHold);
             this.grpInstrumentControl.Controls.Add(this.btnSaDeltaMarker);
             this.grpInstrumentControl.Controls.Add(this.btnSaHarmonics);
+            this.grpInstrumentControl.Controls.Add(this.btnSaRefLevelUp);
+            this.grpInstrumentControl.Controls.Add(this.btnSaRefLevelDown);
             this.grpInstrumentControl.Location = new System.Drawing.Point(456, 8);
             this.grpInstrumentControl.Name = "grpInstrumentControl";
             this.grpInstrumentControl.Size = new System.Drawing.Size(383, 439);
@@ -733,7 +735,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaPeakSearch
             // 
-            this.btnSaPeakSearch.Location = new System.Drawing.Point(6, 134);
+            this.btnSaPeakSearch.Location = new System.Drawing.Point(17, 134);
             this.btnSaPeakSearch.Name = "btnSaPeakSearch";
             this.btnSaPeakSearch.Size = new System.Drawing.Size(80, 49);
             this.btnSaPeakSearch.TabIndex = 40;
@@ -743,7 +745,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMarkerAllOff
             // 
-            this.btnSaMarkerAllOff.Location = new System.Drawing.Point(266, 134);
+            this.btnSaMarkerAllOff.Location = new System.Drawing.Point(285, 134);
             this.btnSaMarkerAllOff.Name = "btnSaMarkerAllOff";
             this.btnSaMarkerAllOff.Size = new System.Drawing.Size(80, 49);
             this.btnSaMarkerAllOff.TabIndex = 41;
@@ -753,7 +755,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaReset
             // 
-            this.btnSaReset.Location = new System.Drawing.Point(266, 24);
+            this.btnSaReset.Location = new System.Drawing.Point(285, 24);
             this.btnSaReset.Name = "btnSaReset";
             this.btnSaReset.Size = new System.Drawing.Size(80, 49);
             this.btnSaReset.TabIndex = 42;
@@ -763,7 +765,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMaxHold
             // 
-            this.btnSaMaxHold.Location = new System.Drawing.Point(92, 79);
+            this.btnSaMaxHold.Location = new System.Drawing.Point(105, 79);
             this.btnSaMaxHold.Name = "btnSaMaxHold";
             this.btnSaMaxHold.Size = new System.Drawing.Size(80, 49);
             this.btnSaMaxHold.TabIndex = 43;
@@ -771,19 +773,9 @@ namespace A205AutoTestSystem.UI
             this.btnSaMaxHold.UseVisualStyleBackColor = true;
             this.btnSaMaxHold.Click += new System.EventHandler(this.OnSaMaxHoldClicked);
             // 
-            // btnSaClearDisplay
-            // 
-            this.btnSaClearDisplay.Location = new System.Drawing.Point(266, 79);
-            this.btnSaClearDisplay.Name = "btnSaClearDisplay";
-            this.btnSaClearDisplay.Size = new System.Drawing.Size(80, 49);
-            this.btnSaClearDisplay.TabIndex = 44;
-            this.btnSaClearDisplay.Text = "清除显示";
-            this.btnSaClearDisplay.UseVisualStyleBackColor = true;
-            this.btnSaClearDisplay.Click += new System.EventHandler(this.OnSaClearDisplayClicked);
-            // 
             // btnSaPeakAuto
             // 
-            this.btnSaPeakAuto.Location = new System.Drawing.Point(178, 134);
+            this.btnSaPeakAuto.Location = new System.Drawing.Point(197, 134);
             this.btnSaPeakAuto.Name = "btnSaPeakAuto";
             this.btnSaPeakAuto.Size = new System.Drawing.Size(80, 49);
             this.btnSaPeakAuto.TabIndex = 46;
@@ -793,7 +785,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaBwAuto
             // 
-            this.btnSaBwAuto.Location = new System.Drawing.Point(266, 189);
+            this.btnSaBwAuto.Location = new System.Drawing.Point(285, 79);
             this.btnSaBwAuto.Name = "btnSaBwAuto";
             this.btnSaBwAuto.Size = new System.Drawing.Size(80, 49);
             this.btnSaBwAuto.TabIndex = 47;
@@ -803,7 +795,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaTraceAvg
             // 
-            this.btnSaTraceAvg.Location = new System.Drawing.Point(6, 79);
+            this.btnSaTraceAvg.Location = new System.Drawing.Point(17, 79);
             this.btnSaTraceAvg.Name = "btnSaTraceAvg";
             this.btnSaTraceAvg.Size = new System.Drawing.Size(80, 49);
             this.btnSaTraceAvg.TabIndex = 48;
@@ -813,7 +805,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMinHold
             // 
-            this.btnSaMinHold.Location = new System.Drawing.Point(180, 79);
+            this.btnSaMinHold.Location = new System.Drawing.Point(197, 79);
             this.btnSaMinHold.Name = "btnSaMinHold";
             this.btnSaMinHold.Size = new System.Drawing.Size(80, 49);
             this.btnSaMinHold.TabIndex = 49;
@@ -823,7 +815,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaDeltaMarker
             // 
-            this.btnSaDeltaMarker.Location = new System.Drawing.Point(92, 134);
+            this.btnSaDeltaMarker.Location = new System.Drawing.Point(105, 134);
             this.btnSaDeltaMarker.Name = "btnSaDeltaMarker";
             this.btnSaDeltaMarker.Size = new System.Drawing.Size(80, 49);
             this.btnSaDeltaMarker.TabIndex = 50;
@@ -833,13 +825,33 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaHarmonics
             // 
-            this.btnSaHarmonics.Location = new System.Drawing.Point(180, 24);
+            this.btnSaHarmonics.Location = new System.Drawing.Point(197, 24);
             this.btnSaHarmonics.Name = "btnSaHarmonics";
             this.btnSaHarmonics.Size = new System.Drawing.Size(80, 49);
             this.btnSaHarmonics.TabIndex = 51;
             this.btnSaHarmonics.Text = "谐波测量";
             this.btnSaHarmonics.UseVisualStyleBackColor = true;
             this.btnSaHarmonics.Click += new System.EventHandler(this.OnSaHarmonicsClicked);
+            // 
+            // btnSaRefLevelUp
+            // 
+            this.btnSaRefLevelUp.Location = new System.Drawing.Point(105, 189);
+            this.btnSaRefLevelUp.Name = "btnSaRefLevelUp";
+            this.btnSaRefLevelUp.Size = new System.Drawing.Size(80, 49);
+            this.btnSaRefLevelUp.TabIndex = 52;
+            this.btnSaRefLevelUp.Text = "参考电平+5";
+            this.btnSaRefLevelUp.UseVisualStyleBackColor = true;
+            this.btnSaRefLevelUp.Click += new System.EventHandler(this.OnSaRefLevelUpClicked);
+            // 
+            // btnSaRefLevelDown
+            // 
+            this.btnSaRefLevelDown.Location = new System.Drawing.Point(197, 189);
+            this.btnSaRefLevelDown.Name = "btnSaRefLevelDown";
+            this.btnSaRefLevelDown.Size = new System.Drawing.Size(80, 49);
+            this.btnSaRefLevelDown.TabIndex = 53;
+            this.btnSaRefLevelDown.Text = "参考电平-5";
+            this.btnSaRefLevelDown.UseVisualStyleBackColor = true;
+            this.btnSaRefLevelDown.Click += new System.EventHandler(this.OnSaRefLevelDownClicked);
             // 
             // ReceiverControlPanel
             // 
@@ -877,12 +889,13 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.Button btnSaMarkerAllOff;
         private System.Windows.Forms.Button btnSaReset;
         private System.Windows.Forms.Button btnSaMaxHold;
-        private System.Windows.Forms.Button btnSaClearDisplay;
         private System.Windows.Forms.Button btnSaPeakAuto;
         private System.Windows.Forms.Button btnSaBwAuto;
         private System.Windows.Forms.Button btnSaTraceAvg;
         private System.Windows.Forms.Button btnSaMinHold;
         private System.Windows.Forms.Button btnSaDeltaMarker;
         private System.Windows.Forms.Button btnSaHarmonics;
+        private System.Windows.Forms.Button btnSaRefLevelUp;
+        private System.Windows.Forms.Button btnSaRefLevelDown;
     }
 }
