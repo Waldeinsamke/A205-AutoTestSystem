@@ -128,6 +128,35 @@ namespace A205AutoTestSystem.UI
         // ============================================================
 
         /// <summary>
+        /// AutoTestPanel.cmbChannel 选中变化：单向同步到 ReceiverControlPanel.cmbChannel。
+        /// <para>不反向同步（ReceiverControlPanel.cmbChannel 改变时不动 AutoTestPanel）——
+        /// ReceiverControlPanel 是"权威数据源"，AutoTestPanel 只是快捷入口。</para>
+        /// <para>切通道后**重建测试项清单**：原 GainTest._channel 是构造期锁定的，
+        /// 切通道不重建的话 DGV 行的 Tag 仍指向旧 channel 的 test 实例，
+        /// 再次运行时仍发旧 channel 命令。重建让 row.Tag 指向新 channel 的 test。</para>
+        /// </summary>
+        private void OnAutoTestCmbChannelChanged(object sender, EventArgs e)
+        {
+            // 构造期 InitializeDefaults 内触发时 _receiverPanel 还是 null，安全跳过。
+            if (_receiverPanel == null || _receiverPanel.cmbChannel == null) return;
+
+            int newIndex = cmbChannel.SelectedIndex;
+            // 已经在同一索引就不重复赋值（避免无谓的二次触发）
+            if (_receiverPanel.cmbChannel.SelectedIndex == newIndex) return;
+
+            _receiverPanel.cmbChannel.SelectedIndex = newIndex;
+            // 后续 OnChannelSelected 由 ReceiverControlPanel 自己订阅，会自动切矩阵。
+
+            // 通道变了 → 重建测试项清单，让 DGV 行的 row.Tag 指向新 channel 的 test。
+            // 仅在资源已就绪（Fake/真机初始化完成）时重建：构造期或切 Tab 期间
+            // _instrumentsReady 还是 false，没必要重建。
+            if (_instrumentsReady)
+            {
+                LoadDefaultTestsToGrid();
+            }
+        }
+
+        /// <summary>
         /// "初始化测试环境"按钮。
         /// <para>M6 阶段：把 <c>VisaBaseInstrument.DefaultTransportFactory</c> 重置为
         /// <c>addr => new FakeVisaInstrument(addr)</c>，让三仪表在生产路径下走伪传输。
@@ -253,6 +282,37 @@ namespace A205AutoTestSystem.UI
         public void AttachToReceiver(ReceiverControlPanel receiverPanel)
         {
             _receiverPanel = receiverPanel;
+        }
+
+        /// <summary>
+        /// 由 <see cref="ReceiverControlPanel.OnRealConnectClicked"/> 调用，
+        /// 把"已在接收机控制页连好的真机三仪表"推送到本面板的 _rf / _lo / _sa 字段。
+        /// <para>推送完成后立即调 <see cref="LoadDefaultTestsToGrid"/> 走 CreateProduction 路径
+        /// （receiver.IsOpen=true 且三仪表 IsConnected=true → 加载 60+3 模式测试项）。</para>
+        /// <para>调用方负责先确保三仪表 IsConnected + receiver.IsOpen；本方法不做就绪检查。</para>
+        /// </summary>
+        public void ApplyReceiverResources(
+            SignalGenerator rf,
+            SignalGeneratorLO lo,
+            SpectrumAnalyzer sa)
+        {
+            if (rf == null) throw new ArgumentNullException(nameof(rf));
+            if (lo == null) throw new ArgumentNullException(nameof(lo));
+            if (sa == null) throw new ArgumentNullException(nameof(sa));
+
+            // 释放旧实例（避免泄漏真机句柄 / Fake 实例）—— Fake 阶段创建的也要释放
+            try { _rf?.Dispose(); } catch { }
+            try { _lo?.Dispose(); } catch { }
+            try { _sa?.Dispose(); } catch { }
+
+            _rf = rf;
+            _lo = lo;
+            _sa = sa;
+            _instrumentsReady = true;
+            Logger.Log("[AutoTestPanel] 已绑定真机三仪表（来自 ReceiverControlPanel）。");
+
+            // 资源已就绪——重新走资源分支判断，receiver IsOpen 决定走 CreateProduction 还是 fallback
+            LoadDefaultTestsToGrid();
         }
 
         /// <summary>

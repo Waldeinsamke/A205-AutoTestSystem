@@ -41,6 +41,10 @@ namespace A205AutoTestSystem.UI
         // 关机=RF/LO :OUTP 0→断开接收机串口→电源OFF。
         private bool _powerOutputOn = false;
 
+        // M6.x：自动测试面板引用。由 MainForm.OnLoad 注入，
+        // "真机连接"按钮把本面板已连好的三仪表推送给自动测试面板走真机路径。
+        private AutoTestPanel _autoTestPanel;
+
         // 频段 ComboBox 当前显示列表（依模式动态变化，由 RefreshBandCombo 写入）
         private IReadOnlyList<ModeBandTable.BandInfo> _currentBands;
 
@@ -190,6 +194,15 @@ namespace A205AutoTestSystem.UI
                 if (ch < 1 || ch > 8) return 1;
                 return ch;
             }
+        }
+
+        /// <summary>
+        /// 由 MainForm.OnLoad 调用，注入自动测试面板引用。
+        /// 用于"真机连接"按钮：把本面板已建好的真机三仪表推送给自动测试面板走全功能路径。
+        /// </summary>
+        public void AttachToAutoTestPanel(AutoTestPanel autoTestPanel)
+        {
+            _autoTestPanel = autoTestPanel;
         }
 
         // ============================================================
@@ -999,6 +1012,58 @@ namespace A205AutoTestSystem.UI
                         "电源关闭失败: " + ex.Message + "\n（信号输出已关闭、接收机串口已断开，请排查后重试关闭供电）",
                         "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
+            }
+        }
+
+        // -------- 日志清除按钮
+        // -------- M6.x：真机连接按钮（推送三仪表到自动测试面板）--------
+        /// <summary>
+        /// "真机连接"按钮：把本面板已连好的三台真机仪表推送给自动测试面板，
+        /// 使自动测试面板走 CreateProduction 全功能路径（60 点 GainTest + 3 模式扫频 BandwidthTest）。
+        /// <para>前置条件：三台仪表（RF/LO/SA）必须已 Connect，且接收机串口必须已 Open。</para>
+        /// </summary>
+        private void OnRealConnectClicked(object sender, EventArgs e)
+        {
+            if (_autoTestPanel == null)
+            {
+                MessageBox.Show(this,
+                    "自动测试面板未注入（MainForm 启动时漏 AttachToAutoTestPanel），请联系开发者。",
+                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 1) 三仪表就绪检查
+            if (!AreInstrumentsReady)
+            {
+                MessageBox.Show(this,
+                    "请先在『一键连接』连好三台仪表（RF/LO/SA 状态灯全绿）。",
+                    "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2) 接收机串口就绪检查
+            if (_receiver == null || !_receiver.IsOpen)
+            {
+                MessageBox.Show(this,
+                    "请先在『串口连接』区连接收机串口。",
+                    "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 3) 推送三仪表到自动测试面板
+            try
+            {
+                _autoTestPanel.ApplyReceiverResources(_rfGenerator, _loGenerator, _spectrumAnalyzer);
+                MessageBox.Show(this,
+                    "真机资源已绑定到自动测试面板。\r\n" +
+                    "请切换到『自动测试』Tab，点击 ▶ 运行或『一键运行』开始测试。",
+                    "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "绑定真机资源失败：" + ex.Message,
+                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

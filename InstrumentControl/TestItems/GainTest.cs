@@ -96,6 +96,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         /// <summary>等待信号稳定的延时（毫秒）。M6 阶段固定 200ms。</summary>
         private const int DefaultSettleDelayMs = 200;
 
+        // M6.x 时序常量（每频点总时长 ~1s；模式切换 2s；读 peak 后 200ms 余量给 SA 扫下一帧）
+        private const int RfLoStableMs = 200;        // RF/LO 频率切换 + PLL 锁相稳定
+        private const int BandStableMs = 500;        // 频段命令后等 0.5s 再读 peak（推测 9 + Q2）
+        private const int ModeStableMs = 2000;       // 模式切换后稳定（按 M6.x 用户要求 2s）
+        private const int PostReadDelayMs = 200;     // 读 peak 后等频谱仪扫到下一帧（Q5=b）
+
+        /// <summary>频谱仪参考电平（dBm）。推测 2：峰 -10 dBm 占满 0-10 dBm 量程。</summary>
+        private const double SaReferenceLevelDbm = 10.0;
+
         // ============================================================
         // 构造（M6 兼容）
         // ============================================================
@@ -307,118 +316,156 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 throw new InvalidOperationException("GainTest（M6.x 全功能）需要三台仪表（RF/LO/SA）已连接。");
             }
 
+            // 频谱仪入口：清残留状态 + 切连续扫描（Q1=不需要设 RBW/VBW）
+            try { _saLoop.Reset(); } catch { /* best-effort */ }
+            _saLoop.SetContinuousScan(true);
+
+            // M6.x 业务要求：测试开始时打开 RF/LO 输出，整个 60 点循环期间不再切，
+            // 整个 GainTest 结束（异常或正常 return 都包含）时再关闭。
+            try
+            {
+                _rfLoop.SetOutputState(true);
+                _loLoop.SetOutputState(true);
+                Logger.Log("[GainTest] RF/LO 输出已开启（整个 60 点循环期间保持）。");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[GainTest] RF/LO :OUTP 1 失败：" + ex.Message);
+            }
+
             TestResult lastResult = null;
             int total = 0;
             foreach (var _ in _modes) total += ModeBandTable.GetBands(_).Count;
             int done = 0;
 
-            foreach (var mode in _modes)
+            try
             {
-                ct.ThrowIfCancellationRequested();
-                progress.Report($"[GainTest] === 进入 {mode} ===");
-                Logger.Log($"[GainTest] === 进入 {mode} ===");
-
-                // M6.x：模式相关参数在循环内按 mode 实时取，避免整组循环共用一组参数。
-                // 与 ReceiverControlPanel.cs#L57-64 的常量保持一致；如修改需同步两处。
-                double ifFreqHz = mode == ReceiverMode.Mode3 ? SaCenterFreqMode3Hz : SaCenterFreqMode12Hz;
-                double rfPowerDbm = mode == ReceiverMode.Mode2 ? RfPowerMode2Dbm : RfPowerMode13Dbm;
-                double loPowerDbm = LoPowerModeDbm;     // 三个模式 LO 均为 3 dBm
-
-                // 1) 模式命令
-                _receiver.SendModeCommand(mode);
-
-                // 2) 模式联动：频谱仪中心 = 当前 mode 的 IF，功率按当前 mode
-                _saLoop.SetFrequencySpan(ifFreqHz, SaSpanModeHz);
-                _rfLoop.SetPower(rfPowerDbm);
-                _loLoop.SetPower(loPowerDbm);
-
-                // 3) 遍历该模式下的所有频点
-                IReadOnlyList<ModeBandTable.BandInfo> bands = ModeBandTable.GetBands(mode);
-                foreach (var band in bands)
+                foreach (var mode in _modes)
                 {
                     ct.ThrowIfCancellationRequested();
+                    progress.Report($"[GainTest] === 进入 {mode} ===");
+                    Logger.Log($"[GainTest] === 进入 {mode} ===");
 
-                    // a) 频段命令
-                    _receiver.SendBandCommand(mode, band.BandIndex);
+                    // M6.x：模式相关参数在循环内按 mode 实时取，避免整组循环共用一组参数。
+                    // 与 ReceiverControlPanel.cs#L57-64 的常量保持一致；如修改需同步两处。
+                    double ifFreqHz = mode == ReceiverMode.Mode3 ? SaCenterFreqMode3Hz : SaCenterFreqMode12Hz;
+                    double rfPowerDbm = mode == ReceiverMode.Mode2 ? RfPowerMode2Dbm : RfPowerMode13Dbm;
+                    double loPowerDbm = LoPowerModeDbm;     // 三个模式 LO 均为 3 dBm
 
-                    // b) 设置 RF 频率（按频段名解析 MHz）
-                    if (!band.TryGetRfFreqMHz(out double rfFreqMHz))
+                    // A) 模式切换：先通道命令再模式命令（按 M6.x 用户要求 Q1，照搬
+                    //    ReceiverControlPanel.OnModeSetClicked 的现成调用）。
+                    //    SendChannelThenModeCommand 内部自动在两条命令之间 Sleep(InterSequenceIntervalMs=100ms)。
+                    _receiver.SendChannelThenModeCommand(_channel, mode);
+
+                    // B) 频谱仪：中心 = 当前 mode IF + Span 50MHz + 参考电平 10 dBm
+                    _saLoop.SetFrequencySpan(ifFreqHz, SaSpanModeHz);
+                    _saLoop.SetReferenceLevel(SaReferenceLevelDbm);
+
+                    // C) RF/LO 功率
+                    _rfLoop.SetPower(rfPowerDbm);
+                    _loLoop.SetPower(loPowerDbm);
+
+                    // D) 模式切换稳定（按 M6.x 用户要求 1.5s）
+                    progress.Report($"[GainTest] {mode} 模式切换稳定 {ModeStableMs}ms…");
+                    await Task.Delay(ModeStableMs, ct).ConfigureAwait(false);
+
+                    // 3) 遍历该模式下的所有频点
+                    IReadOnlyList<ModeBandTable.BandInfo> bands = ModeBandTable.GetBands(mode);
+                    foreach (var band in bands)
                     {
-                        string err = $"无法从频段名 '{band.DisplayName}' 解析 RF 频率，跳过该频点。";
-                        progress.Report("[GainTest] " + err);
-                        Logger.Log("[GainTest] " + err);
-                        continue;
-                    }
-                    double rfFreqHz = rfFreqMHz * 1_000_000.0;
+                        ct.ThrowIfCancellationRequested();
 
-                    // c) 设置 RF/LO 频率
-                    _rfLoop.SetFrequency(rfFreqHz);
-                    double loFreqHz = LoFrequencyRule.Calculate(rfFreqHz, (int)mode);
-                    _loLoop.SetFrequency(loFreqHz);
+                        // 1) 设置 RF/LO 频率（按频段名解析 MHz）
+                        //    推测 9 修正时序：RF/LO 设频在频段命令之前——
+                        //    避免"切到新频段瞬间 LO 还是上频段的"读到错误 IF。
+                        if (!band.TryGetRfFreqMHz(out double rfFreqMHz))
+                        {
+                            string err = $"无法从频段名 '{band.DisplayName}' 解析 RF 频率，跳过该频点。";
+                            progress.Report("[GainTest] " + err);
+                            Logger.Log("[GainTest] " + err);
+                            continue;
+                        }
+                        double rfFreqHz = rfFreqMHz * 1_000_000.0;
+                        double loFreqHz = LoFrequencyRule.Calculate(rfFreqHz, (int)mode);
 
-                    // d) RF/LO 输出 ON
-                    _rfLoop.SetOutputState(true);
-                    _loLoop.SetOutputState(true);
+                        // 2) RF/LO 设频（不再重复 :OUTP 1：业务要求"开始时打开后保持开启"）
+                        _rfLoop.SetFrequency(rfFreqHz);
+                        _loLoop.SetFrequency(loFreqHz);
 
-                    // e) 等待稳定
-                    progress.Report($"[GainTest] {mode} {band.DisplayName} 等待 {_settleDelayMsLoop}ms…");
-                    await Task.Delay(_settleDelayMsLoop, ct).ConfigureAwait(false);
+                        // 3) 等待 RF/LO 频率切换 + PLL 锁相稳定
+                        progress.Report($"[GainTest] {mode} {band.DisplayName} 等 RF/LO 稳定 {RfLoStableMs}ms…");
+                        await Task.Delay(RfLoStableMs, ct).ConfigureAwait(false);
 
-                    // f) 读 peak
-                    double peakDbm;
-                    try
-                    {
-                        peakDbm = _saLoop.ReadPeakAmplitude();
-                    }
-                    catch (Exception ex)
-                    {
-                        string err = $"{mode} {band.DisplayName} 读 peak 失败：{ex.Message}";
-                        progress.Report("[GainTest] " + err);
-                        Logger.Log("[GainTest] " + err);
-                        _rfLoop.SetOutputState(false);
-                        _loLoop.SetOutputState(false);
-                        done++;
-                        continue;
-                    }
-                    double gain = peakDbm - rfPowerDbm;
+                        // 4) 频段命令
+                        _receiver.SendBandCommand(mode, band.BandIndex);
 
-                    // 按当前模式取判据
-                    var modeLimits = GetGainLimits(mode);
-                    bool pass = gain >= modeLimits.Lower && gain <= modeLimits.Upper;
+                        // 推测 9 + Q2：读 peak 前等 0.5s（频段切换 + 接收机内部稳定）
+                        progress.Report($"[GainTest] {mode} {band.DisplayName} 等频段稳定 {BandStableMs}ms…");
+                        await Task.Delay(BandStableMs, ct).ConfigureAwait(false);
 
-                    TestResult result = new TestResult
-                    {
-                        TestTime = DateTime.Now,
-                        Channel = _channel,
-                        Mode = mode.ToString(),
-                        BandIndex = band.BandIndex,
-                        BandDisplayName = band.DisplayName,
-                        TestItem = TestName,
-                        Value = gain,
-                        Unit = Unit,
-                        Judgment = pass ? "Pass" : "Fail",
-                        Remarks = string.Format(
+                        // 5) 读 peak（业务要求：失败时不再 :OUTP 0，保持开启等 finally 统一关）
+                        double peakDbm;
+                        try
+                        {
+                            peakDbm = _saLoop.ReadPeakAmplitude();
+                        }
+                        catch (Exception ex)
+                        {
+                            string err = $"{mode} {band.DisplayName} 读 peak 失败：{ex.Message}";
+                            progress.Report("[GainTest] " + err);
+                            Logger.Log("[GainTest] " + err);
+                            done++;
+                            continue;
+                        }
+                        double gain = peakDbm - rfPowerDbm;
+
+                        // 按当前模式取判据
+                        var modeLimits = GetGainLimits(mode);
+                        bool pass = gain >= modeLimits.Lower && gain <= modeLimits.Upper;
+
+                        TestResult result = new TestResult
+                        {
+                            TestTime = DateTime.Now,
+                            Channel = _channel,
+                            Mode = mode.ToString(),
+                            BandIndex = band.BandIndex,
+                            BandDisplayName = band.DisplayName,
+                            TestItem = TestName,
+                            Value = gain,
+                            Unit = Unit,
+                            Judgment = pass ? "Pass" : "Fail",
+                            Remarks = string.Format(
+                                CultureInfo.InvariantCulture,
+                                "RF={0:F3}MHz@{1}dBm, LO={2:F3}MHz, IF={3:F3}MHz, IFpeak={4:F2}dBm",
+                                rfFreqMHz, rfPowerDbm,
+                                loFreqHz / 1e6, ifFreqHz / 1e6, peakDbm)
+                        };
+                        TestReportManager.Instance.Record(result);
+                        lastResult = result;
+
+                        progress.Report(string.Format(
                             CultureInfo.InvariantCulture,
-                            "RF={0:F3}MHz@{1}dBm, LO={2:F3}MHz, IF={3:F3}MHz, IFpeak={4:F2}dBm",
-                            rfFreqMHz, rfPowerDbm,
-                            loFreqHz / 1e6, ifFreqHz / 1e6, peakDbm)
-                    };
-                    TestReportManager.Instance.Record(result);
-                    lastResult = result;
+                            "[GainTest] {0} {1} ({2}/{3}): peak={4:F2} dBm, gain={5:F2} dB → {6}",
+                            mode, band.DisplayName, ++done, total, peakDbm, gain, result.Judgment));
+                        Logger.Log(string.Format(
+                            CultureInfo.InvariantCulture,
+                            "[GainTest] {0} {1}: peak={2:F2} dBm, gain={3:F2} dB → {4}",
+                            mode, band.DisplayName, peakDbm, gain, result.Judgment));
 
-                    progress.Report(string.Format(
-                        CultureInfo.InvariantCulture,
-                        "[GainTest] {0} {1} ({2}/{3}): peak={4:F2} dBm, gain={5:F2} dB → {6}",
-                        mode, band.DisplayName, ++done, total, peakDbm, gain, result.Judgment));
-                    Logger.Log(string.Format(
-                        CultureInfo.InvariantCulture,
-                        "[GainTest] {0} {1}: peak={2:F2} dBm, gain={3:F2} dB → {4}",
-                        mode, band.DisplayName, peakDbm, gain, result.Judgment));
+                        // 6) 读 peak 后余量：等频谱仪扫到下一帧（Q5=b）
+                        //    业务要求：读完当前频点后给 SA 时间"扫到下一频点的稳定值"，
+                        //    避免下一频点的首次读 peak 拿到上频点的尾迹。
+                        await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
+                    }
                 }
-
-                // 4) 该模式结束后 RF/LO :OUTP 0，避免下一模式首频点读到上模式尾迹
+            }
+            finally
+            {
+                // M6.x 业务要求：测试完成后再关闭信号输出。
+                // 正常 return 与异常都走到这里，保证 :OUTP 0 一定执行。
                 try { _rfLoop.SetOutputState(false); } catch { /* best-effort */ }
                 try { _loLoop.SetOutputState(false); } catch { /* best-effort */ }
+                Logger.Log("[GainTest] RF/LO 输出已关闭（finally）。");
             }
 
             return lastResult;

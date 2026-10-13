@@ -102,7 +102,8 @@ namespace A205AutoTestSystem.UI
             this.cmbChannel.Name = "cmbChannel";
             this.cmbChannel.Size = new System.Drawing.Size(100, 23);
             this.cmbChannel.TabIndex = 1;
-            // 
+            this.cmbChannel.SelectedIndexChanged += new System.EventHandler(this.OnAutoTestCmbChannelChanged);
+            //
             // lblConfigMode
             // 
             this.lblConfigMode.Location = new System.Drawing.Point(174, 29);

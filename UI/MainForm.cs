@@ -42,6 +42,8 @@ namespace A205AutoTestSystem.UI
             if (autoTestPanel != null && receiverControlPanel != null)
             {
                 autoTestPanel.AttachToReceiver(receiverControlPanel);
+                // 反向注入："真机连接"按钮要把 receiver 侧已建好的真机三仪表推送给自动测试面板
+                receiverControlPanel.AttachToAutoTestPanel(autoTestPanel);
             }
         }
 
