@@ -10,7 +10,7 @@ namespace A205AutoTestSystem.InstrumentControl
     /// 与具体 VISA 实现解耦，<see cref="VisaBaseInstrument"/> 只依赖本接口，
     /// 不直接接触 <c>NationalInstruments.Visa</c> 的具体类型。
     /// <para>生产实现：<c>NationalInstrumentsVisaTransport</c>（见同名文件）。</para>
-    /// <para>测试实现：<c>FakeVisaTransport</c>（见 <c>Tests/Instrument.Tests</c>）。</para>
+    /// <para>测试实现：见 <c>Tests/Instrument.Tests/FakeVisaInstrument.cs</c>。</para>
     /// </summary>
     public interface IVisaTransport : IDisposable
     {
@@ -100,7 +100,7 @@ namespace A205AutoTestSystem.InstrumentControl
 
         /// <summary>
         /// 注入传输实现。仅在调用 <see cref="Connect"/> 之前生效。
-        /// <para>测试场景：在测试用例中注入 <c>FakeVisaTransport</c> 验证命令与重试逻辑。</para>
+        /// <para>测试场景：在测试用例中注入 <c>FakeVisaInstrument</c> 验证命令与重试逻辑。</para>
         /// </summary>
         protected void SetTransport(IVisaTransport transport)
         {

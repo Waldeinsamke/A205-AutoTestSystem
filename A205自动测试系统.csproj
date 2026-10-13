@@ -97,7 +97,6 @@
     <Compile Include="InstrumentControl\AutoTestEngine.cs" />
     <Compile Include="InstrumentControl\VisaBaseInstrument.cs" />
     <Compile Include="InstrumentControl\NationalInstrumentsVisaTransport.cs" />
-    <Compile Include="InstrumentControl\FakeVisaInstrument.cs" />
     <Compile Include="InstrumentControl\SignalGenerator.cs" />
     <Compile Include="InstrumentControl\SignalGeneratorLO.cs" />
     <Compile Include="InstrumentControl\SpectrumAnalyzer.cs" />

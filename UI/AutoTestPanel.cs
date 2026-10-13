@@ -16,20 +16,12 @@ namespace A205AutoTestSystem.UI
     /// 自动测试面板（M6 阶段实现）。
     /// <para>布局（严格按 spec §5.3）：</para>
     /// <list type="number">
-    /// <item>测试配置区：通道 / 模式 / 温度下拉 + 初始化测试环境 / 加载测试项</item>
+    /// <item>测试配置区：通道 / 模式 / 温度下拉 + 加载测试项</item>
     /// <item>测试项面板：列出每个测试项 + 单独运行按钮 + 状态显示</item>
     /// <item>进度与日志区：进度条 + 当前步骤 + RichTextBox 日志 + 清除按钮</item>
     /// </list>
     /// <para>控件创建已移至 <c>AutoTestPanel.Designer.cs</c> 的 <c>InitializeComponent()</c>，
     /// 可在 VS 设计器中可视化编辑。</para>
-    /// <para>Fake 注入策略（M6 阶段）：</para>
-    /// <list type="bullet">
-    /// <item>"初始化测试环境"按钮按下时，重置 <c>VisaBaseInstrument.DefaultTransportFactory</c> 为
-    ///       <c>addr => new FakeVisaInstrument(addr)</c>，使生产类（SignalGenerator / SpectrumAnalyzer 等）
-    ///       直接通过工厂获得伪传输，避免反射注入。</item>
-    /// <item>用户切到真机阶段时，应使用原始 <c>NationalInstrumentsVisaTransport</c> 工厂；
-    ///       M6 阶段 UI 仅在演示路径上覆盖，不持久化。</item>
-    /// </list>
     /// </summary>
     public partial class AutoTestPanel : UserControl
     {
@@ -144,7 +136,7 @@ namespace A205AutoTestSystem.UI
             // 后续 OnChannelSelected 由 ReceiverControlPanel 自己订阅，会自动切矩阵。
 
             // 通道变了 → 重建测试项清单，让 DGV 行的 row.Tag 指向新 channel 的 test。
-            // 仅在资源已就绪（Fake/真机初始化完成）时重建：构造期或切 Tab 期间
+            // 仅在资源已就绪（三仪表已绑定）时重建：构造期或切 Tab 期间
             // _instrumentsReady 还是 false，没必要重建。
             if (_instrumentsReady)
             {
@@ -152,125 +144,12 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        /// <summary>
-        /// "初始化测试环境"按钮。
-        /// <para>M6 阶段：把 <c>VisaBaseInstrument.DefaultTransportFactory</c> 重置为
-        /// <c>addr => new FakeVisaInstrument(addr)</c>，让三仪表在生产路径下走伪传输。
-        /// 真机阶段应在 Program.Main 注册 <c>NationalInstrumentsVisaTransport</c>，
-        /// 切到真机时不要点击本按钮（否则全局静态工厂被覆盖）。</para>
-        /// </summary>
-        private void OnInitEnvClicked(object sender, EventArgs e)
-        {
-            try
-            {
-                // 释放旧实例
-                try { _rf?.Dispose(); } catch { }
-                try { _lo?.Dispose(); } catch { }
-                try { _sa?.Dispose(); } catch { }
 
-                // M6 阶段：注册 FakeVisaInstrument 工厂
-                // 注意：这是全局静态，多窗口/多实例会相互影响——见 review-notes 担忧。
-                Func<string, IVisaTransport> fakeFactory = addr => new FakeVisaInstrument(addr);
-                VisaBaseInstrument.DefaultTransportFactory = fakeFactory;
-
-                const string rfAddr = "TCPIP0::rf-fake::INSTR";
-                const string loAddr = "TCPIP0::lo-fake::INSTR";
-                const string saAddr = "TCPIP0::sa-fake::INSTR";
-
-                _rf = new SignalGenerator(rfAddr);
-                _lo = new SignalGeneratorLO(loAddr);
-                _sa = new SpectrumAnalyzer(saAddr);
-
-                _rf.Connect();
-                _lo.Connect();
-                _sa.Connect();
-
-                _instrumentsReady = true;
-
-                // 配置伪传输的常见响应（让 ReadPeakAmplitude 返回合理值）
-                InjectFakeDefaults(_rf, _lo, _sa);
-
-                // M6.x：Fake 流程下构造一个 Mock 接收机注入到 ReceiverControlPanel._receiver，
-                // 让 LoadDefaultTestsToGrid 的资源分支判断能走通（receiver.IsOpen=true 且 IsMock=true），
-                // 从而加载 60 点遍历的 GainTest。
-                if (_receiverPanel != null)
-                {
-                    try { _receiverPanel._receiver?.Close(); } catch { }
-                    try { _receiverPanel._receiver?.Dispose(); } catch { }
-                    var mockReceiver = new ReceiverSerialPort
-                    {
-                        IsMock = true,
-                        SendIntervalMs = 0,           // Mock 模式不真发，省 sleep
-                        InterSequenceIntervalMs = 0
-                    };
-                    _receiverPanel._receiver = mockReceiver;
-                    Logger.Log("[AutoTestPanel] Mock ReceiverSerialPort 已注入（IsMock=true），GainTest 将按 60 点循环跑。");
-                }
-
-                // 三仪表就绪后立即把默认测试项清单加载到 DataGridView，
-                // 不再需要"加载测试项"按钮。
-                LoadDefaultTestsToGrid();
-
-                MessageBox.Show(this,
-                    "测试环境初始化完成（FakeInstrument）。\r\n" +
-                    $"已默认加载 {_tests.Count} 项测试项，可点击 ▶ 运行或『一键运行』。",
-                    "提示",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                _instrumentsReady = false;
-                MessageBox.Show(this, "初始化失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>
-        /// 为 FakeVisaInstrument 注入常用的命令响应，便于 UI 演示有合理的测量值。
-        /// </summary>
-        private static void InjectFakeDefaults(SignalGenerator rf, SignalGeneratorLO lo, SpectrumAnalyzer sa)
-        {
-            var transportField = typeof(VisaBaseInstrument).GetField(
-                "_transport",
-                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-            if (transportField == null) return;
-
-            // SignalGenerator：只发命令，无需 ReadString
-            // SignalGeneratorLO：同样
-
-            // SpectrumAnalyzer.ReadPeakAmplitude 调用 STAT ON / MAX:PEAK / MAX:PEAK:SEARCH / Y?，
-            // 默认响应是空字符串；预先注入一个有效的 dBm 值（-10 dBm，符合 RF @ -20 dBm + Gain ≈ 10dB 的预期）。
-            // RF/LO 信号源只发命令不读响应，无需注入（占位用 _ 丢弃以防 IDE0059）。
-            _ = transportField.GetValue(rf) as FakeVisaInstrument;
-            _ = transportField.GetValue(lo) as FakeVisaInstrument;
-            var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
-
-            if (saTransport != null)
-            {
-                // SpectrumAnalyzer 实际发出的命令是 MARK1（前缀 CALC:MARK1:MAX:PEAK:SEARCH 与 CALC:MARK1:Y?），
-                // FakeVisaInstrument.ReadString 以"最后一次 Write 的命令"为字典 key，
-                // 这里必须与 SpectrumAnalyzer.MeasureMarkerPeak / ParseMarkerY 发出的命令字串完全一致。
-                saTransport.SetResponse(":CALC:MARK1:MAX:PEAK:SEARCH", "");
-                // 给 SA 一个"合理"幅度响应：
-                //   第一次 ReadPeakAmplitude（GainTest）→ -10 dBm
-                //   后续扫描点（BandwidthTest）→ 也用 -10 dBm；简化版
-                saTransport.SetResponse(":CALC:MARK1:Y?", "-10.00");
-
-                // M6.x BandwidthTest PTP 路径：
-                // SpectrumAnalyzer.ReadPeakToPeak 实际发 :CALC:MARK:PTP + :CALC:MARK:Y?（注意是 MARK 不是 MARK1）。
-                // Q4=b 3 个模式共用一个注入值（不扩展 FakeVisaInstrument）：
-                //   注入 2.0 dB（< 3.0 dB 上限）→ 3 个模式都 Pass，
-                //   真机接入后由频谱仪真实读数覆盖。
-                saTransport.SetResponse(":CALC:MARK:PTP", "");
-                saTransport.SetResponse(":CALC:MARK:Y?", "2.00");
-            }
-        }
 
         /// <summary>
         /// 由 MainForm.OnLoad 调用，把 ReceiverControlPanel 注入本面板，
         /// 共享 _receiver / 三仪表 / _matrix 资源。
-        /// <para>在 <see cref="OnInitEnvClicked"/> 的 Fake 初始化路径之前调用；
-        /// 若此时 receiver 串口尚未打开，会自动回退到 M6 兼容单点测试。</para>
+        /// <para>若此时 receiver 串口尚未打开，会自动回退到 M6 兼容单点测试。</para>
         /// </summary>
         public void AttachToReceiver(ReceiverControlPanel receiverPanel)
         {
@@ -293,7 +172,7 @@ namespace A205AutoTestSystem.UI
             if (lo == null) throw new ArgumentNullException(nameof(lo));
             if (sa == null) throw new ArgumentNullException(nameof(sa));
 
-            // 释放旧实例（避免泄漏真机句柄 / Fake 实例）—— Fake 阶段创建的也要释放
+            // 释放旧实例（避免泄漏真机 VISA 句柄）
             try { _rf?.Dispose(); } catch { }
             try { _lo?.Dispose(); } catch { }
             try { _sa?.Dispose(); } catch { }
@@ -309,8 +188,8 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 初始化测试环境完成后，加载默认测试项清单到 DataGridView。
-        /// 由 OnInitEnvClicked 在三仪表 Connect() 成功后调用。
+        /// 把默认测试项清单加载到 DataGridView。
+        /// 由 <see cref="ApplyReceiverResources"/> 在三仪表 Connect() 成功后调用。
         /// <para>资源分支：</para>
         /// <list type="bullet">
         /// <item>若 <see cref="_receiverPanel"/> 已注入且 receiver 串口已 Open，
@@ -607,7 +486,6 @@ namespace A205AutoTestSystem.UI
 
             _runAllInProgress = true;
             btnRunAll.Enabled = false;
-            btnInitEnv.Enabled = false;
 
             int total = dgvTests.Rows.Count;
             try
@@ -626,7 +504,6 @@ namespace A205AutoTestSystem.UI
             {
                 _runAllInProgress = false;
                 btnRunAll.Enabled = true;
-                btnInitEnv.Enabled = true;
             }
         }
 

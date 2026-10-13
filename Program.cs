@@ -17,7 +17,7 @@ namespace A205自动测试系统
         static void Main()
         {
             // 注册生产环境默认 VISA 传输工厂。
-            // 测试覆盖：M4 阶段 UnitTest 通过 SetTransport() 注入 FakeVisaInstrument，
+            // 测试覆盖：通过 SetTransport() 注入测试工程内的伪传输，
             // 不调用此工厂，因此测试工程不需要引用 NationalInstruments.Visa.dll。
             VisaBaseInstrument.DefaultTransportFactory =
                 address => new NationalInstrumentsVisaTransport(address);

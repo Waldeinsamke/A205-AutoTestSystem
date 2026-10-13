@@ -22,7 +22,6 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.ComboBox cmbMode;
         private System.Windows.Forms.Label lblConfigTemp;
         private System.Windows.Forms.ComboBox cmbTemp;
-        private System.Windows.Forms.Button btnInitEnv;
         private System.Windows.Forms.Button btnExportExcel;
         private System.Windows.Forms.Button btnRunAll;
 
@@ -51,7 +50,6 @@ namespace A205AutoTestSystem.UI
             this.cmbMode = new System.Windows.Forms.ComboBox();
             this.lblConfigTemp = new System.Windows.Forms.Label();
             this.cmbTemp = new System.Windows.Forms.ComboBox();
-            this.btnInitEnv = new System.Windows.Forms.Button();
             this.btnExportExcel = new System.Windows.Forms.Button();
             this.btnRunAll = new System.Windows.Forms.Button();
             this.grpTestItems = new System.Windows.Forms.GroupBox();
@@ -75,7 +73,6 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig.Controls.Add(this.cmbMode);
             this.grpTestConfig.Controls.Add(this.lblConfigTemp);
             this.grpTestConfig.Controls.Add(this.cmbTemp);
-            this.grpTestConfig.Controls.Add(this.btnInitEnv);
             this.grpTestConfig.Controls.Add(this.btnExportExcel);
             this.grpTestConfig.Controls.Add(this.btnRunAll);
             this.grpTestConfig.Location = new System.Drawing.Point(0, 8);
@@ -137,17 +134,7 @@ namespace A205AutoTestSystem.UI
             this.cmbTemp.Name = "cmbTemp";
             this.cmbTemp.Size = new System.Drawing.Size(84, 23);
             this.cmbTemp.TabIndex = 5;
-            // 
-            // btnInitEnv
-            // 
-            this.btnInitEnv.Location = new System.Drawing.Point(591, 26);
-            this.btnInitEnv.Name = "btnInitEnv";
-            this.btnInitEnv.Size = new System.Drawing.Size(72, 26);
-            this.btnInitEnv.TabIndex = 6;
-            this.btnInitEnv.Text = "初始化";
-            this.btnInitEnv.UseVisualStyleBackColor = true;
-            this.btnInitEnv.Click += new System.EventHandler(this.OnInitEnvClicked);
-            // 
+            //
             // btnExportExcel
             // 
             this.btnExportExcel.Enabled = false;

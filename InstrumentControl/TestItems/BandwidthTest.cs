@@ -22,7 +22,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>LO 设中心 + 偏移（LoFrequencyRule）+ 功率</item>
     ///   <item>RF 设扫频模式：FREQ:MODE SWE / FREQ:STAR / FREQ:STOP / SWE:POIN 100 / POW / INIT:CONT 1</item>
     ///   <item>频谱仪 Reset + 中心 70 MHz + 带宽 50 MHz + 轨迹最大保持</item>
-    ///   <item>等 settleDelayMs（真机 10s / Fake 1s）</item>
+    ///   <item>等 settleDelayMs（真机 10s）</item>
     ///   <item>ReadPeakToPeak() 读一次 PTP dB 差</item>
     ///   <item>写一条 TestResult，Value=PTP dB，Unit="dB"，Judgment=Pass/Fail</item>
     /// </list>
@@ -42,9 +42,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
         /// <summary>真机模式下频谱仪最大保持的稳定时间（ms）。</summary>
         private const int RealMachineSettleDelayMs = 10_000;
-
-        /// <summary>Fake 模式下频谱仪最大保持的"假"等待（ms）——仪表瞬间返回，仅为日志可读性。</summary>
-        private const int FakeSettleDelayMs = 1_000;
 
         // 模式联动频谱仪参数（与 GainTest / ReceiverControlPanel 保持一致；如修改需同步）
         private const double SaSpanHz = 50_000_000.0;
@@ -225,7 +222,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _sa.SetSpan(SaSpanHz);
             _sa.SetMaxHold(true);
 
-            // 5) 等稳定（真机 10s / Fake 1s）
+            // 5) 等稳定（真机 10s）
             progress.Report($"[BandwidthTest] {mode} 等待最大保持扫描 {_settleDelayMs}ms…");
             Logger.Log($"[BandwidthTest] {mode} 等待最大保持扫描 {_settleDelayMs}ms");
             await Task.Delay(_settleDelayMs, ct).ConfigureAwait(false);

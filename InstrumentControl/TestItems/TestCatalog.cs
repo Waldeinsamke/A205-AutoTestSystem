@@ -106,15 +106,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     modes: allModes,
                     settleDelayMs: 200),
                 // BandwidthTest（M6.x 全功能：3 模式扫频 + PTP 读数）。
-                // settleDelayMs=1000 是 Fake 演示加速（真机默认 10000ms）。
+                // settleDelayMs 使用真机默认值 10000ms（频谱仪最大保持稳定时间）。
                 new BandwidthTest(
                     receiver: receiver,
                     rfGenerator: rf,
                     loGenerator: lo,
                     spectrumAnalyzer: sa,
                     channel: channel,
-                    modes: allModes,
-                    settleDelayMs: 1000),
+                    modes: allModes),
 
                 // ---- 未实现 Stub（占位，UI 仍显示该行，运行时报"未实现"）----
                 new NotImplementedTestItem("噪声系数"),
