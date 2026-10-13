@@ -45,7 +45,6 @@ namespace A205AutoTestSystem.UI
         // 用于按钮 Text/BackColor 反映当前是否已开启。
         // UI 状态与仪表侧 SCPI 命令独立，断连时复位为 false。
         private bool _saMaxHoldOn = false;
-        private bool _saContSweepOn = true;   // 频谱仪默认连续扫描
         private bool _saPeakAutoOn = false;
         private bool _saTraceAvgOn = false;
         private bool _saMinHoldOn = false;
@@ -718,18 +717,16 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 复位 3 个频谱仪 Toggle 按钮（最大保持 / 连续扫描 / 峰值自动搜索）的本地状态与按钮文字。
+        /// 复位 2 个频谱仪 Toggle 按钮（最大保持 / 峰值自动搜索）的本地状态与按钮文字。
         /// 仅修改 UI 状态，不发 SCPI 命令——仪表已断连。
         /// </summary>
         private void ResetSaToggleStates()
         {
             _saMaxHoldOn = false;
-            _saContSweepOn = true;
             _saPeakAutoOn = false;
             _saTraceAvgOn = false;
             _saMinHoldOn = false;
             if (btnSaMaxHold != null) btnSaMaxHold.Text = "最大保持";
-            if (btnSaContSweep != null) btnSaContSweep.Text = "连续扫描";
             if (btnSaPeakAuto != null) btnSaPeakAuto.Text = "峰值自动搜索";
             if (btnSaTraceAvg != null) btnSaTraceAvg.Text = "Trace平均";
             if (btnSaMinHold != null) btnSaMinHold.Text = "轨迹最小保持";
@@ -1100,7 +1097,7 @@ namespace A205AutoTestSystem.UI
         //
         // 约定：
         // - 所有方法先检查 _spectrumAnalyzer 是否已 Connect，未连接弹窗提示，不抛异常、不发命令。
-        // - Toggle 类按钮（最大保持 / 连续扫描 / 峰值自动搜索）维护本地状态变量 + 按钮文字，
+        // - Toggle 类按钮（最大保持 / 峰值自动搜索）维护本地状态变量 + 按钮文字，
         //   仪表断连时由 DisconnectSa 统一复位。
 
         /// <summary>未连接频谱仪时弹窗提示，返回 false；调用方应中止操作。</summary>
@@ -1156,12 +1153,10 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _spectrumAnalyzer.Reset();
-                // 复位后仪表回到默认（关闭最大保持 / 开启连续扫描 / 关闭峰值自动搜索），
+                // 复位后仪表回到默认（关闭最大保持 / 关闭峰值自动搜索），
                 // 本地 Toggle 状态同步复位
                 _saMaxHoldOn = false;
                 btnSaMaxHold.Text = "最大保持";
-                _saContSweepOn = true;
-                btnSaContSweep.Text = "连续扫描";
                 _saPeakAutoOn = false;
                 btnSaPeakAuto.Text = "峰值自动搜索";
                 _saTraceAvgOn = false;
@@ -1210,26 +1205,6 @@ namespace A205AutoTestSystem.UI
             {
                 Logger.Log("[UI] 清除显示失败: " + ex.Message);
                 MessageBox.Show(this, "清除显示失败: " + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        /// <summary>连续 / 单次扫描 Toggle。点击切换 INIT:CONT，按钮文字同步。</summary>
-        private void OnSaContSweepClicked(object sender, EventArgs e)
-        {
-            if (!EnsureSpectrumAnalyzerConnected()) return;
-            bool next = !_saContSweepOn;
-            try
-            {
-                _spectrumAnalyzer.SetContinuousScan(next);
-                _saContSweepOn = next;
-                btnSaContSweep.Text = next ? "连续扫描" : "单次扫描";
-                Logger.Log($"[UI] 频谱仪扫描模式：{(next ? "连续" : "单次")}");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log("[UI] 切换扫描模式失败: " + ex.Message);
-                MessageBox.Show(this, "切换扫描模式失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }

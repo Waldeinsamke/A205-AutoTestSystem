@@ -138,7 +138,6 @@ namespace A205AutoTestSystem.UI
             this.btnSaReset = new System.Windows.Forms.Button();
             this.btnSaMaxHold = new System.Windows.Forms.Button();
             this.btnSaClearDisplay = new System.Windows.Forms.Button();
-            this.btnSaContSweep = new System.Windows.Forms.Button();
             this.btnSaPeakAuto = new System.Windows.Forms.Button();
             this.btnSaBwAuto = new System.Windows.Forms.Button();
             this.btnSaTraceAvg = new System.Windows.Forms.Button();
@@ -719,7 +718,6 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentControl.Controls.Add(this.btnSaReset);
             this.grpInstrumentControl.Controls.Add(this.btnSaMaxHold);
             this.grpInstrumentControl.Controls.Add(this.btnSaClearDisplay);
-            this.grpInstrumentControl.Controls.Add(this.btnSaContSweep);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakAuto);
             this.grpInstrumentControl.Controls.Add(this.btnSaBwAuto);
             this.grpInstrumentControl.Controls.Add(this.btnSaTraceAvg);
@@ -755,7 +753,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaReset
             // 
-            this.btnSaReset.Location = new System.Drawing.Point(180, 24);
+            this.btnSaReset.Location = new System.Drawing.Point(266, 24);
             this.btnSaReset.Name = "btnSaReset";
             this.btnSaReset.Size = new System.Drawing.Size(80, 49);
             this.btnSaReset.TabIndex = 42;
@@ -782,16 +780,6 @@ namespace A205AutoTestSystem.UI
             this.btnSaClearDisplay.Text = "清除显示";
             this.btnSaClearDisplay.UseVisualStyleBackColor = true;
             this.btnSaClearDisplay.Click += new System.EventHandler(this.OnSaClearDisplayClicked);
-            // 
-            // btnSaContSweep
-            // 
-            this.btnSaContSweep.Location = new System.Drawing.Point(266, 24);
-            this.btnSaContSweep.Name = "btnSaContSweep";
-            this.btnSaContSweep.Size = new System.Drawing.Size(80, 49);
-            this.btnSaContSweep.TabIndex = 45;
-            this.btnSaContSweep.Text = "连续扫描";
-            this.btnSaContSweep.UseVisualStyleBackColor = true;
-            this.btnSaContSweep.Click += new System.EventHandler(this.OnSaContSweepClicked);
             // 
             // btnSaPeakAuto
             // 
@@ -845,7 +833,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaHarmonics
             // 
-            this.btnSaHarmonics.Location = new System.Drawing.Point(178, 189);
+            this.btnSaHarmonics.Location = new System.Drawing.Point(180, 24);
             this.btnSaHarmonics.Name = "btnSaHarmonics";
             this.btnSaHarmonics.Size = new System.Drawing.Size(80, 49);
             this.btnSaHarmonics.TabIndex = 51;
@@ -890,7 +878,6 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.Button btnSaReset;
         private System.Windows.Forms.Button btnSaMaxHold;
         private System.Windows.Forms.Button btnSaClearDisplay;
-        private System.Windows.Forms.Button btnSaContSweep;
         private System.Windows.Forms.Button btnSaPeakAuto;
         private System.Windows.Forms.Button btnSaBwAuto;
         private System.Windows.Forms.Button btnSaTraceAvg;
