@@ -699,7 +699,7 @@ namespace A205AutoTestSystem.UI
             this.btnOpenPower.Click += new System.EventHandler(this.OnOpenPowerClicked);
             // 
             // grpInstrumentControl
-            //
+            // 
             this.grpInstrumentControl.Controls.Add(this.btnOpenPower);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakSearch);
             this.grpInstrumentControl.Controls.Add(this.btnSaMarkerAllOff);
@@ -812,7 +812,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaHarmonics
             // 
-            this.btnSaHarmonics.Location = new System.Drawing.Point(197, 24);
+            this.btnSaHarmonics.Location = new System.Drawing.Point(105, 24);
             this.btnSaHarmonics.Name = "btnSaHarmonics";
             this.btnSaHarmonics.Size = new System.Drawing.Size(80, 49);
             this.btnSaHarmonics.TabIndex = 51;
