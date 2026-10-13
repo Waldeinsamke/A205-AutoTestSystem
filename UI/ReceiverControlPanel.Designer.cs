@@ -819,7 +819,7 @@ namespace A205AutoTestSystem.UI
             this.btnSaDeltaMarker.Name = "btnSaDeltaMarker";
             this.btnSaDeltaMarker.Size = new System.Drawing.Size(80, 49);
             this.btnSaDeltaMarker.TabIndex = 50;
-            this.btnSaDeltaMarker.Text = "Delta标记";
+            this.btnSaDeltaMarker.Text = "差值标记";
             this.btnSaDeltaMarker.UseVisualStyleBackColor = true;
             this.btnSaDeltaMarker.Click += new System.EventHandler(this.OnSaDeltaMarkerClicked);
             // 

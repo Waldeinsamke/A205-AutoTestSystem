@@ -728,7 +728,7 @@ namespace A205AutoTestSystem.UI
             _saMinHoldOn = false;
             if (btnSaMaxHold != null) btnSaMaxHold.Text = "最大保持";
             if (btnSaPeakAuto != null) btnSaPeakAuto.Text = "峰值自动搜索";
-            if (btnSaTraceAvg != null) btnSaTraceAvg.Text = "Trace平均";
+            if (btnSaTraceAvg != null) btnSaTraceAvg.Text = "轨迹平均";
             if (btnSaMinHold != null) btnSaMinHold.Text = "轨迹最小保持";
         }
 
@@ -1160,7 +1160,7 @@ namespace A205AutoTestSystem.UI
                 _saPeakAutoOn = false;
                 btnSaPeakAuto.Text = "峰值自动搜索";
                 _saTraceAvgOn = false;
-                btnSaTraceAvg.Text = "Trace平均";
+                btnSaTraceAvg.Text = "轨迹平均";
                 _saMinHoldOn = false;
                 btnSaMinHold.Text = "轨迹最小保持";
 
@@ -1236,7 +1236,7 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        /// <summary>Trace平均模式切换（:TRAC:TYPE AVER / WRIT）。Toggle，按钮文字同步。</summary>
+        /// <summary>轨迹平均模式切换（:TRAC:TYPE AVER / WRIT）。Toggle，按钮文字在"轨迹平均"与"轨迹平均:开"之间切换。</summary>
         private void OnSaTraceAvgClicked(object sender, EventArgs e)
         {
             if (!EnsureSpectrumAnalyzerConnected()) return;
@@ -1245,13 +1245,13 @@ namespace A205AutoTestSystem.UI
             {
                 _spectrumAnalyzer.SetAverageMode(next);
                 _saTraceAvgOn = next;
-                btnSaTraceAvg.Text = next ? "Trace平均:开" : "Trace平均";
-                Logger.Log($"[UI] 频谱仪 Trace平均模式：{(next ? "开" : "关")}");
+                btnSaTraceAvg.Text = next ? "轨迹平均:开" : "轨迹平均";
+                Logger.Log($"[UI] 频谱仪轨迹平均模式：{(next ? "开" : "关")}");
             }
             catch (Exception ex)
             {
-                Logger.Log("[UI] 设置 Trace平均失败: " + ex.Message);
-                MessageBox.Show(this, "设置 Trace平均失败: " + ex.Message, "错误",
+                Logger.Log("[UI] 设置轨迹平均失败: " + ex.Message);
+                MessageBox.Show(this, "设置轨迹平均失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
