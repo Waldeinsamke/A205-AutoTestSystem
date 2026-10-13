@@ -39,11 +39,11 @@ namespace A205AutoTestSystem.UI
 
             // M6.x 阶段：把 receiver 控制面板的能力注入到自动测试面板，
             // 让"测试项 → 频段命令 → 频谱仪"共享同一组资源。
+            // 『加载测试』按钮已迁到 AutoTestPanel（点击时主动从 _receiverPanel 拉三仪表引用），
+            // 不再需要反向注入 _autoTestPanel。
             if (autoTestPanel != null && receiverControlPanel != null)
             {
                 autoTestPanel.AttachToReceiver(receiverControlPanel);
-                // 反向注入："加载测试"按钮要把 receiver 侧已建好的真机三仪表推送给自动测试面板
-                receiverControlPanel.AttachToAutoTestPanel(autoTestPanel);
             }
         }
 

@@ -157,10 +157,69 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 由 <see cref="ReceiverControlPanel.OnLoadTestClicked"/> 调用，
+        /// "加载测试"按钮：从 <see cref="_receiverPanel"/> 拉取已连接的真机三仪表，
+        /// 推送到本面板的 _rf / _lo / _sa 字段。
+        /// <para>前置条件：</para>
+        /// <list type="bullet">
+        ///   <item><see cref="_receiverPanel"/> 必须已注入（由 MainForm.OnLoad 注入）</item>
+        ///   <item>三仪表（RF/LO/SA）必须已 Connect</item>
+        ///   <item>接收机串口必须已 Open</item>
+        /// </list>
+        /// <para>成功：仅在 <see cref="lblCurrentStep"/> 显示提示；不弹窗。</para>
+        /// <para>失败：弹 <see cref="MessageBox"/> 提示具体原因。</para>
+        /// </summary>
+        private void OnLoadTestClicked(object sender, EventArgs e)
+        {
+            if (_receiverPanel == null)
+            {
+                MessageBox.Show(this,
+                    "接收机控制面板未注入（MainForm 启动时漏 AttachToReceiver），请联系开发者。",
+                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 1) 三仪表就绪检查
+            if (!_receiverPanel.AreInstrumentsReady)
+            {
+                MessageBox.Show(this,
+                    "请先在『接收机控制』页一键连好三台仪表（RF/LO/SA 状态灯全绿）。",
+                    "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2) 接收机串口就绪检查
+            if (!_receiverPanel.IsReceiverReady)
+            {
+                MessageBox.Show(this,
+                    "请先在『接收机控制』页『串口连接』区连接收机串口。",
+                    "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 3) 推送三仪表到本面板
+            try
+            {
+                ApplyReceiverResources(
+                    _receiverPanel.RfGenerator,
+                    _receiverPanel.LoGenerator,
+                    _receiverPanel.SpectrumAnalyzerInstance);
+
+                // 成功：仅状态栏提示，不弹窗
+                UpdateStep("已加载真机测试资源（60+3 模式测试项已就绪，可点 ▶ 运行 或 一键运行）");
+                Logger.Log("[AutoTestPanel] 加载测试成功。");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this,
+                    "加载测试资源失败：" + ex.Message,
+                    "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
         /// 把"已在接收机控制页连好的真机三仪表"推送到本面板的 _rf / _lo / _sa 字段。
-        /// <para>推送完成后立即调 <see cref="LoadDefaultTestsToGrid"/> 走 CreateProduction 路径
-        /// （receiver.IsOpen=true 且三仪表 IsConnected=true → 加载 60+3 模式测试项）。</para>
+        /// <para>由 <see cref="OnLoadTestClicked"/> 调用。推送完成后立即调 <see cref="LoadDefaultTestsToGrid"/>
+        /// 走 CreateProduction 路径（receiver.IsOpen=true 且三仪表 IsConnected=true → 加载 60+3 模式测试项）。</para>
         /// <para>调用方负责先确保三仪表 IsConnected + receiver.IsOpen；本方法不做就绪检查。</para>
         /// </summary>
         public void ApplyReceiverResources(
