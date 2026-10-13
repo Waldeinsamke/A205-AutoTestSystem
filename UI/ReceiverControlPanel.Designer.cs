@@ -66,7 +66,7 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.TextBox txtPowerAddress;
         private System.Windows.Forms.Button btnConnectAll;
         private System.Windows.Forms.Button btnDisconnectAll;
-        private System.Windows.Forms.Button btnRealConnect;
+        private System.Windows.Forms.Button btnLoadTest;
 
         // 通信日志区
         private System.Windows.Forms.GroupBox grpCommunicationLog;
@@ -127,7 +127,7 @@ namespace A205AutoTestSystem.UI
             this.txtPowerAddress = new System.Windows.Forms.TextBox();
             this.btnConnectAll = new System.Windows.Forms.Button();
             this.btnDisconnectAll = new System.Windows.Forms.Button();
-            this.btnRealConnect = new System.Windows.Forms.Button();
+            this.btnLoadTest = new System.Windows.Forms.Button();
             this.grpCommunicationLog = new System.Windows.Forms.GroupBox();
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.btnLogClear = new System.Windows.Forms.Button();
@@ -654,16 +654,16 @@ namespace A205AutoTestSystem.UI
             this.btnDisconnectAll.Text = "断开";
             this.btnDisconnectAll.UseVisualStyleBackColor = true;
             this.btnDisconnectAll.Click += new System.EventHandler(this.OnDisconnectAllClicked);
-            // 
-            // btnRealConnect
-            // 
-            this.btnRealConnect.Location = new System.Drawing.Point(105, 24);
-            this.btnRealConnect.Name = "btnRealConnect";
-            this.btnRealConnect.Size = new System.Drawing.Size(80, 49);
-            this.btnRealConnect.TabIndex = 32;
-            this.btnRealConnect.Text = "真机连接";
-            this.btnRealConnect.UseVisualStyleBackColor = true;
-            this.btnRealConnect.Click += new System.EventHandler(this.OnRealConnectClicked);
+            //
+            // btnLoadTest
+            //
+            this.btnLoadTest.Location = new System.Drawing.Point(105, 24);
+            this.btnLoadTest.Name = "btnLoadTest";
+            this.btnLoadTest.Size = new System.Drawing.Size(80, 49);
+            this.btnLoadTest.TabIndex = 32;
+            this.btnLoadTest.Text = "加载测试";
+            this.btnLoadTest.UseVisualStyleBackColor = true;
+            this.btnLoadTest.Click += new System.EventHandler(this.OnLoadTestClicked);
             // 
             // grpCommunicationLog
             // 
@@ -712,7 +712,7 @@ namespace A205AutoTestSystem.UI
             // 
             // grpInstrumentControl
             // 
-            this.grpInstrumentControl.Controls.Add(this.btnRealConnect);
+            this.grpInstrumentControl.Controls.Add(this.btnLoadTest);
             this.grpInstrumentControl.Controls.Add(this.btnOpenPower);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakSearch);
             this.grpInstrumentControl.Controls.Add(this.btnSaMarkerAllOff);

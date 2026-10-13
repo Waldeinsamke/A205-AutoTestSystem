@@ -157,7 +157,7 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 由 <see cref="ReceiverControlPanel.OnRealConnectClicked"/> 调用，
+        /// 由 <see cref="ReceiverControlPanel.OnLoadTestClicked"/> 调用，
         /// 把"已在接收机控制页连好的真机三仪表"推送到本面板的 _rf / _lo / _sa 字段。
         /// <para>推送完成后立即调 <see cref="LoadDefaultTestsToGrid"/> 走 CreateProduction 路径
         /// （receiver.IsOpen=true 且三仪表 IsConnected=true → 加载 60+3 模式测试项）。</para>
