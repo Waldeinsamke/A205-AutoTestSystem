@@ -41,6 +41,15 @@ namespace A205AutoTestSystem.UI
         // 关机=RF/LO :OUTP 0→断开接收机串口→电源OFF。
         private bool _powerOutputOn = false;
 
+        // 仪表控制区频谱仪 Toggle 按钮的本地状态：
+        // 用于按钮 Text/BackColor 反映当前是否已开启。
+        // UI 状态与仪表侧 SCPI 命令独立，断连时复位为 false。
+        private bool _saMaxHoldOn = false;
+        private bool _saContSweepOn = true;   // 频谱仪默认连续扫描
+        private bool _saPeakAutoOn = false;
+        private bool _saTraceAvgOn = false;
+        private bool _saMinHoldOn = false;
+
         // M6.x：自动测试面板引用。由 MainForm.OnLoad 注入，
         // "真机连接"按钮把本面板已连好的三仪表推送给自动测试面板走真机路径。
         private AutoTestPanel _autoTestPanel;
@@ -703,7 +712,27 @@ namespace A205AutoTestSystem.UI
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
                 _spectrumAnalyzer = null;
                 pnlSaStatus.BackColor = StatusColorDisconnected;
+                // 断连时复位频谱仪 Toggle 按钮本地状态与按钮文字
+                ResetSaToggleStates();
             }
+        }
+
+        /// <summary>
+        /// 复位 3 个频谱仪 Toggle 按钮（最大保持 / 连续扫描 / 峰值自动搜索）的本地状态与按钮文字。
+        /// 仅修改 UI 状态，不发 SCPI 命令——仪表已断连。
+        /// </summary>
+        private void ResetSaToggleStates()
+        {
+            _saMaxHoldOn = false;
+            _saContSweepOn = true;
+            _saPeakAutoOn = false;
+            _saTraceAvgOn = false;
+            _saMinHoldOn = false;
+            if (btnSaMaxHold != null) btnSaMaxHold.Text = "最大保持";
+            if (btnSaContSweep != null) btnSaContSweep.Text = "连续扫描";
+            if (btnSaPeakAuto != null) btnSaPeakAuto.Text = "峰值自动搜索";
+            if (btnSaTraceAvg != null) btnSaTraceAvg.Text = "Trace平均";
+            if (btnSaMinHold != null) btnSaMinHold.Text = "轨迹最小保持";
         }
 
         private bool TryConnectPower()
@@ -1064,6 +1093,264 @@ namespace A205AutoTestSystem.UI
                 MessageBox.Show(this,
                     "绑定真机资源失败：" + ex.Message,
                     "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // -------- 频谱仪快捷按钮（仪表控制区 / groupBox1）
+        //
+        // 约定：
+        // - 所有方法先检查 _spectrumAnalyzer 是否已 Connect，未连接弹窗提示，不抛异常、不发命令。
+        // - Toggle 类按钮（最大保持 / 连续扫描 / 峰值自动搜索）维护本地状态变量 + 按钮文字，
+        //   仪表断连时由 DisconnectSa 统一复位。
+
+        /// <summary>未连接频谱仪时弹窗提示，返回 false；调用方应中止操作。</summary>
+        private bool EnsureSpectrumAnalyzerConnected()
+        {
+            if (_spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected)
+            {
+                return true;
+            }
+            MessageBox.Show(this, "请先在『仪表连接状态』区连接频谱仪。", "提示",
+                MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return false;
+        }
+
+        /// <summary>峰值搜索：marker1 启 → max-peak → 读 Y，打到日志。</summary>
+        private void OnSaPeakSearchClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                double peakDbm = _spectrumAnalyzer.MeasureMarkerPeak();
+                Logger.Log($"[UI] 峰值搜索结果：{peakDbm:F3} dBm");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 峰值搜索失败: " + ex.Message);
+                MessageBox.Show(this, "峰值搜索失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>关闭所有标记（:CALC:MARK1:AOFF）。</summary>
+        private void OnSaMarkerAllOffClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.SetAllMarkOFF();
+                Logger.Log("[UI] 频谱仪已关闭所有标记");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 关闭标记失败: " + ex.Message);
+                MessageBox.Show(this, "关闭标记失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>频谱仪复位（*RST + *CLS）。</summary>
+        private void OnSaResetClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.Reset();
+                // 复位后仪表回到默认（关闭最大保持 / 开启连续扫描 / 关闭峰值自动搜索），
+                // 本地 Toggle 状态同步复位
+                _saMaxHoldOn = false;
+                btnSaMaxHold.Text = "最大保持";
+                _saContSweepOn = true;
+                btnSaContSweep.Text = "连续扫描";
+                _saPeakAutoOn = false;
+                btnSaPeakAuto.Text = "峰值自动搜索";
+                _saTraceAvgOn = false;
+                btnSaTraceAvg.Text = "Trace平均";
+                _saMinHoldOn = false;
+                btnSaMinHold.Text = "轨迹最小保持";
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 频谱仪复位失败: " + ex.Message);
+                MessageBox.Show(this, "频谱仪复位失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>最大保持 Toggle。点击切换 MAXH / WRIT，按钮文字同步。</summary>
+        private void OnSaMaxHoldClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            bool next = !_saMaxHoldOn;
+            try
+            {
+                _spectrumAnalyzer.SetMaxHold(next);
+                _saMaxHoldOn = next;
+                btnSaMaxHold.Text = next ? "最大保持:开" : "最大保持";
+                Logger.Log($"[UI] 频谱仪最大保持：{(next ? "开" : "关")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 设置最大保持失败: " + ex.Message);
+                MessageBox.Show(this, "设置最大保持失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>清除显示（:DISP:WIND:TRAC:CLE），不影响 Max Hold 等模式。</summary>
+        private void OnSaClearDisplayClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.ClearDisplay();
+                Logger.Log("[UI] 频谱仪显示已清除");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 清除显示失败: " + ex.Message);
+                MessageBox.Show(this, "清除显示失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>连续 / 单次扫描 Toggle。点击切换 INIT:CONT，按钮文字同步。</summary>
+        private void OnSaContSweepClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            bool next = !_saContSweepOn;
+            try
+            {
+                _spectrumAnalyzer.SetContinuousScan(next);
+                _saContSweepOn = next;
+                btnSaContSweep.Text = next ? "连续扫描" : "单次扫描";
+                Logger.Log($"[UI] 频谱仪扫描模式：{(next ? "连续" : "单次")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 切换扫描模式失败: " + ex.Message);
+                MessageBox.Show(this, "切换扫描模式失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>峰值自动搜索 Toggle。点击切换 CALC:MARK:MAX:AUTO，按钮文字同步。</summary>
+        private void OnSaPeakAutoClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            bool next = !_saPeakAutoOn;
+            try
+            {
+                _spectrumAnalyzer.SetPeakAutoSearch(next);
+                _saPeakAutoOn = next;
+                btnSaPeakAuto.Text = next ? "峰值自动:开" : "峰值自动搜索";
+                Logger.Log($"[UI] 频谱仪峰值自动搜索：{(next ? "开" : "关")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 设置峰值自动搜索失败: " + ex.Message);
+                MessageBox.Show(this, "设置峰值自动搜索失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>RBW/VBW 一键设自动（:BWID:RES:AUTO ON + :BWID:VID:AUTO ON）。</summary>
+        private void OnSaBwAutoClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.SetResolutionBandwidthAuto();
+                _spectrumAnalyzer.SetVideoBandwidthAuto();
+                Logger.Log("[UI] 频谱仪 RBW/VBW 已设为自动");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 设置 RBW/VBW 自动失败: " + ex.Message);
+                MessageBox.Show(this, "设置 RBW/VBW 自动失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>Trace平均模式切换（:TRAC:MODE 1,AVG / 1,WRIT）。Toggle，按钮文字同步。</summary>
+        private void OnSaTraceAvgClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            bool next = !_saTraceAvgOn;
+            try
+            {
+                _spectrumAnalyzer.SetAverageMode(next);
+                _saTraceAvgOn = next;
+                btnSaTraceAvg.Text = next ? "Trace平均:开" : "Trace平均";
+                Logger.Log($"[UI] 频谱仪 Trace平均模式：{(next ? "开" : "关")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 设置 Trace平均失败: " + ex.Message);
+                MessageBox.Show(this, "设置 Trace平均失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>轨迹最小保持 Toggle（:TRACE1:MODE MINH / WRIT）。与最大保持对称，按钮文字同步。</summary>
+        private void OnSaMinHoldClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            bool next = !_saMinHoldOn;
+            try
+            {
+                _spectrumAnalyzer.SetMinHold(next);
+                _saMinHoldOn = next;
+                btnSaMinHold.Text = next ? "轨迹最小保持:开" : "轨迹最小保持";
+                Logger.Log($"[UI] 频谱仪轨迹最小保持：{(next ? "开" : "关")}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 设置轨迹最小保持失败: " + ex.Message);
+                MessageBox.Show(this, "设置轨迹最小保持失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// 开启差值标记（:CALC:MARK1:MODE DELTA），不读 Y?、不设 X 频率。
+        /// <para>调试便捷按钮：切到 Delta 模式后直接看频谱仪屏幕。
+        /// 关闭标记请用"关闭标记"按钮。</para>
+        /// </summary>
+        private void OnSaDeltaMarkerClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.EnableDeltaMarker();
+                Logger.Log("[UI] 频谱仪已开启差值标记");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 开启差值标记失败: " + ex.Message);
+                MessageBox.Show(this, "开启差值标记失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// 进入谐波测试模式（:INITiate:HARMonics），不读幅度结果。
+        /// <para>调试便捷按钮：进入谐波模式后直接看频谱仪屏幕。
+        /// 测量结果记录请在自动测试界面写脚本。</para>
+        /// </summary>
+        private void OnSaHarmonicsClicked(object sender, EventArgs e)
+        {
+            if (!EnsureSpectrumAnalyzerConnected()) return;
+            try
+            {
+                _spectrumAnalyzer.InitializeHarmonicsTest();
+                Logger.Log("[UI] 频谱仪已进入谐波测试模式");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[UI] 进入谐波测试模式失败: " + ex.Message);
+                MessageBox.Show(this, "进入谐波测试模式失败: " + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

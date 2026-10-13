@@ -100,13 +100,13 @@ namespace A205AutoTestSystem.UI
             this.cmbChannel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cmbChannel.Location = new System.Drawing.Point(63, 27);
             this.cmbChannel.Name = "cmbChannel";
-            this.cmbChannel.Size = new System.Drawing.Size(100, 23);
+            this.cmbChannel.Size = new System.Drawing.Size(84, 23);
             this.cmbChannel.TabIndex = 1;
             this.cmbChannel.SelectedIndexChanged += new System.EventHandler(this.OnAutoTestCmbChannelChanged);
-            //
+            // 
             // lblConfigMode
             // 
-            this.lblConfigMode.Location = new System.Drawing.Point(174, 29);
+            this.lblConfigMode.Location = new System.Drawing.Point(157, 28);
             this.lblConfigMode.Name = "lblConfigMode";
             this.lblConfigMode.Size = new System.Drawing.Size(44, 20);
             this.lblConfigMode.TabIndex = 2;
@@ -116,14 +116,14 @@ namespace A205AutoTestSystem.UI
             // cmbMode
             // 
             this.cmbMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMode.Location = new System.Drawing.Point(224, 26);
+            this.cmbMode.Location = new System.Drawing.Point(207, 25);
             this.cmbMode.Name = "cmbMode";
-            this.cmbMode.Size = new System.Drawing.Size(100, 23);
+            this.cmbMode.Size = new System.Drawing.Size(84, 23);
             this.cmbMode.TabIndex = 3;
             // 
             // lblConfigTemp
             // 
-            this.lblConfigTemp.Location = new System.Drawing.Point(336, 29);
+            this.lblConfigTemp.Location = new System.Drawing.Point(306, 27);
             this.lblConfigTemp.Name = "lblConfigTemp";
             this.lblConfigTemp.Size = new System.Drawing.Size(38, 21);
             this.lblConfigTemp.TabIndex = 4;
@@ -133,16 +133,16 @@ namespace A205AutoTestSystem.UI
             // cmbTemp
             // 
             this.cmbTemp.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbTemp.Location = new System.Drawing.Point(380, 26);
+            this.cmbTemp.Location = new System.Drawing.Point(350, 26);
             this.cmbTemp.Name = "cmbTemp";
-            this.cmbTemp.Size = new System.Drawing.Size(100, 23);
+            this.cmbTemp.Size = new System.Drawing.Size(84, 23);
             this.cmbTemp.TabIndex = 5;
             // 
             // btnInitEnv
             // 
-            this.btnInitEnv.Location = new System.Drawing.Point(486, 24);
+            this.btnInitEnv.Location = new System.Drawing.Point(591, 26);
             this.btnInitEnv.Name = "btnInitEnv";
-            this.btnInitEnv.Size = new System.Drawing.Size(149, 28);
+            this.btnInitEnv.Size = new System.Drawing.Size(72, 26);
             this.btnInitEnv.TabIndex = 6;
             this.btnInitEnv.Text = "初始化";
             this.btnInitEnv.UseVisualStyleBackColor = true;
@@ -151,9 +151,9 @@ namespace A205AutoTestSystem.UI
             // btnExportExcel
             // 
             this.btnExportExcel.Enabled = false;
-            this.btnExportExcel.Location = new System.Drawing.Point(641, 25);
+            this.btnExportExcel.Location = new System.Drawing.Point(669, 26);
             this.btnExportExcel.Name = "btnExportExcel";
-            this.btnExportExcel.Size = new System.Drawing.Size(75, 28);
+            this.btnExportExcel.Size = new System.Drawing.Size(72, 26);
             this.btnExportExcel.TabIndex = 8;
             this.btnExportExcel.Text = "导出";
             this.btnExportExcel.UseVisualStyleBackColor = true;
@@ -162,9 +162,9 @@ namespace A205AutoTestSystem.UI
             // btnRunAll
             // 
             this.btnRunAll.Enabled = false;
-            this.btnRunAll.Location = new System.Drawing.Point(722, 25);
+            this.btnRunAll.Location = new System.Drawing.Point(750, 26);
             this.btnRunAll.Name = "btnRunAll";
-            this.btnRunAll.Size = new System.Drawing.Size(105, 28);
+            this.btnRunAll.Size = new System.Drawing.Size(81, 26);
             this.btnRunAll.TabIndex = 9;
             this.btnRunAll.Text = "一键运行";
             this.btnRunAll.UseVisualStyleBackColor = true;

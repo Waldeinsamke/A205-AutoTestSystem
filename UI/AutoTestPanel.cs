@@ -48,8 +48,6 @@ namespace A205AutoTestSystem.UI
 
         private readonly List<ITestItem> _tests = new List<ITestItem>();
 
-        // 抑制初始化阶段事件回调（避免在构建控件时立刻触发副作用）
-        private bool _initialized;
         private bool _instrumentsReady;
 
         // 是否正在"一键运行"，用于抑制子项的某些交互（如禁用 grpTestConfig 上的非必要按钮）
@@ -70,8 +68,6 @@ namespace A205AutoTestSystem.UI
             InitializeComponent();        // ← Designer 生成（参见 Designer.cs）
             InitializeDefaults();
             ConfigureDgvColumns();       // DataGridView 列初始化（运行期构造）
-            // WireEvents() 不需要：Designer 内已订阅
-            _initialized = true;
 
             // 订阅全局 Logger 与引擎日志
             Logger.MessageLogged += OnLogMessage;
@@ -244,14 +240,11 @@ namespace A205AutoTestSystem.UI
 
             // SpectrumAnalyzer.ReadPeakAmplitude 调用 STAT ON / MAX:PEAK / MAX:PEAK:SEARCH / Y?，
             // 默认响应是空字符串；预先注入一个有效的 dBm 值（-10 dBm，符合 RF @ -20 dBm + Gain ≈ 10dB 的预期）。
-            var rfTransport = transportField.GetValue(rf) as FakeVisaInstrument;
-            var loTransport = transportField.GetValue(lo) as FakeVisaInstrument;
+            // RF/LO 信号源只发命令不读响应，无需注入（占位用 _ 丢弃以防 IDE0059）。
+            _ = transportField.GetValue(rf) as FakeVisaInstrument;
+            _ = transportField.GetValue(lo) as FakeVisaInstrument;
             var saTransport = transportField.GetValue(sa) as FakeVisaInstrument;
 
-            if (rfTransport != null)
-            {
-                // 频率相关的查询无需设置（SG 只发命令）
-            }
             if (saTransport != null)
             {
                 // SpectrumAnalyzer 实际发出的命令是 MARK1（前缀 CALC:MARK1:MAX:PEAK:SEARCH 与 CALC:MARK1:Y?），

@@ -166,6 +166,16 @@ namespace A205AutoTestSystem.InstrumentControl
             return ParseMarkerY(":CALC:MARK1:Y?");
         }
 
+        /// <summary>
+        /// 仅开启差值标记（:CALC:MARK1:MODE DELTA），不读 Y?、不设 X 频率。
+        /// <para>供 UI 便捷按钮调用——调试时直接看频谱仪屏幕，
+        /// 不需要程序端读差值。复位或关闭所有标记请使用 <see cref="SetAllMarkOFF"/>。</para>
+        /// </summary>
+        public void EnableDeltaMarker()
+        {
+            SendCommand(":CALC:MARK1:MODE DELTA");
+        }
+
         /// <summary>峰峰值搜索（Peak-to-Peak）。文档：MARK:PTP + MARK:Y?</summary>
         public double ReadPeakToPeak()
         {
@@ -193,6 +203,12 @@ namespace A205AutoTestSystem.InstrumentControl
         public void SetMaxHold(bool enable)
         {
             SendCommand(enable ? ":TRACE1:MODE MAXH" : ":TRACE1:MODE WRIT");
+        }
+
+        /// <summary>设置最小保持模式开关。文档：TRACE1:MODE MINH / WRIT</summary>
+        public void SetMinHold(bool enable)
+        {
+            SendCommand(enable ? ":TRACE1:MODE MINH" : ":TRACE1:MODE WRIT");
         }
 
         /// <summary>清除显示。</summary>
@@ -232,10 +248,16 @@ namespace A205AutoTestSystem.InstrumentControl
             SendCommand(continuous ? ":INIT:CONT ON" : ":INIT:CONT OFF");
         }
 
-        /// <summary>启用峰值自动搜索。</summary>
+        /// <summary>启用峰值自动搜索。兼容旧调用方，内部转发到 <see cref="SetPeakAutoSearch(bool)"/>。</summary>
         public void EnablePeakAutoSearch()
         {
-            SendCommand(":CALC:MARK:MAX:AUTO ON");
+            SetPeakAutoSearch(true);
+        }
+
+        /// <summary>设置峰值自动搜索开关（:CALC:MARK:MAX:AUTO ON / OFF）。</summary>
+        public void SetPeakAutoSearch(bool enable)
+        {
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":CALC:MARK:MAX:AUTO {0}", enable ? "ON" : "OFF"));
         }
 
         // ====================================================================
