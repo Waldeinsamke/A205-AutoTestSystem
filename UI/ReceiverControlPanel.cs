@@ -197,6 +197,15 @@ namespace A205AutoTestSystem.UI
         /// <summary>当前已连接的频谱仪。供 AutoTestPanel 在『加载测试』时拉取推送；未连接返回 null。</summary>
         public SpectrumAnalyzer SpectrumAnalyzerInstance => _spectrumAnalyzer;
 
+        /// <summary>"常温" RadioButton（pnlTempGroup 内）。供 AutoTestPanel 同步温度档位用。RadioButton 本身无 CheckedChanged 订阅，因此外部赋值不会重复触发『设置』按钮里的命令。</summary>
+        public RadioButton RbTempNormal => rbTempNormal;
+
+        /// <summary>"高温" RadioButton（pnlTempGroup 内）。供 AutoTestPanel 同步温度档位用。</summary>
+        public RadioButton RbTempHigh => rbTempHigh;
+
+        /// <summary>"低温" RadioButton（pnlTempGroup 内）。供 AutoTestPanel 同步温度档位用。</summary>
+        public RadioButton RbTempLow => rbTempLow;
+
         /// <summary>当前 UI 上选中的通道号（1..8）。未选中时返回 1。</summary>
         public int SelectedChannel
         {

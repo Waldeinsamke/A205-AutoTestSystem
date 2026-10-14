@@ -42,6 +42,17 @@ namespace A205AutoTestSystem.UI
 
         private bool _instrumentsReady;
 
+        /// <summary>
+        /// Mock 模式标志：由『Mock 加载』按钮置 true；用于无真机连接时预览 DGV 行为。
+        /// <para>为 true 时：</para>
+        /// <list type="bullet">
+        ///   <item><see cref="LoadDefaultTestsToGrid"/> 走 <see cref="TestCatalog.CreateMockItems(TemperatureRange)"/>（纯 Stub，不发任何命令）</item>
+        ///   <item>切温度/切通道仍触发 DGV 重建（即使 _instrumentsReady=false）</item>
+        ///   <item>点『加载测试』成功后置 false（恢复真资源路径）</item>
+        /// </list>
+        /// </summary>
+        private bool _isMockMode;
+
         // 是否正在"一键运行"，用于抑制子项的某些交互（如禁用 grpTestConfig 上的非必要按钮）
         private bool _runAllInProgress;
 
@@ -136,9 +147,75 @@ namespace A205AutoTestSystem.UI
             // 后续 OnChannelSelected 由 ReceiverControlPanel 自己订阅，会自动切矩阵。
 
             // 通道变了 → 重建测试项清单，让 DGV 行的 row.Tag 指向新 channel 的 test。
-            // 仅在资源已就绪（三仪表已绑定）时重建：构造期或切 Tab 期间
+            // 仅在资源已就绪（三仪表已绑定）或 mock 模式时重建：构造期或切 Tab 期间
             // _instrumentsReady 还是 false，没必要重建。
-            if (_instrumentsReady)
+            if (_instrumentsReady || _isMockMode)
+            {
+                LoadDefaultTestsToGrid();
+            }
+        }
+
+        /// <summary>
+        /// AutoTestPanel.cmbTemp 选中变化：按"测试温度"分支。
+        /// <para>行为（与切通道一致，差别在"切温度会发硬件命令"）：</para>
+        /// <list type="number">
+        ///   <item>如果接收机已连接且串口已 Open，向接收机发送 <see cref="ReceiverSerialPort.SendTemperatureCommand"/>。</item>
+        ///   <item>资源已就绪（三仪表已绑定）时，调 <see cref="LoadDefaultTestsToGrid"/> 重建 DGV。</item>
+        /// </list>
+        /// <para>cmbTemp 数据源（构造期）："常温" / "高温" / "低温"——索引 0/1/2 对应 <see cref="TemperatureRange.Normal/High/Low"/>。</para>
+        /// </summary>
+        private void OnAutoTestCmbTempChanged(object sender, EventArgs e)
+        {
+            // 构造期 InitializeDefaults 内触发时 _receiverPanel / _receiver 都可能为 null，安全跳过。
+            if (_receiverPanel == null) return;
+
+            int newIndex = cmbTemp.SelectedIndex;
+            if (newIndex < 0) return;
+
+            // 把 cmbTemp 索引映射到 TemperatureRange 枚举（数据源 0/1/2 = Normal/High/Low）。
+            TemperatureRange temperature;
+            switch (newIndex)
+            {
+                case 0: temperature = TemperatureRange.Normal; break;
+                case 1: temperature = TemperatureRange.High; break;
+                case 2: temperature = TemperatureRange.Low; break;
+                default: return;
+            }
+
+            // 1) 给接收机发温度命令（仅在串口已 Open 时；同通道一样做 null/IsOpen 防护）
+            if (_receiverPanel._receiver != null && _receiverPanel._receiver.IsOpen)
+            {
+                try
+                {
+                    _receiverPanel._receiver.SendTemperatureCommand(temperature);
+                    Logger.Log($"[AutoTestPanel] cmbTemp → {temperature}，已发送接收机温度命令。");
+                }
+                catch (Exception ex)
+                {
+                    // 硬件命令失败只记日志，不弹窗——切温度本身不应该被硬件错误阻塞 UI 刷新
+                    Logger.Log("[AutoTestPanel] 发送接收机温度命令失败: " + ex.Message);
+                }
+            }
+
+            // 2) 同步 ReceiverControlPanel 的温度 RadioButton 状态（pnlTempGroup 内的 rbTempNormal/High/Low）。
+            //    这些 RadioButton 没有 CheckedChanged 事件订阅（温度命令只在『设置』按钮里发），
+            //    所以仅赋值不会重复发命令，也不会触发联动逻辑。
+            if (_receiverPanel.RbTempNormal != null
+                && _receiverPanel.RbTempHigh != null
+                && _receiverPanel.RbTempLow != null)
+            {
+                bool wantNormal = (temperature == TemperatureRange.Normal);
+                bool wantHigh   = (temperature == TemperatureRange.High);
+                bool wantLow    = (temperature == TemperatureRange.Low);
+
+                // 防自触发：状态完全相同就不赋值（参考 OnAutoTestCmbChannelChanged 的写法）
+                if (_receiverPanel.RbTempNormal.Checked != wantNormal) _receiverPanel.RbTempNormal.Checked = wantNormal;
+                if (_receiverPanel.RbTempHigh.Checked   != wantHigh)   _receiverPanel.RbTempHigh.Checked   = wantHigh;
+                if (_receiverPanel.RbTempLow.Checked    != wantLow)    _receiverPanel.RbTempLow.Checked    = wantLow;
+            }
+
+            // 3) 资源已就绪或 mock 模式时重建 DGV（与切通道一致）
+            if (_instrumentsReady || _isMockMode)
             {
                 LoadDefaultTestsToGrid();
             }
@@ -204,7 +281,8 @@ namespace A205AutoTestSystem.UI
                     _receiverPanel.LoGenerator,
                     _receiverPanel.SpectrumAnalyzerInstance);
 
-                // 成功：仅状态栏提示，不弹窗
+                // 成功：仅状态栏提示，不弹窗。同时清除 mock 模式（恢复真资源路径）。
+                _isMockMode = false;
                 UpdateStep("已加载真机测试资源（60+3 模式测试项已就绪，可点 ▶ 运行 或 一键运行）");
                 Logger.Log("[AutoTestPanel] 加载测试成功。");
             }
@@ -214,6 +292,26 @@ namespace A205AutoTestSystem.UI
                     "加载测试资源失败：" + ex.Message,
                     "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// "Mock 加载"按钮：跳过三仪表 + 接收机串口的就绪检查，
+        /// 直接按当前温度档位加载 <see cref="TestCatalog.CreateMockItems"/> 的纯 Stub 测试项列表。
+        /// <para>用途：无真机连接时验证"按温度分测试项 + 切温度重建 DGV"的 UI 行为。
+        /// 点"运行"会立即返回"未实现"Fail 结果，不会发任何 SCPI/串口命令。</para>
+        /// <para>要点：</para>
+        /// <list type="bullet">
+        ///   <item>不检查三仪表/串口——故意跳过</item>
+        ///   <item>不向接收机发任何命令</item>
+        ///   <item>置 <see cref="_isMockMode"/> = true，让切温度/切通道在 mock 下也重建 DGV</item>
+        /// </list>
+        /// </summary>
+        private void OnMockLoadClicked(object sender, EventArgs e)
+        {
+            _isMockMode = true;
+            LoadDefaultTestsToGrid();
+            UpdateStep("Mock 模式：已加载按当前温度档位的 Stub 测试项（不发任何命令，点运行返回『未实现』Fail）");
+            Logger.Log("[AutoTestPanel] Mock 加载成功，进入 mock 模式。");
         }
 
         /// <summary>
@@ -249,11 +347,13 @@ namespace A205AutoTestSystem.UI
         /// <summary>
         /// 把默认测试项清单加载到 DataGridView。
         /// 由 <see cref="ApplyReceiverResources"/> 在三仪表 Connect() 成功后调用。
-        /// <para>资源分支：</para>
+        /// <para>三种分支：</para>
         /// <list type="bullet">
-        /// <item>若 <see cref="_receiverPanel"/> 已注入且 receiver 串口已 Open，
-        ///       走 <see cref="TestCatalog.CreateProduction"/>（模式×频点遍历）。</item>
-        /// <item>否则走 <see cref="TestCatalog.CreateDefault"/>（M6 兼容：单点）。</item>
+        /// <item>Mock 模式（<see cref="_isMockMode"/>）：走 <see cref="TestCatalog.CreateMockItems(TemperatureRange)"/>，
+        ///       纯 Stub 列表，不依赖真资源。</item>
+        /// <item>真资源模式（receiver + 三仪表都就绪）：走 <see cref="TestCatalog.CreateProduction(ReceiverSerialPort, SignalGenerator, SignalGeneratorLO, SpectrumAnalyzer, int, TemperatureRange)"/>
+        ///       （模式×频点遍历 + 按温度分支）。</item>
+        /// <item>否则走 <see cref="TestCatalog.CreateDefault"/>（M6 兼容：单点，不分温度）。</item>
         /// </list>
         /// </summary>
         private void LoadDefaultTestsToGrid()
@@ -263,9 +363,22 @@ namespace A205AutoTestSystem.UI
 
             IReadOnlyList<ITestItem> items;
             int mode = cmbMode.SelectedIndex + 1;  // 0/1/2 → 1/2/3
+            // 温度：cmbTemp 索引 0/1/2 → Normal/High/Low；索引无效时退回常温
+            TemperatureRange temperature;
+            switch (cmbTemp.SelectedIndex)
+            {
+                case 1: temperature = TemperatureRange.High; break;
+                case 2: temperature = TemperatureRange.Low; break;
+                default: temperature = TemperatureRange.Normal; break;
+            }
 
-            // 资源分支：receiver + 三仪表都就绪 → 走全功能；否则单点兼容
-            if (_receiverPanel != null
+            // Mock 模式：跳过资源分支，按当前温度档位加载纯 Stub 列表
+            if (_isMockMode)
+            {
+                items = TestCatalog.CreateMockItems(temperature);
+            }
+            // 真资源分支：receiver + 三仪表都就绪 → 走全功能；否则单点兼容
+            else if (_receiverPanel != null
                 && _receiverPanel._receiver != null
                 && _receiverPanel._receiver.IsOpen
                 && _rf != null && _rf.IsConnected
@@ -275,7 +388,7 @@ namespace A205AutoTestSystem.UI
                 int channel = _receiverPanel.SelectedChannel;
                 if (channel < 1 || channel > 8) channel = 1;
                 items = TestCatalog.CreateProduction(
-                    _receiverPanel._receiver, _rf, _lo, _sa, channel);
+                    _receiverPanel._receiver, _rf, _lo, _sa, channel, temperature);
             }
             else
             {
