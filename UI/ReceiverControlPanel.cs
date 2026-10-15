@@ -755,9 +755,9 @@ namespace A205AutoTestSystem.UI
                 _powerSupply = new ODP3063(txtPowerAddress.Text.Trim());
                 _powerSupply.Connect();
                 pnlPowerStatus.BackColor = StatusColorConnected;
-                // 按约定：连接后不主动发命令，软件侧默认视为未输出（OFF）
-                _powerOutputOn = false;
-                btnOpenPower.Text = "开启供电";
+                // 连接后查询 CH2 实际输出状态，按真实状态同步按钮文字与本地状态。
+                // 读取失败则按默认 OFF 处理 + 日志告警，绝不让读取异常破坏"已连接"的成果。
+                SyncPowerButtonFromInstrument();
                 Logger.Log("[UI] ODP3063 power supply connected.");
                 return true;
             }
@@ -769,6 +769,33 @@ namespace A205AutoTestSystem.UI
                 Logger.Log("[Error] 电源连接失败: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 连接电源后调用：读取 CH2 实际输出状态，同步 <see cref="btnOpenPower"/> 文字
+        /// 与 <see cref="_powerOutputOn"/> 本地状态。
+        /// 接受 "1"/"0"、"ON"/"OFF"（大小写不敏感、含空白也容忍）。
+        /// 读取失败 → 按默认 OFF 处理 + 日志告警，不抛异常、不弹窗。
+        /// </summary>
+        private void SyncPowerButtonFromInstrument()
+        {
+            bool on = false;
+            try
+            {
+                string raw = _powerSupply.QueryChannel2OutputStatus();
+                Logger.Log($"[UI] 电源 CH2 输出状态原始返回: \"{raw}\"");
+                string trimmed = raw == null ? string.Empty : raw.Trim();
+                on = trimmed == "1"
+                     || string.Equals(trimmed, "ON", StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Warn] 读取电源输出状态失败，按默认 OFF 处理: " + ex.Message);
+                on = false;
+            }
+
+            _powerOutputOn = on;
+            btnOpenPower.Text = on ? "关闭供电" : "开启供电";
         }
 
         private void DisconnectPower()

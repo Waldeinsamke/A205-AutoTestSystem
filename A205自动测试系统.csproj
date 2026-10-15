@@ -93,6 +93,8 @@
     <Compile Include="InstrumentControl\TestItems\ITestItem.cs" />
     <Compile Include="InstrumentControl\TestItems\GainTest.cs" />
     <Compile Include="InstrumentControl\TestItems\BandwidthTest.cs" />
+    <Compile Include="InstrumentControl\TestItems\InputP1Test.cs" />
+    <Compile Include="InstrumentControl\TestItems\AgcControlTest.cs" />
     <Compile Include="InstrumentControl\TestItems\TestCatalog.cs" />
     <Compile Include="InstrumentControl\AutoTestEngine.cs" />
     <Compile Include="InstrumentControl\VisaBaseInstrument.cs" />

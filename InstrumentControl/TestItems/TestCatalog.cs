@@ -186,9 +186,21 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
                 // ---- 未实现 Stub（占位，UI 仍显示该行，运行时报"未实现"）----
                 new NotImplementedTestItem("噪声系数"),
-                new NotImplementedTestItem("输入P-1"),
+                new InputP1Test(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: allModes),
                 new NotImplementedTestItem("饱和输出电平"),
-                new NotImplementedTestItem("AGC控制特性"),
+                new AgcControlTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: allModes),
                 new NotImplementedTestItem("AGC响应时间"),
                 new NotImplementedTestItem("通道延时"),
                 new NotImplementedTestItem("阻塞信号"),
@@ -238,7 +250,13 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     channel: channel,
                     modes: allModes,
                     settleDelayMs: 200),
-                new NotImplementedTestItem("输入P-1"),
+                new InputP1Test(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: allModes),
                 new NotImplementedTestItem("电源功耗"),
             };
         }

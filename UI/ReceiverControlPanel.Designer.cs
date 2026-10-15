@@ -550,7 +550,7 @@ namespace A205AutoTestSystem.UI
             this.txtRfAddress.Name = "txtRfAddress";
             this.txtRfAddress.Size = new System.Drawing.Size(209, 25);
             this.txtRfAddress.TabIndex = 3;
-            this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252683::INSTR";
+            this.txtRfAddress.Text = "USB0::0x0957::0x1F01::MY61252673::INSTR";
             // 
             // pnlLoStatus
             // 
@@ -577,7 +577,7 @@ namespace A205AutoTestSystem.UI
             this.txtLoAddress.Name = "txtLoAddress";
             this.txtLoAddress.Size = new System.Drawing.Size(209, 25);
             this.txtLoAddress.TabIndex = 9;
-            this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY59101329::INSTR";
+            this.txtLoAddress.Text = "USB0::0x0957::0x1F01::MY61250166::INSTR";
             // 
             // pnlSaStatus
             // 
@@ -604,7 +604,7 @@ namespace A205AutoTestSystem.UI
             this.txtSaAddress.Name = "txtSaAddress";
             this.txtSaAddress.Size = new System.Drawing.Size(209, 25);
             this.txtSaAddress.TabIndex = 15;
-            this.txtSaAddress.Text = "USB0::0x0957::0x0A0B::MY53290027::INSTR";
+            this.txtSaAddress.Text = "USB0::0x2A8D::0x0A0B::MY51282426::INSTR";
             // 
             // pnlPowerStatus
             // 
@@ -631,7 +631,7 @@ namespace A205AutoTestSystem.UI
             this.txtPowerAddress.Name = "txtPowerAddress";
             this.txtPowerAddress.Size = new System.Drawing.Size(209, 25);
             this.txtPowerAddress.TabIndex = 23;
-            this.txtPowerAddress.Text = "USB0::0x5345::0x1234::2312386::INSTR";
+            this.txtPowerAddress.Text = "USB0::0x5345::0x1234::2243132::INSTR";
             // 
             // btnConnectAll
             // 
