@@ -56,11 +56,26 @@ namespace A205AutoTestSystem.UI
         // 是否正在"一键运行"，用于抑制子项的某些交互（如禁用 grpTestConfig 上的非必要按钮）
         private bool _runAllInProgress;
 
+        /// <summary>单条运行中的 CancellationTokenSource（用于"■ 停止"按钮取消当前任务）。</summary>
+        private CancellationTokenSource _runCts;
+
+        /// <summary>是否有"单条运行"在执行（与 _runAllInProgress 互斥）。</summary>
+        private bool _runInProgress;
+
+        /// <summary>当前正在运行的行索引（_runInProgress=true 时有效；否则 -1）。
+        /// 用于 OnDgvTestsCellContentClick 区分"点当前行■ 停止"和"点其他行"，避免误取消。</summary>
+        private int _runningRowIndex = -1;
+
         // 状态颜色常量（不写进 .resx，保持代码可读性）
         private static readonly Color StatusColorReady = Color.Gray;
         private static readonly Color StatusColorRunning = Color.DodgerBlue;
         private static readonly Color StatusColorPass = Color.LimeGreen;
         private static readonly Color StatusColorFail = Color.Red;
+
+        // 运行中"其它行按钮 disabled"灰化色（DataGridViewButtonColumn 没有 Enabled 属性，
+        // 用 ReadOnly=true + 这三个色模拟"真 disable"的视觉效果）
+        private static readonly Color ActionDisabledFore = Color.FromArgb(160, 160, 160);
+        private static readonly Color ActionDisabledBack = Color.FromArgb(245, 245, 245);
 
         // ============================================================
         // 构造与生命周期
@@ -283,6 +298,11 @@ namespace A205AutoTestSystem.UI
 
                 // 成功：仅状态栏提示，不弹窗。同时清除 mock 模式（恢复真资源路径）。
                 _isMockMode = false;
+
+                // 4) 关闭两台信号源的 RF 输出——确保自动测试开始前频谱仪没有任何显示，
+                //    避免之前残留的载波 / LO 漏信号被误判。失败仅记日志，不弹窗 / 不中断加载流程。
+                TurnOffBothSignalGenerators();
+
                 UpdateStep("已加载真机测试资源（60+3 模式测试项已就绪，可点 ▶ 运行 或 一键运行）");
                 Logger.Log("[AutoTestPanel] 加载测试成功。");
             }
@@ -312,6 +332,41 @@ namespace A205AutoTestSystem.UI
             LoadDefaultTestsToGrid();
             UpdateStep("Mock 模式：已加载按当前温度档位的 Stub 测试项（不发任何命令，点运行返回『未实现』Fail）");
             Logger.Log("[AutoTestPanel] Mock 加载成功，进入 mock 模式。");
+        }
+
+        /// <summary>
+        /// 关闭 RF / LO 两台信号源的 RF 输出。
+        /// <para>目的：自动测试开始前让频谱仪不显示任何信号，
+        /// 避免上次残留的载波 / LO 漏信号被误判为频谱异常。</para>
+        /// <para>失败容忍：仪器为 null、未连接、或命令抛错 → 仅记日志，不弹窗、不中断加载流程。</para>
+        /// </summary>
+        private void TurnOffBothSignalGenerators()
+        {
+            if (_rf != null && _rf.IsConnected)
+            {
+                try
+                {
+                    _rf.SetOutputState(false);
+                    Logger.Log("[AutoTestPanel] 已关闭 RF 信号源输出。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[AutoTestPanel] 关闭 RF 信号源输出失败: " + ex.Message);
+                }
+            }
+
+            if (_lo != null && _lo.IsConnected)
+            {
+                try
+                {
+                    _lo.SetOutputState(false);
+                    Logger.Log("[AutoTestPanel] 已关闭 LO 信号源输出。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[AutoTestPanel] 关闭 LO 信号源输出失败: " + ex.Message);
+                }
+            }
         }
 
         /// <summary>
@@ -422,6 +477,11 @@ namespace A205AutoTestSystem.UI
         private const int ColAction = 4;    // 操作（按钮列）
         private const int ColStatus = 5;    // 状态
 
+        /// <summary>"操作"列的引用。运行中改单 cell.Value 切"▶ 运行" ↔ "■ 停止"，
+        /// 其它行 cell.ReadOnly=true（disable、变灰、不可点）。
+        /// 之所以升为字段，是因为要在 RunSingleTestAsync 入口访问列实例。</summary>
+        private DataGridViewButtonColumn colAction;
+
         /// <summary>
         /// 配置 DataGridView 列。Designer 中只声明了 dgvTests 实例，
         /// 列与列样式在运行期构造，便于在代码里集中维护。
@@ -504,12 +564,12 @@ namespace A205AutoTestSystem.UI
             dgvTests.Columns.Add(colLimit);
 
             // 操作（按钮列）
-            var colAction = new DataGridViewButtonColumn
+            colAction = new DataGridViewButtonColumn
             {
                 Name = "colAction",
                 HeaderText = "操作",
-                Text = "▶ 运行",
-                UseColumnTextForButtonValue = true,
+                Text = "▶ 运行",          // 列默认文字（运行入口可单独覆盖单 cell.Value）
+                UseColumnTextForButtonValue = false,   // 单 cell.Value 生效（运行中只改当前行 Value = "■ 停止"，其它行保持 "▶ 运行"）
                 Width = 80,
                 FlatStyle = FlatStyle.Standard,
                 SortMode = DataGridViewColumnSortMode.NotSortable
@@ -581,6 +641,8 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// DataGridView 单元格点击事件（捕获操作列按钮）。
+        /// <para>按钮文字 = "▶ 运行" → 调 <see cref="RunSingleTestAsync"/> 开始运行；
+        /// 按钮文字 = "■ 停止" → 取消当前 CancellationTokenSource（对应行正在运行）。</para>
         /// </summary>
         private async void OnDgvTestsCellContentClick(object sender, DataGridViewCellEventArgs e)
         {
@@ -588,32 +650,103 @@ namespace A205AutoTestSystem.UI
             if (e.ColumnIndex != ColAction) return;
             if (_runAllInProgress) return;     // 一键运行期间忽略手动运行
 
+            // 单条运行中：只允许点当前行"■ 停止"取消；其它行已 ReadOnly=true（视觉 disabled），
+            // 此处再兜一层——非当前行的点击一律 return，不动 cts，避免误停当前测试。
+            if (_runInProgress)
+            {
+                if (e.RowIndex == _runningRowIndex
+                    && _runCts != null && !_runCts.IsCancellationRequested)
+                {
+                    _runCts.Cancel();
+                    UpdateStep("正在停止测试…");
+                }
+                return;
+            }
+
             await RunSingleTestAsync(e.RowIndex);
+        }
+
+        /// <summary>
+        /// 切换"运行中" / "非运行中"状态下各入口的可用性。
+        /// <para>disable 范围：一键运行按钮 + 加载测试按钮 + Mock 加载按钮 + 温度/通道/模式下拉框。
+        /// 防止"运行中再点运行"或"运行中切温/通道"导致紊乱。</para>
+        /// </summary>
+        private void SetRunButtonsEnabledState(bool enabled)
+        {
+            if (btnRunAll != null) btnRunAll.Enabled = enabled;
+            if (btnLoadTest != null) btnLoadTest.Enabled = enabled;
+            if (btnMockLoad != null) btnMockLoad.Enabled = enabled;
+            if (cmbTemp != null) cmbTemp.Enabled = enabled;
+            if (cmbChannel != null) cmbChannel.Enabled = enabled;
+            if (cmbMode != null) cmbMode.Enabled = enabled;
         }
 
         /// <summary>
         /// 单条测试项的执行逻辑（共用：手动按行触发 + 一键运行逐条调用）。
         /// <para>入口会修改行内"操作"列与"状态"列文案，运行结束还原。</para>
+        /// <para>支持"■ 停止"按钮：构造 CancellationTokenSource，点击停止时取消，
+        /// 测试项内部 <c>ct.ThrowIfCancellationRequested()</c> 抛出 OperationCanceledException，
+        /// finally 块中 RF/LO 输出仍会兜底关闭。</para>
         /// </summary>
-        private async Task RunSingleTestAsync(int rowIndex)
+        private async Task RunSingleTestAsync(int rowIndex, bool isFromRunAll = false)
         {
             if (rowIndex < 0 || rowIndex >= dgvTests.Rows.Count) return;
             var row = dgvTests.Rows[rowIndex];
             var test = row.Tag as ITestItem;
             if (test == null) return;
 
+            // 防重入：手动点行（默认 isFromRunAll=false）时拦截 _runInProgress。
+            // 一键运行（isFromRunAll=true）跳过此检查——因为一键运行在 _runAllInProgress==true 期间
+            // 循环调本方法，如果拦截会全部 return，循环空跑 + 进度条瞬间 100%。
+            if (!isFromRunAll && _runInProgress) return;
+
             var statusCell = row.Cells[ColStatus];
             var actionCell = row.Cells[ColAction];
 
-            actionCell.Value = "运行中…";
+            // 进入运行态：构造 cts、置位、按钮文字改"停止"、disable 其他入口
+            _runInProgress = true;
+            _runningRowIndex = rowIndex;
+            _runCts = new CancellationTokenSource();
+            // 仅手动单条运行时 disable 一键运行 / 加载 / mock / 切温/通道；
+            // 一键运行期间（isFromRunAll=true）跳过 disable 一键运行按钮——
+            // 该按钮此时已被 OnRunAllClicked 改成"■ 停止测试"，必须保持可点，
+            // 否则单条测试项进出 finally 会反复 disable/enable，造成按钮灰抖动。
+            if (!isFromRunAll)
+            {
+                SetRunButtonsEnabledState(false);
+            }
+            else
+            {
+                // 一键运行期间只 disable 加载 / mock / 切温/通道（不禁掉"■ 停止测试"按钮）
+                if (btnLoadTest != null) btnLoadTest.Enabled = false;
+                if (btnMockLoad != null) btnMockLoad.Enabled = false;
+                if (cmbTemp != null) cmbTemp.Enabled = false;
+                if (cmbChannel != null) cmbChannel.Enabled = false;
+                if (cmbMode != null) cmbMode.Enabled = false;
+            }
+
+            // 仅当前行按钮变"■ 停止"；其它所有行按钮 ReadOnly=true + 灰化，
+            // 视觉上模拟"真 disabled"（DataGridViewButtonColumn 没有 Enabled 属性）
+            actionCell.Value = "■ 停止";
+            for (int i = 0; i < dgvTests.Rows.Count; i++)
+            {
+                if (i == rowIndex) continue;
+                var cell = dgvTests.Rows[i].Cells[ColAction];
+                cell.ReadOnly = true;
+                cell.Style.ForeColor = ActionDisabledFore;
+                cell.Style.BackColor = ActionDisabledBack;
+                cell.Style.SelectionBackColor = ActionDisabledBack;
+                cell.Style.SelectionForeColor = ActionDisabledFore;
+            }
+
             statusCell.Value = "运行中…";
             statusCell.Style.ForeColor = StatusColorRunning;
 
+            bool wasCancelled = false;
             try
             {
                 var progress = new Progress<string>(msg => UpdateStep(msg));
-                // M6 阶段固定 CancellationToken.None；M6.x 阶段接入 Cancel 按钮。
-                TestResult result = await test.ExecuteAsync(progress, CancellationToken.None)
+                TestResult result = await test.ExecuteAsync(progress, _runCts.Token)
                                               .ConfigureAwait(true);
 
                 if (result != null)
@@ -637,6 +770,12 @@ namespace A205AutoTestSystem.UI
                     statusCell.Style.ForeColor = StatusColorFail;
                 }
             }
+            catch (OperationCanceledException)
+            {
+                wasCancelled = true;
+                statusCell.Value = "已停止";
+                statusCell.Style.ForeColor = StatusColorReady;   // 灰色
+            }
             catch (Exception ex)
             {
                 statusCell.Value = "异常: " + ex.Message;
@@ -644,7 +783,45 @@ namespace A205AutoTestSystem.UI
             }
             finally
             {
+                // 还原 UI：当前行按钮文字改回"▶ 运行"；其它行 ReadOnly + 灰化色还原
                 actionCell.Value = "▶ 运行";
+                for (int i = 0; i < dgvTests.Rows.Count; i++)
+                {
+                    var cell = dgvTests.Rows[i].Cells[ColAction];
+                    cell.ReadOnly = false;
+                    cell.Style.ForeColor = dgvTests.DefaultCellStyle.ForeColor;
+                    cell.Style.BackColor = dgvTests.DefaultCellStyle.BackColor;
+                    cell.Style.SelectionBackColor = dgvTests.DefaultCellStyle.SelectionBackColor;
+                    cell.Style.SelectionForeColor = dgvTests.DefaultCellStyle.SelectionForeColor;
+                }
+                // 释放/复位 cts：手动单条运行时安全释放；一键运行期间**保留 cts 与 IsCancellationRequested**，
+                // 这样下一项进入前能从 _runCts.IsCancellationRequested 读到取消信号并立即 break，
+                // 而不会因为 cts 被重建而丢信号、下项继续跑。
+                if (!isFromRunAll)
+                {
+                    _runCts?.Dispose();
+                    _runCts = null;
+                }
+                _runInProgress = false;
+                _runningRowIndex = -1;
+                // 对称恢复：单条手动运行恢复一键运行按钮；一键运行期间一键按钮保持可点（文字由 OnRunAllClicked 管）
+                if (!isFromRunAll)
+                {
+                    SetRunButtonsEnabledState(true);
+                }
+                else
+                {
+                    if (btnLoadTest != null) btnLoadTest.Enabled = true;
+                    if (btnMockLoad != null) btnMockLoad.Enabled = true;
+                    if (cmbTemp != null) cmbTemp.Enabled = true;
+                    if (cmbChannel != null) cmbChannel.Enabled = true;
+                    if (cmbMode != null) cmbMode.Enabled = true;
+                }
+
+                if (wasCancelled)
+                {
+                    UpdateStep("测试已停止（手动取消）");
+                }
             }
         }
 
@@ -653,11 +830,20 @@ namespace A205AutoTestSystem.UI
         /// </summary>
         private async void OnRunAllClicked(object sender, EventArgs e)
         {
-            if (_runAllInProgress) return;
+            // 一键运行已开始时，再次点击 = "停止测试"按钮 → 取消 _runCts 让循环 break
+            if (_runAllInProgress)
+            {
+                if (_runCts != null && !_runCts.IsCancellationRequested)
+                {
+                    _runCts.Cancel();
+                    UpdateStep("正在停止一键运行…");
+                }
+                return;
+            }
             if (dgvTests.Rows.Count == 0) return;
 
             _runAllInProgress = true;
-            btnRunAll.Enabled = false;
+            btnRunAll.Text = "■ 停止测试";   // 同一个按钮变"停止"语义
 
             int total = dgvTests.Rows.Count;
             try
@@ -665,16 +851,30 @@ namespace A205AutoTestSystem.UI
                 UpdateProgress(0, $"一键运行：共 {total} 项");
                 for (int i = 0; i < total; i++)
                 {
+                    // 循环前后各检查一次：取消请求（来自一键停止按钮 / DGV 单条停止）→ 跳出
+                    if (_runCts != null && _runCts.IsCancellationRequested) break;
                     UpdateProgress(
                         (int)Math.Round(100.0 * i / total),
                         $"一键运行 {i + 1}/{total}");
-                    await RunSingleTestAsync(i);
+                    // isFromRunAll=true：绕过 _runInProgress 拦截，否则循环会空跑
+                    await RunSingleTestAsync(i, isFromRunAll: true);
+                    if (_runCts != null && _runCts.IsCancellationRequested) break;
                 }
-                UpdateProgress(100, $"一键运行完成：{total}/{total}");
+                bool aborted = _runCts != null && _runCts.IsCancellationRequested;
+                UpdateProgress(
+                    aborted ? (int)Math.Round(100.0 * _runningRowIndex / Math.Max(total, 1)) : 100,
+                    aborted
+                        ? "一键运行已中止（用户取消）"
+                        : $"一键运行完成：{total}/{total}");
             }
             finally
             {
                 _runAllInProgress = false;
+                // 一键运行退出时释放 cts（单条路径里 RunSingleTestAsync 自己已释放，
+                // 但 for-break / 异常路径可能没释放，这里兜底）
+                try { _runCts?.Dispose(); } catch { }
+                _runCts = null;
+                btnRunAll.Text = "一键运行";
                 btnRunAll.Enabled = true;
             }
         }
