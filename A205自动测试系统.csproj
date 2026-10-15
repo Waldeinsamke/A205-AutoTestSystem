@@ -135,6 +135,8 @@
       <DependentUpon>AutoTestPanel.cs</DependentUpon>
       <SubType>Designer</SubType>
     </EmbeddedResource>
+    <!-- M-2026-10：H-6 资源快照判定的纯逻辑（不依赖 WinForms，方便测试链接源文件） -->
+    <Compile Include="UI\ResourceSnapshotLogic.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

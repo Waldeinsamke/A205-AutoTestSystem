@@ -364,7 +364,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             double p1ResultValue = double.NaN;   // 报表 Value = 触发判停时的 RF 功率
             int stepCount = 0;
             string finalDeltaStr = "0.00";
-            bool hit10Dbm = false;
+            // H-7 修复：触达上限立即 break（不再多跑一轮重发同值 SCPI + 多读一次 delta）。
+            // 保留标志是为让 Remarks 准确输出"未压缩"。
+            bool reachedUpperLimit = false;
 
             while (true)
             {
@@ -374,11 +376,18 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 步进：功率 +1 dB
                 currentPowerDbm += PowerStepDbm;
 
-                // 达上限保护
-                if (currentPowerDbm > MaxRfPowerDbm)
+                // 达上限保护：触顶立即 break，不再继续循环（修复前会多跑一轮：
+                // 重发 :POW 10 dBm、等 500ms、多读一次 :CALC:MARK1:Y?，劣化用户体验）。
+                // 判据故意用 ">=" 而非 ">"，让"刚好到上限"也立即退出（不留双发）。
+                if (currentPowerDbm >= MaxRfPowerDbm)
                 {
                     currentPowerDbm = MaxRfPowerDbm;
-                    hit10Dbm = true;
+                    p1ResultValue = currentPowerDbm;
+                    reachedUpperLimit = true;
+                    string msg = $"[InputP1Test] {mode} {band.DisplayName} 触达 {MaxRfPowerDbm}dBm 上限仍未压缩，P-1 记 {p1ResultValue:F2} dBm（未压缩）";
+                    progress.Report(msg);
+                    Logger.Log(msg);
+                    break;
                 }
 
                 _rf.SetPower(currentPowerDbm);
@@ -426,13 +435,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     break;
                 }
 
-                // 上限保护：到 10 dBm 仍未压缩，记 10 dBm + 备注"未压缩"
-                if (hit10Dbm)
-                {
-                    p1ResultValue = currentPowerDbm;
-                    break;
-                }
-
                 lastDeltaDb = currentDeltaDb;
             }
 
@@ -449,7 +451,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 freqMHz, ifFreqHz / 1e6, referencePeakDbm, stepCount,
                 double.IsNaN(p1ResultValue) ? 0.0 : p1ResultValue,
                 finalDeltaStr,
-                hit10Dbm ? ", 触达10dBm上限未压缩" : "");
+                reachedUpperLimit ? ", 触达10dBm上限未压缩" : "");
 
             TestResult result = new TestResult
             {

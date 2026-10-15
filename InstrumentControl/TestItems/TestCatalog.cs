@@ -22,51 +22,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     public static class TestCatalog
     {
         /// <summary>
-        /// 创建默认的 16 项测试项清单（已实现 + 未实现 Stub）。
-        /// <para>这是 M6 阶段单点兼容版本，GainTest 不接收 receiver，
-        /// 仅做单点（100 MHz）测量；适合资源未就绪（receiver 未连接）的演示场景。</para>
-        /// </summary>
-        /// <param name="rf">射频信号源（已连接）；Stub 项不强制使用。</param>
-        /// <param name="lo">本振信号源（已连接）；仅 GainTest 等需要。</param>
-        /// <param name="sa">频谱仪（已连接）；GainTest / BandwidthTest 需要。</param>
-        /// <param name="mode">工作模式 1/2/3；用于 LO 频率规则。</param>
-        public static IReadOnlyList<ITestItem> CreateDefault(
-            SignalGenerator rf,
-            SignalGeneratorLO lo,
-            SpectrumAnalyzer sa,
-            int mode)
-        {
-            var list = new List<ITestItem>(16)
-            {
-                // ---- 已实现（M6 兼容：单点）----
-                new GainTest(rf, lo, sa, rfFreqHz: 100e6, rfPowerDbm: -20,
-                             mode: mode, loPowerDbm: 0, ifFreqHz: 70e6),
-                new BandwidthTest(rf, sa, centerRfFreqHz: 100e6, rfPowerDbm: -20,
-                                  ifFreqHz: 70e6, scanPoints: 11),
-
-                // ---- 未实现 Stub（占位，UI 仍显示该行，运行时报"未实现"）----
-                new NotImplementedTestItem("噪声系数"),
-                new NotImplementedTestItem("输入P-1"),
-                new NotImplementedTestItem("饱和输出电平"),
-                new NotImplementedTestItem("AGC控制特性"),
-                new NotImplementedTestItem("AGC响应时间"),
-                new NotImplementedTestItem("通道延时"),
-                new NotImplementedTestItem("阻塞信号"),
-                new NotImplementedTestItem("镜频抑制"),
-                new NotImplementedTestItem("中频抑制"),
-                new NotImplementedTestItem("中频带外抑制"),
-                new NotImplementedTestItem("三阶互调抑制"),
-                new NotImplementedTestItem("谐波抑制"),
-                new NotImplementedTestItem("带内虚假信号"),
-                new NotImplementedTestItem("通道间隔离度"),
-            };
-            return list;
-        }
-
-        /// <summary>
         /// M6.x 全功能测试项清单（兼容重载，默认走"常温"分支）。
-        /// <para>与 <see cref="CreateDefault"/> 的差异：第 1 项 GainTest 接收 receiver
-        /// 和共享的 RF/LO/SA 实例，按"模式 → 频点"两层循环扫测，每点一条 TestResult。</para>
+        /// <para>第 1 项 GainTest 接收 receiver 和共享的 RF/LO/SA 实例，
+        /// 按"模式 → 频点"两层循环扫测，每点一条 TestResult。</para>
         /// </summary>
         /// <param name="receiver">接收机串口（必须已 Open）。</param>
         /// <param name="rf">射频信号源（必须已 Connect）。</param>
@@ -261,74 +219,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             };
         }
 
-        /// <summary>
-        /// 创建"Mock 加载"模式下的测试项清单（不依赖任何真资源）。
-        /// <para>用途：开发/调试阶段无真机连接时，预览"按温度分测试项 + 切温度重建 DGV"的 UI 行为。
-        /// 所有项都是 <see cref="NotImplementedTestItem"/> Stub，点"运行"会立即返回"未实现"Fail 结果，
-        /// <strong>不会</strong>尝试连接任何仪表或串口。</para>
-        /// <para>返回结构与 <see cref="CreateProduction(ReceiverSerialPort, SignalGenerator, SignalGeneratorLO, SpectrumAnalyzer, int, TemperatureRange)"/>
-        /// 一致（常温 21 / 高低温 3），便于在 mock 与真机模式下 UI 行为对齐。</para>
-        /// </summary>
-        /// <param name="temperature">测试温度档位。</param>
-        public static IReadOnlyList<ITestItem> CreateMockItems(TemperatureRange temperature)
-        {
-            switch (temperature)
-            {
-                case TemperatureRange.Normal:
-                    return BuildMockNormalTempItems();
-                case TemperatureRange.High:
-                case TemperatureRange.Low:
-                    return BuildMockHighLowTempItems();
-                default:
-                    throw new ArgumentOutOfRangeException(
-                        nameof(temperature), temperature, "未定义的测试温度档位。");
-            }
-        }
-
-        // ============================================================
-        // 常温 Mock：21 项（全部 Stub，连"线性最大增益"和"信号带宽"也用 Stub 占位）
-        //   与 BuildNormalTempItems 的 21 项一一对应，便于和真机模式对照
-        // ============================================================
-        private static IReadOnlyList<ITestItem> BuildMockNormalTempItems()
-        {
-            return new List<ITestItem>(21)
-            {
-                new NotImplementedTestItem("线性最大增益"),
-                new NotImplementedTestItem("信号带宽"),
-                new NotImplementedTestItem("噪声系数"),
-                new NotImplementedTestItem("输入P-1"),
-                new NotImplementedTestItem("饱和输出电平"),
-                new NotImplementedTestItem("AGC控制特性"),
-                new NotImplementedTestItem("AGC响应时间"),
-                new NotImplementedTestItem("通道延时"),
-                new NotImplementedTestItem("阻塞信号"),
-                new NotImplementedTestItem("镜频抑制"),
-                new NotImplementedTestItem("中频抑制"),
-                new NotImplementedTestItem("三阶互调"),
-                new NotImplementedTestItem("中频带外抑制"),
-                new NotImplementedTestItem("谐波抑制"),
-                new NotImplementedTestItem("带内虚假信号"),
-                new NotImplementedTestItem("通道间隔离度"),
-                new NotImplementedTestItem("通道间增益不一致性（AGC不起控）"),
-                new NotImplementedTestItem("通道间增益不一致性（AGC同时起控）"),
-                new NotImplementedTestItem("通道间相位差稳定度"),
-                new NotImplementedTestItem("通道间增益差稳定度"),
-                new NotImplementedTestItem("驻波"),
-            };
-        }
-
-        // ============================================================
-        // 高/低温 Mock：3 项（全部 Stub）
-        // ============================================================
-        private static IReadOnlyList<ITestItem> BuildMockHighLowTempItems()
-        {
-            return new List<ITestItem>(3)
-            {
-                new NotImplementedTestItem("线性最大增益"),
-                new NotImplementedTestItem("输入P-1"),
-                new NotImplementedTestItem("电源功耗"),
-            };
-        }
+        // 注意：原 CreateMockItems / BuildMockNormalTempItems / BuildMockHighLowTempItems 已随 mock 模式移除。
     }
 
     /// <summary>

@@ -33,25 +33,13 @@ namespace A205AutoTestSystem.UI
         private SpectrumAnalyzer _sa;
         private readonly AutoTestEngine _engine = new AutoTestEngine();
 
-        // M6.x：保存 ReceiverControlPanel 引用，便于在 LoadDefaultTestsToGrid
-        // 中检测 receiver 是否已连接，决定走 CreateProduction（模式×频点遍历）
-        // 还是 CreateDefault（M6 兼容：单点）。
+        // 保存 ReceiverControlPanel 引用，便于在 LoadDefaultTestsToGrid 中检测 receiver 是否已连接，
+        // 决定能否走 CreateProduction（模式×频点遍历）——资源不全则不加载测试项。
         private ReceiverControlPanel _receiverPanel;
 
         private readonly List<ITestItem> _tests = new List<ITestItem>();
 
         private bool _instrumentsReady;
-
-        /// <summary>
-        /// Mock 模式标志：由『Mock 加载』按钮置 true；用于无真机连接时预览 DGV 行为。
-        /// <para>为 true 时：</para>
-        /// <list type="bullet">
-        ///   <item><see cref="LoadDefaultTestsToGrid"/> 走 <see cref="TestCatalog.CreateMockItems(TemperatureRange)"/>（纯 Stub，不发任何命令）</item>
-        ///   <item>切温度/切通道仍触发 DGV 重建（即使 _instrumentsReady=false）</item>
-        ///   <item>点『加载测试』成功后置 false（恢复真资源路径）</item>
-        /// </list>
-        /// </summary>
-        private bool _isMockMode;
 
         // 是否正在"一键运行"，用于抑制子项的某些交互（如禁用 grpTestConfig 上的非必要按钮）
         private bool _runAllInProgress;
@@ -162,9 +150,9 @@ namespace A205AutoTestSystem.UI
             // 后续 OnChannelSelected 由 ReceiverControlPanel 自己订阅，会自动切矩阵。
 
             // 通道变了 → 重建测试项清单，让 DGV 行的 row.Tag 指向新 channel 的 test。
-            // 仅在资源已就绪（三仪表已绑定）或 mock 模式时重建：构造期或切 Tab 期间
+            // 仅在资源已就绪（三仪表已绑定）时重建：构造期或切 Tab 期间
             // _instrumentsReady 还是 false，没必要重建。
-            if (_instrumentsReady || _isMockMode)
+            if (_instrumentsReady)
             {
                 LoadDefaultTestsToGrid();
             }
@@ -229,8 +217,8 @@ namespace A205AutoTestSystem.UI
                 if (_receiverPanel.RbTempLow.Checked    != wantLow)    _receiverPanel.RbTempLow.Checked    = wantLow;
             }
 
-            // 3) 资源已就绪或 mock 模式时重建 DGV（与切通道一致）
-            if (_instrumentsReady || _isMockMode)
+            // 3) 资源已就绪时重建 DGV（与切通道一致）
+            if (_instrumentsReady)
             {
                 LoadDefaultTestsToGrid();
             }
@@ -296,8 +284,7 @@ namespace A205AutoTestSystem.UI
                     _receiverPanel.LoGenerator,
                     _receiverPanel.SpectrumAnalyzerInstance);
 
-                // 成功：仅状态栏提示，不弹窗。同时清除 mock 模式（恢复真资源路径）。
-                _isMockMode = false;
+                // 成功：仅状态栏提示，不弹窗。
 
                 // 4) 关闭两台信号源的 RF 输出——确保自动测试开始前频谱仪没有任何显示，
                 //    避免之前残留的载波 / LO 漏信号被误判。失败仅记日志，不弹窗 / 不中断加载流程。
@@ -312,26 +299,6 @@ namespace A205AutoTestSystem.UI
                     "加载测试资源失败：" + ex.Message,
                     "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        /// <summary>
-        /// "Mock 加载"按钮：跳过三仪表 + 接收机串口的就绪检查，
-        /// 直接按当前温度档位加载 <see cref="TestCatalog.CreateMockItems"/> 的纯 Stub 测试项列表。
-        /// <para>用途：无真机连接时验证"按温度分测试项 + 切温度重建 DGV"的 UI 行为。
-        /// 点"运行"会立即返回"未实现"Fail 结果，不会发任何 SCPI/串口命令。</para>
-        /// <para>要点：</para>
-        /// <list type="bullet">
-        ///   <item>不检查三仪表/串口——故意跳过</item>
-        ///   <item>不向接收机发任何命令</item>
-        ///   <item>置 <see cref="_isMockMode"/> = true，让切温度/切通道在 mock 下也重建 DGV</item>
-        /// </list>
-        /// </summary>
-        private void OnMockLoadClicked(object sender, EventArgs e)
-        {
-            _isMockMode = true;
-            LoadDefaultTestsToGrid();
-            UpdateStep("Mock 模式：已加载按当前温度档位的 Stub 测试项（不发任何命令，点运行返回『未实现』Fail）");
-            Logger.Log("[AutoTestPanel] Mock 加载成功，进入 mock 模式。");
         }
 
         /// <summary>
@@ -402,22 +369,15 @@ namespace A205AutoTestSystem.UI
         /// <summary>
         /// 把默认测试项清单加载到 DataGridView。
         /// 由 <see cref="ApplyReceiverResources"/> 在三仪表 Connect() 成功后调用。
-        /// <para>三种分支：</para>
-        /// <list type="bullet">
-        /// <item>Mock 模式（<see cref="_isMockMode"/>）：走 <see cref="TestCatalog.CreateMockItems(TemperatureRange)"/>，
-        ///       纯 Stub 列表，不依赖真资源。</item>
-        /// <item>真资源模式（receiver + 三仪表都就绪）：走 <see cref="TestCatalog.CreateProduction(ReceiverSerialPort, SignalGenerator, SignalGeneratorLO, SpectrumAnalyzer, int, TemperatureRange)"/>
-        ///       （模式×频点遍历 + 按温度分支）。</item>
-        /// <item>否则走 <see cref="TestCatalog.CreateDefault"/>（M6 兼容：单点，不分温度）。</item>
-        /// </list>
+        /// <para>真资源模式（receiver + 三仪表都就绪）：走 <see cref="TestCatalog.CreateProduction(ReceiverSerialPort, SignalGenerator, SignalGeneratorLO, SpectrumAnalyzer, int, TemperatureRange)"/>
+        /// （模式×频点遍历 + 按温度分支）。资源不全则不加载任何测试项 + 提示原因。</para>
         /// </summary>
         private void LoadDefaultTestsToGrid()
         {
             _engine.Clear();
             ClearTestRows();
 
-            IReadOnlyList<ITestItem> items;
-            int mode = cmbMode.SelectedIndex + 1;  // 0/1/2 → 1/2/3
+            IReadOnlyList<ITestItem> items = null;
             // 温度：cmbTemp 索引 0/1/2 → Normal/High/Low；索引无效时退回常温
             TemperatureRange temperature;
             switch (cmbTemp.SelectedIndex)
@@ -427,27 +387,27 @@ namespace A205AutoTestSystem.UI
                 default: temperature = TemperatureRange.Normal; break;
             }
 
-            // Mock 模式：跳过资源分支，按当前温度档位加载纯 Stub 列表
-            if (_isMockMode)
-            {
-                items = TestCatalog.CreateMockItems(temperature);
-            }
-            // 真资源分支：receiver + 三仪表都就绪 → 走全功能；否则单点兼容
-            else if (_receiverPanel != null
-                && _receiverPanel._receiver != null
-                && _receiverPanel._receiver.IsOpen
-                && _rf != null && _rf.IsConnected
-                && _lo != null && _lo.IsConnected
-                && _sa != null && _sa.IsConnected)
+            // H-6 修复：先一次性快照全部资源状态（receiver + 三仪表），
+            // 后续分支判断统一使用这份快照，避免分支间状态分散读取导致
+            // "DGV 重建时看到的资源"与"测试项实际执行时看到的资源"不一致。
+            ResourceSnapshot snap = SnapshotResources();
+
+            if (snap.AllProductionReady)
             {
                 int channel = _receiverPanel.SelectedChannel;
                 if (channel < 1 || channel > 8) channel = 1;
                 items = TestCatalog.CreateProduction(
-                    _receiverPanel._receiver, _rf, _lo, _sa, channel, temperature);
+                    snap.Receiver, _rf, _lo, _sa, channel, temperature);
             }
             else
             {
-                items = TestCatalog.CreateDefault(_rf, _lo, _sa, mode);
+                // 资源不全（receiver 串口未开 / 接收机控制面板未注入 / 某台仪表未连接），
+                // 不再回退到单点兼容清单——直接不加载任何测试项 + 把"为什么不满足"写到 UI + 日志。
+                string reason = string.IsNullOrEmpty(snap.Reason) ? "资源未就绪" : snap.Reason;
+                Logger.Log("[AutoTestPanel] 资源不全，不加载测试项：" + reason);
+                UpdateStep("资源未就绪：" + reason);
+                btnRunAll.Enabled = false;
+                return;
             }
 
             foreach (var t in items)
@@ -463,6 +423,62 @@ namespace A205AutoTestSystem.UI
             // 加载完成后允许一键运行
             btnRunAll.Enabled = true;
             UpdateProgress(0, $"已加载 {_tests.Count} 个测试项。");
+        }
+
+        /// <summary>
+        /// 资源快照：在方法入口一次性采集 receiver 串口 + 三仪表的就绪状态，
+        /// 确保后续分支判断基于同一时刻的状态，避免"读 receiver 引用 → 读 IsConnected"
+        /// 跨多步时被另一控件异步改动（参见审查报告 H-6）。
+        /// </summary>
+        private ResourceSnapshot SnapshotResources()
+        {
+            ResourceSnapshot s = new ResourceSnapshot();
+
+            if (_receiverPanel == null)
+            {
+                s.Receiver = null;
+                s.ReceiverOpen = false;
+                s.RfReady = _rf != null && _rf.IsConnected;
+                s.LoReady = _lo != null && _lo.IsConnected;
+                s.SaReady = _sa != null && _sa.IsConnected;
+                s.Reason = "接收机控制面板未注入";
+                return s;
+            }
+
+            s.Receiver = _receiverPanel._receiver;
+            s.ReceiverOpen = s.Receiver != null && s.Receiver.IsOpen;
+
+            // 三仪表实时查询（IsConnected 是 VISA 内部实时探测，未连接/被外部断开均反映为 false）
+            s.RfReady = _rf != null && _rf.IsConnected;
+            s.LoReady = _lo != null && _lo.IsConnected;
+            s.SaReady = _sa != null && _sa.IsConnected;
+
+            // 复用纯判定逻辑（独立文件 ResourceSnapshotLogic.cs，
+            // 可被 Tests/AutoTest.Tests 链接源文件直接覆盖所有组合，
+            // 无需实例化 UserControl 也无需引入 System.Windows.Forms）。
+            ResourceSnapshotDecision decision = ResourceSnapshotLogic.EvaluateReadiness(
+                s.Receiver != null, s.ReceiverOpen, s.RfReady, s.LoReady, s.SaReady);
+
+            s.Reason = decision.Reason;
+            s.AllProductionReady = decision.AllReady;
+            return s;
+        }
+
+        /// <summary>
+        /// 资源就绪状态快照（仅供 SnapshotResources 内部使用）。
+        /// <para>WinForms 单 UI 线程下，方法内的多次字段读取对该操作而言是原子的——
+        /// 不存在真正的多线程交错，问题是分散读取带来的"先后两步之间资源状态被
+        /// 另一控件改动"的逻辑竞态（H-6）。本结构体把 6 个分散判断折叠为 1 次快照。</para>
+        /// </summary>
+        internal struct ResourceSnapshot
+        {
+            public ReceiverSerialPort Receiver;   // 可能为 null
+            public bool ReceiverOpen;
+            public bool RfReady;
+            public bool LoReady;
+            public bool SaReady;
+            public bool AllProductionReady;       // 由 ResourceSnapshotLogic.EvaluateReadiness 填充
+            public string Reason;                 // 不满足时的具体原因；为空表示全就绪
         }
 
         // ============================================================
@@ -668,14 +684,13 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// 切换"运行中" / "非运行中"状态下各入口的可用性。
-        /// <para>disable 范围：一键运行按钮 + 加载测试按钮 + Mock 加载按钮 + 温度/通道/模式下拉框。
+        /// <para>disable 范围：一键运行按钮 + 加载测试按钮 + 温度/通道/模式下拉框。
         /// 防止"运行中再点运行"或"运行中切温/通道"导致紊乱。</para>
         /// </summary>
         private void SetRunButtonsEnabledState(bool enabled)
         {
             if (btnRunAll != null) btnRunAll.Enabled = enabled;
             if (btnLoadTest != null) btnLoadTest.Enabled = enabled;
-            if (btnMockLoad != null) btnMockLoad.Enabled = enabled;
             if (cmbTemp != null) cmbTemp.Enabled = enabled;
             if (cmbChannel != null) cmbChannel.Enabled = enabled;
             if (cmbMode != null) cmbMode.Enabled = enabled;
@@ -707,7 +722,7 @@ namespace A205AutoTestSystem.UI
             _runInProgress = true;
             _runningRowIndex = rowIndex;
             _runCts = new CancellationTokenSource();
-            // 仅手动单条运行时 disable 一键运行 / 加载 / mock / 切温/通道；
+            // 仅手动单条运行时 disable 一键运行 / 加载 / 切温/通道；
             // 一键运行期间（isFromRunAll=true）跳过 disable 一键运行按钮——
             // 该按钮此时已被 OnRunAllClicked 改成"■ 停止测试"，必须保持可点，
             // 否则单条测试项进出 finally 会反复 disable/enable，造成按钮灰抖动。
@@ -717,9 +732,8 @@ namespace A205AutoTestSystem.UI
             }
             else
             {
-                // 一键运行期间只 disable 加载 / mock / 切温/通道（不禁掉"■ 停止测试"按钮）
+                // 一键运行期间只 disable 加载 / 切温/通道（不禁掉"■ 停止测试"按钮）
                 if (btnLoadTest != null) btnLoadTest.Enabled = false;
-                if (btnMockLoad != null) btnMockLoad.Enabled = false;
                 if (cmbTemp != null) cmbTemp.Enabled = false;
                 if (cmbChannel != null) cmbChannel.Enabled = false;
                 if (cmbMode != null) cmbMode.Enabled = false;
@@ -783,17 +797,15 @@ namespace A205AutoTestSystem.UI
             }
             finally
             {
-                // 还原 UI：当前行按钮文字改回"▶ 运行"；其它行 ReadOnly + 灰化色还原
-                actionCell.Value = "▶ 运行";
-                for (int i = 0; i < dgvTests.Rows.Count; i++)
-                {
-                    var cell = dgvTests.Rows[i].Cells[ColAction];
-                    cell.ReadOnly = false;
-                    cell.Style.ForeColor = dgvTests.DefaultCellStyle.ForeColor;
-                    cell.Style.BackColor = dgvTests.DefaultCellStyle.BackColor;
-                    cell.Style.SelectionBackColor = dgvTests.DefaultCellStyle.SelectionBackColor;
-                    cell.Style.SelectionForeColor = dgvTests.DefaultCellStyle.SelectionForeColor;
-                }
+                // 还原 UI：当前行按钮文字改回"▶ 运行"；其它行 ReadOnly + 灰化色还原。
+                // finally 块自身必须被保护——面板已 Dispose / DGV 已释放时，直接访问
+                // actionCell.Value / dgvTests.Rows 会抛 ObjectDisposedException，
+                // 不仅打断 finally，还可能遮蔽主流程的真实异常。
+                TryRestoreRowVisuals(actionCell, rowIndex);
+
+                // 释放/复位 cts：手动单条运行时安全释放；一键运行期间**保留 cts 与 IsCancellationRequested**，
+                // 这样下一项进入前能从 _runCts.IsCancellationRequested 读到取消信号并立即 break，
+                // 而不会因为 cts 被重建而丢信号、下项继续跑。
                 // 释放/复位 cts：手动单条运行时安全释放；一键运行期间**保留 cts 与 IsCancellationRequested**，
                 // 这样下一项进入前能从 _runCts.IsCancellationRequested 读到取消信号并立即 break，
                 // 而不会因为 cts 被重建而丢信号、下项继续跑。
@@ -812,7 +824,6 @@ namespace A205AutoTestSystem.UI
                 else
                 {
                     if (btnLoadTest != null) btnLoadTest.Enabled = true;
-                    if (btnMockLoad != null) btnMockLoad.Enabled = true;
                     if (cmbTemp != null) cmbTemp.Enabled = true;
                     if (cmbChannel != null) cmbChannel.Enabled = true;
                     if (cmbMode != null) cmbMode.Enabled = true;
@@ -995,6 +1006,80 @@ namespace A205AutoTestSystem.UI
             rtbLog.AppendText(line + Environment.NewLine);
             rtbLog.SelectionStart = rtbLog.Text.Length;
             rtbLog.ScrollToCaret();
+        }
+
+        /// <summary>
+        /// finally 块专用：把 DGV 当前行按钮文字还原成"▶ 运行"，其它行还原 ReadOnly 与默认色。
+        /// 任何 UI 访问全部用 IsDisposed / IsHandleCreated 守卫，单行失败不影响其它行，
+        /// 整个 finally 自身抛错会被吞掉并写日志——避免 finally 异常遮蔽主流程真实异常。
+        /// </summary>
+        private void TryRestoreRowVisuals(DataGridViewCell actionCell, int rowIndex)
+        {
+            try
+            {
+                if (dgvTests == null || dgvTests.IsDisposed || !dgvTests.IsHandleCreated)
+                {
+                    return;
+                }
+
+                // 当前行按钮文字还原
+                if (actionCell != null)
+                {
+                    try
+                    {
+                        actionCell.Value = "▶ 运行";
+                    }
+                    catch (Exception ex)
+                    {
+                        // cell 可能已被 Dispose，单 cell 失败不影响其它行
+                        Logger.Log("[AutoTestPanel] finally 还原当前行按钮文字失败: " + ex.Message);
+                    }
+                }
+
+                // 其它行 ReadOnly + 灰化色还原
+                int rowCount;
+                try { rowCount = dgvTests.Rows.Count; }
+                catch (Exception ex)
+                {
+                    Logger.Log("[AutoTestPanel] finally 读取 Rows.Count 失败: " + ex.Message);
+                    return;
+                }
+
+                for (int i = 0; i < rowCount; i++)
+                {
+                    DataGridViewCell cell;
+                    try
+                    {
+                        cell = dgvTests.Rows[i].Cells[ColAction];
+                    }
+                    catch (Exception ex)
+                    {
+                        // 单行访问失败跳过
+                        Logger.Log("[AutoTestPanel] finally 访问行 " + i + " 失败: " + ex.Message);
+                        continue;
+                    }
+                    if (cell == null) continue;
+
+                    try
+                    {
+                        cell.ReadOnly = false;
+                        cell.Style.ForeColor = dgvTests.DefaultCellStyle.ForeColor;
+                        cell.Style.BackColor = dgvTests.DefaultCellStyle.BackColor;
+                        cell.Style.SelectionBackColor = dgvTests.DefaultCellStyle.SelectionBackColor;
+                        cell.Style.SelectionForeColor = dgvTests.DefaultCellStyle.SelectionForeColor;
+                    }
+                    catch (Exception ex)
+                    {
+                        // 单 cell 写样式失败跳过
+                        Logger.Log("[AutoTestPanel] finally 还原行 " + i + " 样式失败: " + ex.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // finally 自身的兜底：异常写日志但绝不抛出
+                Logger.Log("[AutoTestPanel] finally 整体异常: " + ex.Message);
+            }
         }
 
         /// <summary>

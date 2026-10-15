@@ -179,7 +179,7 @@ namespace A205AutoTestSystem.UI
         // 资源就绪状态（M6.x 阶段暴露给 AutoTestPanel 用）
         // ============================================================
 
-        /// <summary>接收机串口是否已 Open。AutoTestPanel 用来决定走 CreateProduction 还是 CreateDefault。</summary>
+        /// <summary>接收机串口是否已 Open。AutoTestPanel 用来决定能否走 CreateProduction。</summary>
         public bool IsReceiverReady => _receiver != null && _receiver.IsOpen;
 
         /// <summary>三台仪表（RF/LO/SA）是否都已 Connect。</summary>

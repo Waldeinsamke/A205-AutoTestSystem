@@ -126,6 +126,11 @@
     <Compile Include="..\..\Common\ExcelExporter.cs">
       <Link>Common\ExcelExporter.cs</Link>
     </Compile>
+    <!-- M-2026-10：H-6 资源快照判定单测，仅链接纯逻辑文件
+         （不链接 AutoTestPanel.cs，避免引入 System.Windows.Forms / System.Drawing 依赖） -->
+    <Compile Include="..\..\UI\ResourceSnapshotLogic.cs">
+      <Link>UI\ResourceSnapshotLogic.cs</Link>
+    </Compile>
     <!-- 测试程序本体 -->
     <Compile Include="Program.cs" />
     <Compile Include="Assert.cs" />

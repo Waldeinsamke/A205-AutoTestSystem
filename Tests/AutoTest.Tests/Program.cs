@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.UI;
 
 namespace A205AutoTestSystem.Tests.AutoTestTests
 {
@@ -35,6 +36,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             if (filter.Contains("Gain"))     TestGainTest();
             if (filter.Contains("Bandwidth")) TestBandwidthTest();
             if (filter.Contains("Engine"))    TestAutoTestEngine();
+            if (filter.Contains("H6"))        TestH6ResourceSnapshot();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");
@@ -54,7 +56,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             HashSet<string> set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             if (args == null || args.Length == 0)
             {
-                set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine");
+                set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
                 return set;
             }
             foreach (var arg in args)
@@ -76,7 +78,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             }
             if (set.Count == 0)
             {
-                set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine");
+                set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
             }
             return set;
         }
@@ -304,6 +306,97 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             Assert.Equal(2, executedCount);
             Assert.CurrentTestName = "Engine: LogEmitted 至少触发 6 次（每个 item start+done，共 6）";
             Assert.True(logCount >= 6, $"logCount={logCount} 应 ≥ 6");
+        }
+
+        // ====================================================================
+        // H-6 资源快照判定逻辑单测
+        // ====================================================================
+
+        /// <summary>
+        /// 覆盖 ResourceSnapshotLogic.EvaluateReadiness 的 6 种关键组合。
+        /// <para>目的：验证 LoadDefaultTestsToGrid 改用资源快照后，三层分支判定
+        /// 与"具体不满足原因"的输出符合预期。重点：</para>
+        /// <list type="bullet">
+        ///   <item>全就绪 → AllReady=true, Reason=空</item>
+        ///   <item>任一资源未就绪 → AllReady=false, Reason 指向"第一优先级"的不满足项</item>
+        ///   <item>优先级：receiver 缺失/关闭 > RF > LO > SA</item>
+        /// </list>
+        /// </summary>
+        private static void TestH6ResourceSnapshot()
+        {
+            Console.WriteLine("[Test] H-6 ResourceSnapshotLogic.EvaluateReadiness 资源快照判定");
+
+            // (1) 全就绪：AllReady=true，Reason 为空
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: true, receiverOpen: true,
+                    rfReady: true, loReady: true, saReady: true);
+                Assert.CurrentTestName = "H6: 全就绪 → AllReady=true";
+                Assert.True(d.AllReady, "AllReady 应当为 true");
+                Assert.CurrentTestName = "H6: 全就绪 → Reason=空";
+                Assert.Equal(string.Empty, d.Reason ?? string.Empty);
+            }
+
+            // (2) 无 receiver：第一个不满足项优先报告
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: false, receiverOpen: false,
+                    rfReady: true, loReady: true, saReady: true);
+                Assert.CurrentTestName = "H6: 无 receiver → AllReady=false";
+                Assert.True(!d.AllReady, "AllReady 应当为 false");
+                Assert.CurrentTestName = "H6: 无 receiver → Reason 优先报 receiver";
+                Assert.Equal("接收机串口未连接", d.Reason);
+            }
+
+            // (3) receiver 存在但已 Close
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: true, receiverOpen: false,
+                    rfReady: true, loReady: true, saReady: true);
+                Assert.CurrentTestName = "H6: receiver 已断开 → Reason 准确";
+                Assert.True(!d.AllReady);
+                Assert.Equal("接收机串口已断开", d.Reason);
+            }
+
+            // (4) 三仪表中 RF 缺失（receiver 正常）
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: true, receiverOpen: true,
+                    rfReady: false, loReady: true, saReady: true);
+                Assert.CurrentTestName = "H6: RF 未连接 → Reason 指向 RF（优先级高于 LO/SA）";
+                Assert.True(!d.AllReady);
+                Assert.Equal("RF 信号源未连接", d.Reason);
+            }
+
+            // (5) 三仪表中 LO 缺失（RF 已就绪）
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: true, receiverOpen: true,
+                    rfReady: true, loReady: false, saReady: true);
+                Assert.CurrentTestName = "H6: LO 未连接 → Reason 指向 LO（优先级高于 SA）";
+                Assert.True(!d.AllReady);
+                Assert.Equal("LO 信号源未连接", d.Reason);
+            }
+
+            // (6) 仅 SA 缺失
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: true, receiverOpen: true,
+                    rfReady: true, loReady: true, saReady: false);
+                Assert.CurrentTestName = "H6: SA 未连接 → Reason 指向 SA";
+                Assert.True(!d.AllReady);
+                Assert.Equal("频谱仪未连接", d.Reason);
+            }
+
+            // (7) 极端：receiver + 三仪表全部缺失，仍按优先级报 receiver
+            {
+                var d = ResourceSnapshotLogic.EvaluateReadiness(
+                    hasReceiver: false, receiverOpen: false,
+                    rfReady: false, loReady: false, saReady: false);
+                Assert.CurrentTestName = "H6: 全缺失 → Reason 优先报 receiver（不会被 SA 抢占）";
+                Assert.True(!d.AllReady);
+                Assert.Equal("接收机串口未连接", d.Reason);
+            }
         }
 
         // ====================================================================

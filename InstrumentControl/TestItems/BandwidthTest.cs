@@ -121,28 +121,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _settleDelayMs = settleDelayMs;
         }
 
-        /// <summary>M6 兼容单点构造：不接 receiver、不循环，按 M6 旧语义跑一次自扫 + -3dB 边界。</summary>
-        public BandwidthTest(
-            SignalGenerator rfGenerator,
-            SpectrumAnalyzer spectrumAnalyzer,
-            double centerRfFreqHz,
-            double rfPowerDbm,
-            double ifFreqHz,
-            int scanPoints = 11)
-            : this(
-                receiver: null,
-                rfGenerator: rfGenerator,
-                loGenerator: null,
-                spectrumAnalyzer: spectrumAnalyzer,
-                channel: 1,
-                modes: new ReceiverMode[] { ReceiverMode.Mode1 },
-                settleDelayMs: RealMachineSettleDelayMs)
-        {
-            // 此构造仅保留给 TestCatalog.CreateDefault 走 M6 兼容路径，
-            // 不通过 ExecuteAsync 实际使用本新逻辑——避免破坏旧测试期望。
-            // （见 _legacySinglePoint 标记）
-        }
-
         public string TestName => "信号带宽";
 
         /// <summary>
@@ -170,16 +148,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             if (progress == null) throw new ArgumentNullException(nameof(progress));
             ct.ThrowIfCancellationRequested();
 
-            // 旧 M6 兼容路径（无 receiver）走老逻辑——保留给 CreateDefault 演示场景
-            if (_receiver == null || !_receiver.IsOpen)
-            {
-                return await ExecuteLegacySinglePointAsync(progress, ct).ConfigureAwait(false);
-            }
-
             if (!_rf.IsConnected || !_lo.IsConnected || !_sa.IsConnected)
             {
                 throw new InvalidOperationException(
-                    "BandwidthTest（M6.x）需要三台仪表（RF/LO/SA）已连接。");
+                    "BandwidthTest 需要三台仪表（RF/LO/SA）已连接。");
             }
 
             TestResult lastResult = null;
@@ -361,29 +333,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             return null;
         }
 
-        // ============================================================
-        // M6 兼容：单点自扫 + -3dB 边界（保留给 CreateDefault 演示）
-        // ============================================================
-
-        private async Task<TestResult> ExecuteLegacySinglePointAsync(IProgress<string> progress, CancellationToken ct)
-        {
-            // 旧 BandwidthTest 是单点 + -3dB 边界逻辑。但新构造的 _rf / _lo / _sa 字段在
-            // 兼容构造里 _lo 是 null。这里仅做最小可跑版本：单点 peak + 返回 0 带宽，
-            // 写一条 Fail 结果（提示"已废弃"）。
-            progress.Report("[BandwidthTest] M6 兼容模式（receiver 未连接）：不执行自扫，返回 Fail 占位。");
-            Logger.Log("[BandwidthTest] M6 兼容模式（receiver 未连接）：不执行自扫，返回 Fail 占位。");
-
-            TestResult result = new TestResult
-            {
-                TestTime = DateTime.Now,
-                TestItem = TestName,
-                Value = 0.0,
-                Unit = "MHz",
-                Judgment = "Fail",
-                Remarks = "M6 兼容路径：receiver 未连接，仅占位（M6.x 已切换为 receiver 路径 + PTP 读数）。"
-            };
-            TestReportManager.Instance.Record(result);
-            return await Task.FromResult(result).ConfigureAwait(false);
-        }
+        // 旧 ExecuteLegacySinglePointAsync（M6 兼容单点路径）已随 mock 模式移除。
     }
 }

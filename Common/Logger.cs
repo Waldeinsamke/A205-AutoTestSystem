@@ -149,9 +149,19 @@ namespace A205AutoTestSystem.Common
                 {
                     handler(line);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 订阅方异常不应影响主流程
+                    // 订阅方异常不应影响主流程，但必须留痕以便排查
+                    // （不通过 Logger 自身输出，防止递归）
+                    try
+                    {
+                        Console.Error.WriteLine(
+                            $"[{DateTime.Now:HH:mm:ss.fff}][Logger] subscriber throw: {ex}");
+                    }
+                    catch
+                    {
+                        // 兜底：连 Console.Error 都不可用时静默
+                    }
                 }
             }
         }

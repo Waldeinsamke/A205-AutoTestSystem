@@ -74,18 +74,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             return gain;
         }
 
-        // 兼容路径（M6 单点模式）字段
-        private readonly SignalGenerator _rfSingle;
-        private readonly SignalGeneratorLO _loSingle;
-        private readonly SpectrumAnalyzer _saSingle;
-        private readonly double _rfFreqHzSingle;
-        private readonly double _rfPowerDbmSingle;
-        private readonly double _loFreqHzSingle;
-        private readonly double _loPowerDbmSingle;
-        private readonly double _ifFreqHzSingle;
-        private readonly int _settleDelayMsSingle;
-        private readonly ReceiverMode _singleMode;   // M6 单点路径使用的模式（用于取 GainLimits）
-
         // M6.x 路径（receiver + 模式×频点循环）字段
         private readonly ReceiverSerialPort _receiver;
         private readonly SignalGenerator _rfLoop;
@@ -99,90 +87,19 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private readonly IReadOnlyList<ReceiverMode> _modes;
         private readonly int _settleDelayMsLoop;
 
-        // 兼容标志
-        private readonly bool _isLegacySinglePoint;
-
-        /// <summary>等待信号稳定的延时（毫秒）。M6 阶段固定 200ms。</summary>
+        /// <summary>等待信号稳定的延时（毫秒）。M6.x 默认 200ms。</summary>
         private const int DefaultSettleDelayMs = 200;
 
         // M6.x 时序常量（每频点总时长 ~1s；模式切换 2s；读 peak 后 200ms 余量给 SA 扫下一帧）
         private const int RfLoStableMs = 200;        // RF/LO 频率切换 + PLL 锁相稳定
         private const int BandStableMs = 500;        // 频段命令后等 0.5s 再读 peak（推测 9 + Q2）
-        private const int ModeStableMs = 1500;       // 模式切换后稳定（按 M6.x 用户要求 1.5s）
+        private const int ModeStableMs = 1000;       // 模式切换后稳定
         private const int PostReadDelayMs = 200;     // 读 peak 后等频谱仪扫到下一帧（Q5=b）
 
-        /// <summary>频谱仪参考电平（dBm）。推测 2：峰 -10 dBm 占满 0-10 dBm 量程。</summary>
+        /// <summary>频谱仪参考电平（dBm）。Mode1/3 用 10 dBm（RF=-20 dBm 路径）；
+        /// Mode2 RF=-10 dBm 比其他模式高 10 dB，参考电平提到 20 dBm 避免 IF 信号饱和屏幕顶端。</summary>
         private const double SaReferenceLevelDbm = 10.0;
-
-        // ============================================================
-        // 构造（M6 兼容）
-        // ============================================================
-
-        /// <summary>
-        /// M6 阶段单点测试构造（兼容保留）。
-        /// <para>不接 receiver、不循环，按 M6 旧语义只跑一次。</para>
-        /// </summary>
-        public GainTest(
-            SignalGenerator rfGenerator,
-            SignalGeneratorLO loGenerator,
-            SpectrumAnalyzer spectrumAnalyzer,
-            double rfFreqHz,
-            double rfPowerDbm,
-            double loFreqHz,
-            double loPowerDbm,
-            double ifFreqHz)
-        {
-            if (rfGenerator == null) throw new ArgumentNullException(nameof(rfGenerator));
-            if (loGenerator == null) throw new ArgumentNullException(nameof(loGenerator));
-            if (spectrumAnalyzer == null) throw new ArgumentNullException(nameof(spectrumAnalyzer));
-            if (rfFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(rfFreqHz));
-            if (loFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(loFreqHz));
-            if (ifFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(ifFreqHz));
-
-            _rfSingle = rfGenerator;
-            _loSingle = loGenerator;
-            _saSingle = spectrumAnalyzer;
-            _rfFreqHzSingle = rfFreqHz;
-            _rfPowerDbmSingle = rfPowerDbm;
-            _loFreqHzSingle = loFreqHz;
-            _loPowerDbmSingle = loPowerDbm;
-            _ifFreqHzSingle = ifFreqHz;
-            _settleDelayMsSingle = DefaultSettleDelayMs;
-            _singleMode = ReceiverMode.Mode1;   // 显式未传模式，按 Mode1 取判据（兼容旧调用）
-            _isLegacySinglePoint = true;
-        }
-
-        /// <summary>
-        /// M6 阶段单点测试构造重载（mode → LO 自动计算）。
-        /// </summary>
-        public GainTest(
-            SignalGenerator rfGenerator,
-            SignalGeneratorLO loGenerator,
-            SpectrumAnalyzer spectrumAnalyzer,
-            double rfFreqHz,
-            double rfPowerDbm,
-            int mode,
-            double loPowerDbm,
-            double ifFreqHz)
-        {
-            if (rfGenerator == null) throw new ArgumentNullException(nameof(rfGenerator));
-            if (loGenerator == null) throw new ArgumentNullException(nameof(loGenerator));
-            if (spectrumAnalyzer == null) throw new ArgumentNullException(nameof(spectrumAnalyzer));
-            if (rfFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(rfFreqHz));
-            if (ifFreqHz <= 0) throw new ArgumentOutOfRangeException(nameof(ifFreqHz));
-
-            _rfSingle = rfGenerator;
-            _loSingle = loGenerator;
-            _saSingle = spectrumAnalyzer;
-            _rfFreqHzSingle = rfFreqHz;
-            _rfPowerDbmSingle = rfPowerDbm;
-            _loFreqHzSingle = LoFrequencyRule.Calculate(rfFreqHz, mode);
-            _loPowerDbmSingle = loPowerDbm;
-            _ifFreqHzSingle = ifFreqHz;
-            _settleDelayMsSingle = DefaultSettleDelayMs;
-            _singleMode = (ReceiverMode)mode;
-            _isLegacySinglePoint = true;
-        }
+        private const double SaReferenceLevelMode2Dbm = 20.0;
 
         // ============================================================
         // 构造（M6.x 全功能）
@@ -224,14 +141,13 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _channel = channel;
             _modes = modes;
             _settleDelayMsLoop = settleDelayMs;
-            _isLegacySinglePoint = false;
         }
 
         public string TestName => "线性最大增益";
         public string Unit => "dB";
 
         // UI 单行展示用：固定返回 Mode1 的判据区间。
-        // 真实判定在 ExecuteSinglePointAsync / ExecuteModeBandSweepAsync 中按当前 mode 查询。
+        // 真实判定在 ExecuteModeBandSweepAsync 中按当前 mode 查询。
         private static readonly (double Lower, double Upper) DisplayLimits = GetGainLimits(ReceiverMode.Mode1);
 
         /// <summary>判据下限（dB），展示 Mode1 区间。null 表示不设下限。</summary>
@@ -245,69 +161,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             if (progress == null) throw new ArgumentNullException(nameof(progress));
             ct.ThrowIfCancellationRequested();
 
-            if (_isLegacySinglePoint)
-            {
-                return await ExecuteSinglePointAsync(progress, ct).ConfigureAwait(false);
-            }
             return await ExecuteModeBandSweepAsync(progress, ct).ConfigureAwait(false);
-        }
-
-        // ============================================================
-        // M6 兼容：单点
-        // ============================================================
-
-        private async Task<TestResult> ExecuteSinglePointAsync(IProgress<string> progress, CancellationToken ct)
-        {
-            progress.Report("[GainTest] 配置 RF 信号源…");
-            Logger.Log("[GainTest] 配置 RF 信号源…");
-            _rfSingle.SetFrequency(_rfFreqHzSingle);
-            _rfSingle.SetPower(_rfPowerDbmSingle);
-            _rfSingle.SetOutputState(true);
-
-            progress.Report("[GainTest] 配置 LO 信号源…");
-            Logger.Log("[GainTest] 配置 LO 信号源…");
-            _loSingle.SetFrequency(_loFreqHzSingle);
-            _loSingle.SetPower(_loPowerDbmSingle);
-            _loSingle.SetOutputState(true);
-
-            progress.Report("[GainTest] 配置频谱仪…");
-            Logger.Log("[GainTest] 配置频谱仪…");
-            _saSingle.SetCenterFrequency(_ifFreqHzSingle);
-            _saSingle.SetSpan(10_000);
-            _saSingle.SetResolutionBandwidth(1.0);
-
-            progress.Report($"[GainTest] 等待信号稳定 {_settleDelayMsSingle}ms…");
-            await Task.Delay(_settleDelayMsSingle, ct).ConfigureAwait(false);
-
-            progress.Report("[GainTest] 读取频谱仪峰值…");
-            double peakDbm = _saSingle.ReadPeakAmplitude();
-            double gain = peakDbm - _rfPowerDbmSingle;
-
-            var limits = GetGainLimits(_singleMode);
-            string msg = string.Format(
-                CultureInfo.InvariantCulture,
-                "[GainTest] mode={0} peak={1:F2} dBm, gain={2:F2} dB (limit=[{3:F2},{4:F2}])",
-                _singleMode, peakDbm, gain, limits.Lower, limits.Upper);
-            progress.Report(msg);
-            Logger.Log(msg);
-
-            bool pass = gain >= limits.Lower && gain <= limits.Upper;
-
-            TestResult result = new TestResult
-            {
-                TestTime = DateTime.Now,
-                TestItem = TestName,
-                Value = ToReportValue(_singleMode, gain),
-                Unit = Unit,
-                Judgment = pass ? "Pass" : "Fail",
-                Remarks = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "{0}, RF={1:F3}MHz@{2}dBm, IF={3:F3}MHz, IFpeak={4:F2}dBm, gain={5:F2}dB",
-                    _singleMode,
-                    _rfFreqHzSingle / 1e6, _rfPowerDbmSingle, _ifFreqHzSingle / 1e6, peakDbm, gain)
-            };
-            TestReportManager.Instance.Record(result);
-            return result;
         }
 
         // ============================================================
@@ -366,9 +220,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     //    SendChannelThenModeCommand 内部自动在两条命令之间 Sleep(InterSequenceIntervalMs=100ms)。
                     _receiver.SendChannelThenModeCommand(_channel, mode);
 
-                    // B) 频谱仪：中心 = 当前 mode IF + Span 50MHz + 参考电平 10 dBm
+                    // B) 频谱仪：中心 = 当前 mode IF + Span 50MHz + 参考电平（Mode2 用 20 dBm，其余 10 dBm）
                     _saLoop.SetFrequencySpan(ifFreqHz, SaSpanModeHz);
-                    _saLoop.SetReferenceLevel(SaReferenceLevelDbm);
+                    _saLoop.SetReferenceLevel(
+                        mode == ReceiverMode.Mode2 ? SaReferenceLevelMode2Dbm : SaReferenceLevelDbm);
 
                     // C) RF/LO 功率
                     _rfLoop.SetPower(rfPowerDbm);
