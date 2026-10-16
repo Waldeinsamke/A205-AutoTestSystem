@@ -151,7 +151,13 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     spectrumAnalyzer: sa,
                     channel: channel,
                     modes: allModes),
-                new NotImplementedTestItem("饱和输出电平"),
+                new SaturatedOutputTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: allModes),
                 new AgcControlTest(
                     receiver: receiver,
                     rfGenerator: rf,

@@ -351,10 +351,16 @@ namespace A205AutoTestSystem.UI
             if (lo == null) throw new ArgumentNullException(nameof(lo));
             if (sa == null) throw new ArgumentNullException(nameof(sa));
 
-            // 释放旧实例（避免泄漏真机 VISA 句柄）
-            try { _rf?.Dispose(); } catch { }
-            try { _lo?.Dispose(); } catch { }
-            try { _sa?.Dispose(); } catch { }
+            // 释放旧实例（避免泄漏真机 VISA 句柄）。
+            // 关键：必须 ReferenceEquals 判断后再 Dispose，避免误释放
+            // ReceiverControlPanel 持有的活实例——那是我们"借用"的对象，不是"持有"。
+            // 误释放会跑到 VisaBaseInstrument.Disconnect 的非短路分支，
+            // 写"disconnected from"日志 + 触发 ConnectionChanged(false) →
+            // 状态灯被误变红 + AutoTestPanel 拿到的引用指向已 dispose 的尸体。
+            // 同对象跳过；不同对象才 Dispose 旧引用（之前可能是不同连接批次留下的旧实例）。
+            if (!ReferenceEquals(_rf, rf)) { try { _rf?.Dispose(); } catch { } }
+            if (!ReferenceEquals(_lo, lo)) { try { _lo?.Dispose(); } catch { } }
+            if (!ReferenceEquals(_sa, sa)) { try { _sa?.Dispose(); } catch { } }
 
             _rf = rf;
             _lo = lo;

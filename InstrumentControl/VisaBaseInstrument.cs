@@ -271,14 +271,53 @@ namespace A205AutoTestSystem.InstrumentControl
                 }
                 catch (Exception ex)
                 {
-                    // 非瞬态错误直接抛出，并触发观测事件
+                    // 非瞬态错误：直接标记仪表失联（IsConnected=false + ConnectionChanged(false) +
+                    // 安全释放 transport），再抛出。这样上层 UI 能立即看到"已断开"，
+                    // 避免线缆掉了但 IsConnected 字段还卡 true、导致「一键连接」走"已连接"快路径
+                    // 跳过重连，直到下次发命令才报错。
+                    MarkInstrumentLost(ex, "non-transient exception");
                     InstrumentError?.Invoke(ex);
                     throw;
                 }
             }
 
+            // 重试耗尽（瞬态错误也未能恢复）：同样视为失联。
+            MarkInstrumentLost(lastEx, "transient retry exhausted");
             InstrumentError?.Invoke(lastEx);
             throw lastEx;
+        }
+
+        /// <summary>
+        /// 把仪表标记为"已失联"：清 <see cref="IsConnected"/> 标志、触发
+        /// <see cref="ConnectionChanged"/> 事件让 UI 状态灯自动变红、安全释放底层
+        /// VISA transport 句柄。
+        /// <para>仅在 <see cref="IsConnected"/> == true 时执行一次，避免重复触发事件。
+        /// 释放阶段的异常由 <see cref="SafeDisposeTransport"/> 内部吞掉，不会影响外层抛错链路。</para>
+        /// </summary>
+        /// <param name="cause">引发失联的异常（可为 null）。</param>
+        /// <param name="reasonTag">失联分类标签，写日志用（"non-transient exception" / "transient retry exhausted"）。</param>
+        protected void MarkInstrumentLost(Exception cause, string reasonTag)
+        {
+            if (!IsConnected && _transport == null)
+            {
+                return;
+            }
+
+            IsConnected = false;
+            string msg = cause == null ? "(no exception)" : cause.Message;
+            Logger.Log(
+                $"[VISA:{GetType().Name}] 标记为失联 ({reasonTag}): {msg}");
+            SafeDisposeTransport();
+            try
+            {
+                ConnectionChanged?.Invoke(false);
+            }
+            catch (Exception cbEx)
+            {
+                // 订阅方抛异常不影响主流程；只记日志
+                Logger.Log(
+                    $"[VISA:{GetType().Name}] ConnectionChanged(false) 订阅方异常: {cbEx.Message}");
+            }
         }
 
         private static bool IsTransientError(VisaException ex)

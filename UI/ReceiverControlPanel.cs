@@ -100,6 +100,14 @@ namespace A205AutoTestSystem.UI
                 try { Logger.MessageLogged -= OnLogMessage; }
                 catch { /* 静默 */ }
 
+                // 先退订仪表 ConnectionChanged 事件,避免 Dispose 阶段触发回调访问已释放控件。
+                // (基类 VisaBaseInstrument.Dispose → Disconnect 不会触发 ConnectionChanged(false),
+                //  但显式退订更稳:防止将来基类改了语义导致页面销毁后仍有事件穿透。)
+                try { if (_rfGenerator != null) _rfGenerator.ConnectionChanged -= OnRfConnectionChanged; } catch { }
+                try { if (_loGenerator != null) _loGenerator.ConnectionChanged -= OnLoConnectionChanged; } catch { }
+                try { if (_spectrumAnalyzer != null) _spectrumAnalyzer.ConnectionChanged -= OnSaConnectionChanged; } catch { }
+                try { if (_powerSupply != null) _powerSupply.ConnectionChanged -= OnPowerConnectionChanged; } catch { }
+
                 // 关闭业务资源
                 try { _receiver?.Close(); } catch { }
                 try { _receiver?.Dispose(); } catch { }
@@ -560,10 +568,17 @@ namespace A205AutoTestSystem.UI
 
         private bool TryConnectRf()
         {
+            // 已"声称连接"成功,但 IsConnected 字段在线缆掉了时不会自己变 false,
+            // 必须主动 ping 一次(*IDN?)确认 session 还活着。探测失败 → 当作失联,
+            // 走 DisconnectRf 释放旧对象,然后再走完整重连流程,避免 UI 卡"已连接"。
             if (_rfGenerator != null && _rfGenerator.IsConnected)
             {
-                Logger.Log("[UI] RF 信号源已连接，跳过。");
-                return true;
+                if (PingInstrument(_rfGenerator, "RF"))
+                {
+                    return true;
+                }
+                Logger.Log("[UI] RF 信号源 *IDN? 探测失败,按失联处理走重连。");
+                DisconnectRf();
             }
             if (string.IsNullOrWhiteSpace(txtRfAddress.Text))
             {
@@ -574,6 +589,7 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _rfGenerator = new SignalGenerator(txtRfAddress.Text.Trim());
+                _rfGenerator.ConnectionChanged += OnRfConnectionChanged;
                 _rfGenerator.Connect();
                 pnlRfStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] RF signal generator connected.");
@@ -586,11 +602,34 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 pnlRfStatus.BackColor = StatusColorDisconnected;
-                try { _rfGenerator?.Dispose(); } catch { }
+                if (_rfGenerator != null)
+                {
+                    try { _rfGenerator.ConnectionChanged -= OnRfConnectionChanged; } catch { }
+                    try { _rfGenerator.Dispose(); } catch { }
+                }
                 _rfGenerator = null;
                 Logger.Log("[Error] RF 连接失败: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// RF 信号源 ConnectionChanged 事件回调：失联(IsConnected=false)时把状态灯变红,
+        /// 避免线缆掉了但 UI 还显示绿色(原 IsConnected 字段不会自己变 false)。
+        /// </summary>
+        private void OnRfConnectionChanged(bool isConnected)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<bool>(OnRfConnectionChanged), isConnected); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+            if (pnlRfStatus != null && !pnlRfStatus.IsDisposed)
+            {
+                pnlRfStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+            }
+            Logger.Log($"[UI] RF 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
         }
 
         private void DisconnectRf()
@@ -598,6 +637,7 @@ namespace A205AutoTestSystem.UI
             if (_rfGenerator == null) return;
             try
             {
+                try { _rfGenerator.ConnectionChanged -= OnRfConnectionChanged; } catch { }
                 _rfGenerator.Disconnect();
                 Logger.Log("[UI] RF signal generator disconnected.");
             }
@@ -609,16 +649,24 @@ namespace A205AutoTestSystem.UI
             {
                 try { _rfGenerator?.Dispose(); } catch { }
                 _rfGenerator = null;
-                pnlRfStatus.BackColor = StatusColorDisconnected;
+                if (pnlRfStatus != null && !pnlRfStatus.IsDisposed)
+                {
+                    pnlRfStatus.BackColor = StatusColorDisconnected;
+                }
             }
         }
 
         private bool TryConnectLo()
         {
+            // 已"声称连接"成功 → 先 *IDN? 探测,失败按失联处理走重连（参见 TryConnectRf 注释）
             if (_loGenerator != null && _loGenerator.IsConnected)
             {
-                Logger.Log("[UI] LO 信号源已连接，跳过。");
-                return true;
+                if (PingInstrument(_loGenerator, "LO"))
+                {
+                    return true;
+                }
+                Logger.Log("[UI] LO 信号源 *IDN? 探测失败,按失联处理走重连。");
+                DisconnectLo();
             }
             if (string.IsNullOrWhiteSpace(txtLoAddress.Text))
             {
@@ -629,6 +677,7 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _loGenerator = new SignalGeneratorLO(txtLoAddress.Text.Trim());
+                _loGenerator.ConnectionChanged += OnLoConnectionChanged;
                 _loGenerator.Connect();
                 pnlLoStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] LO signal generator connected.");
@@ -641,11 +690,31 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 pnlLoStatus.BackColor = StatusColorDisconnected;
-                try { _loGenerator?.Dispose(); } catch { }
+                if (_loGenerator != null)
+                {
+                    try { _loGenerator.ConnectionChanged -= OnLoConnectionChanged; } catch { }
+                    try { _loGenerator.Dispose(); } catch { }
+                }
                 _loGenerator = null;
                 Logger.Log("[Error] LO 连接失败: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>LO 信号源 ConnectionChanged 回调（参见 OnRfConnectionChanged 注释）。</summary>
+        private void OnLoConnectionChanged(bool isConnected)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<bool>(OnLoConnectionChanged), isConnected); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+            if (pnlLoStatus != null && !pnlLoStatus.IsDisposed)
+            {
+                pnlLoStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+            }
+            Logger.Log($"[UI] LO 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
         }
 
         private void DisconnectLo()
@@ -653,6 +722,7 @@ namespace A205AutoTestSystem.UI
             if (_loGenerator == null) return;
             try
             {
+                try { _loGenerator.ConnectionChanged -= OnLoConnectionChanged; } catch { }
                 _loGenerator.Disconnect();
                 Logger.Log("[UI] LO signal generator disconnected.");
             }
@@ -664,16 +734,24 @@ namespace A205AutoTestSystem.UI
             {
                 try { _loGenerator?.Dispose(); } catch { }
                 _loGenerator = null;
-                pnlLoStatus.BackColor = StatusColorDisconnected;
+                if (pnlLoStatus != null && !pnlLoStatus.IsDisposed)
+                {
+                    pnlLoStatus.BackColor = StatusColorDisconnected;
+                }
             }
         }
 
         private bool TryConnectSa()
         {
+            // 已"声称连接"成功 → 先 *IDN? 探测,失败按失联处理走重连（参见 TryConnectRf 注释）
             if (_spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected)
             {
-                Logger.Log("[UI] 频谱仪已连接，跳过。");
-                return true;
+                if (PingInstrument(_spectrumAnalyzer, "频谱仪"))
+                {
+                    return true;
+                }
+                Logger.Log("[UI] 频谱仪 *IDN? 探测失败,按失联处理走重连。");
+                DisconnectSa();
             }
             if (string.IsNullOrWhiteSpace(txtSaAddress.Text))
             {
@@ -684,6 +762,7 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _spectrumAnalyzer = new SpectrumAnalyzer(txtSaAddress.Text.Trim());
+                _spectrumAnalyzer.ConnectionChanged += OnSaConnectionChanged;
                 _spectrumAnalyzer.Connect();
                 pnlSaStatus.BackColor = StatusColorConnected;
                 Logger.Log("[UI] Spectrum analyzer connected.");
@@ -692,11 +771,31 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 pnlSaStatus.BackColor = StatusColorDisconnected;
-                try { _spectrumAnalyzer?.Dispose(); } catch { }
+                if (_spectrumAnalyzer != null)
+                {
+                    try { _spectrumAnalyzer.ConnectionChanged -= OnSaConnectionChanged; } catch { }
+                    try { _spectrumAnalyzer.Dispose(); } catch { }
+                }
                 _spectrumAnalyzer = null;
                 Logger.Log("[Error] 频谱仪连接失败: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>频谱仪 ConnectionChanged 回调（参见 OnRfConnectionChanged 注释）。</summary>
+        private void OnSaConnectionChanged(bool isConnected)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<bool>(OnSaConnectionChanged), isConnected); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+            if (pnlSaStatus != null && !pnlSaStatus.IsDisposed)
+            {
+                pnlSaStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+            }
+            Logger.Log($"[UI] 频谱仪连接状态变化: {(isConnected ? "已连接" : "已断开")}");
         }
 
         private void DisconnectSa()
@@ -704,6 +803,7 @@ namespace A205AutoTestSystem.UI
             if (_spectrumAnalyzer == null) return;
             try
             {
+                try { _spectrumAnalyzer.ConnectionChanged -= OnSaConnectionChanged; } catch { }
                 _spectrumAnalyzer.Disconnect();
                 Logger.Log("[UI] Spectrum analyzer disconnected.");
             }
@@ -715,7 +815,10 @@ namespace A205AutoTestSystem.UI
             {
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
                 _spectrumAnalyzer = null;
-                pnlSaStatus.BackColor = StatusColorDisconnected;
+                if (pnlSaStatus != null && !pnlSaStatus.IsDisposed)
+                {
+                    pnlSaStatus.BackColor = StatusColorDisconnected;
+                }
                 // 断连时复位频谱仪 Toggle 按钮本地状态与按钮文字
                 ResetSaToggleStates();
             }
@@ -739,10 +842,15 @@ namespace A205AutoTestSystem.UI
 
         private bool TryConnectPower()
         {
+            // 已"声称连接"成功 → 先 *IDN? 探测,失败按失联处理走重连（参见 TryConnectRf 注释）
             if (_powerSupply != null && _powerSupply.IsConnected)
             {
-                Logger.Log("[UI] 电源已连接，跳过。");
-                return true;
+                if (PingInstrument(_powerSupply, "电源"))
+                {
+                    return true;
+                }
+                Logger.Log("[UI] 电源 *IDN? 探测失败,按失联处理走重连。");
+                DisconnectPower();
             }
             if (string.IsNullOrWhiteSpace(txtPowerAddress.Text))
             {
@@ -753,6 +861,7 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _powerSupply = new ODP3063(txtPowerAddress.Text.Trim());
+                _powerSupply.ConnectionChanged += OnPowerConnectionChanged;
                 _powerSupply.Connect();
                 pnlPowerStatus.BackColor = StatusColorConnected;
                 // 连接后查询 CH2 实际输出状态，按真实状态同步按钮文字与本地状态。
@@ -764,11 +873,31 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 pnlPowerStatus.BackColor = StatusColorDisconnected;
-                try { _powerSupply?.Dispose(); } catch { }
+                if (_powerSupply != null)
+                {
+                    try { _powerSupply.ConnectionChanged -= OnPowerConnectionChanged; } catch { }
+                    try { _powerSupply.Dispose(); } catch { }
+                }
                 _powerSupply = null;
                 Logger.Log("[Error] 电源连接失败: " + ex.Message);
                 return false;
             }
+        }
+
+        /// <summary>电源 ConnectionChanged 回调（参见 OnRfConnectionChanged 注释）。</summary>
+        private void OnPowerConnectionChanged(bool isConnected)
+        {
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<bool>(OnPowerConnectionChanged), isConnected); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+            if (pnlPowerStatus != null && !pnlPowerStatus.IsDisposed)
+            {
+                pnlPowerStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+            }
+            Logger.Log($"[UI] 电源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
         }
 
         /// <summary>
@@ -803,6 +932,7 @@ namespace A205AutoTestSystem.UI
             if (_powerSupply == null) return;
             try
             {
+                try { _powerSupply.ConnectionChanged -= OnPowerConnectionChanged; } catch { }
                 _powerSupply.Disconnect();
                 Logger.Log("[UI] ODP3063 power supply disconnected.");
             }
@@ -814,10 +944,16 @@ namespace A205AutoTestSystem.UI
             {
                 try { _powerSupply?.Dispose(); } catch { }
                 _powerSupply = null;
-                pnlPowerStatus.BackColor = StatusColorDisconnected;
+                if (pnlPowerStatus != null && !pnlPowerStatus.IsDisposed)
+                {
+                    pnlPowerStatus.BackColor = StatusColorDisconnected;
+                }
                 // 下次连接仍按默认 OFF 处理，按钮恢复对应文字
                 _powerOutputOn = false;
-                btnOpenPower.Text = "开启供电";
+                if (btnOpenPower != null && !btnOpenPower.IsDisposed)
+                {
+                    btnOpenPower.Text = "开启供电";
+                }
             }
         }
 
@@ -855,6 +991,42 @@ namespace A205AutoTestSystem.UI
             DisconnectSa();
             DisconnectPower();
             Logger.Log("[UI] ===== 一键断开完成 =====");
+        }
+
+        // ============================================================
+        // 仪表活性探测（用于线缆检测场景）
+        // ============================================================
+
+        /// <summary>
+        /// 对已"声称连接"的仪表发一条只读 SCPI（<c>*IDN?</c>）确认 session 还活着。
+        /// <para>线缆掉了的时候 <see cref="VisaBaseInstrument.IsConnected"/> 字段不会自己变 false，
+        /// 但发命令会立刻抛 <see cref="Ivi.Visa.VisaException"/>，借此判断 session 是否已失联。</para>
+        /// <para>返回 true = session 健康，可复用；返回 false = session 失联，
+        /// 调用方应当走 <c>Disconnect*</c> 释放旧对象、走完整重连流程。</para>
+        /// <para>任何异常都被吞掉并返回 false，绝不向上抛——这是 UI 层"探测 + 决定是否复用"的判定,
+        /// 真实异常会由后续重连流程统一报给用户。</para>
+        /// </summary>
+        private static bool PingInstrument(VisaBaseInstrument instrument, string tag)
+        {
+            if (instrument == null || !instrument.IsConnected)
+            {
+                return false;
+            }
+            try
+            {
+                string resp = instrument.QueryString("*IDN?");
+                if (string.IsNullOrWhiteSpace(resp))
+                {
+                    Logger.Log($"[UI] {tag} *IDN? 返回空响应,视为失联。");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[UI] {tag} *IDN? 探测失败(可能已掉线): {ex.Message}");
+                return false;
+            }
         }
 
         // ============================================================
@@ -1055,20 +1227,31 @@ namespace A205AutoTestSystem.UI
                 // 2) 断开接收机串口
                 BestEffortDisconnectReceiver();
 
-                // 3) 电源断电；失败保持"关闭供电"状态，提示用户重试
+                // 3) 电源断电；VISA 命令异常仅记日志 + 弹窗，本地状态走 finally 强制复位，
+                //    避免仪表掉线后 _powerOutputOn 卡在 true 导致"一键断开"被永久阻塞。
                 try
                 {
                     _powerSupply.EnableChannel2Output(false);
-                    _powerOutputOn = false;
-                    btnOpenPower.Text = "开启供电";
                     Logger.Log("[UI] Power output disabled.");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log("[Error] 电源关闭失败: " + ex.Message);
+                    Logger.Log("[Error] 电源关闭失败（检查线缆连接状态）: " + ex.Message);
                     MessageBox.Show(this,
-                        "电源关闭失败: " + ex.Message + "\n（信号输出已关闭、接收机串口已断开，请排查后重试关闭供电）",
+                        "电源关闭失败(检查线缆连接状态),本地状态已强制复位,请检查连接后按一键断开",
                         "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                finally
+                {
+                    // 无论 VISA 命令成功还是失败，本地 UI 状态都强制复位到 OFF：
+                    //   - 仪表确实 OFF:状态正确;
+                    //   - 仪表掉线/通信失败:状态也复位,允许后续"一键断开"重新走一遍清理路径,
+                    //     不会再卡死在"必须先关闭供电"。
+                    _powerOutputOn = false;
+                    if (btnOpenPower != null && !btnOpenPower.IsDisposed)
+                    {
+                        btnOpenPower.Text = "开启供电";
+                    }
                 }
             }
         }
