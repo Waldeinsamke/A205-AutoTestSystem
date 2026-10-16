@@ -63,6 +63,14 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
+    <!-- M-2026-10: NPOI 2.7 在反序列化 .xlsx 时需要 AsSpan() 方法,
+         依赖 System.Runtime.CompilerServices.Unsafe.dll。
+         该 DLL 不在 .NET Framework BCL 里,需要从 NuGet System.Runtime.CompilerServices.Unsafe 6.1.2
+         的 lib/net462 目录拷贝到 lib/。-->
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <!-- 被测源（只包含 Excel 报告相关的最小集合）-->
