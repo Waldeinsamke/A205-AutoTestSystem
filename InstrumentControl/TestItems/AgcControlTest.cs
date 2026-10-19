@@ -34,12 +34,37 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         // ============================================================
 
         private const double SaReferenceLevelDbm = 10.0;
+        /// <summary>
+        /// AGC=60 dB 单档专用参考电平。AGC=60 时 IF 信号已沉到噪声底附近，
+        /// 默认 10 dBm 参考电平下信号看不清；压到 −15 dBm 抬高屏顶，
+        /// 让 IF 信号在更密的单位刻度下浮出来，从而能读到真实 delta。
+        /// </summary>
+        private const double Agc60dBReferenceLevelDbm = -10.0;
         private const double SaSpanHz = 50_000_000.0;
         private const int ModeStableMs = 1500;
         private const int BandStableMs = 500;
         private const int RfLoStableMs = 200;
-        private const int MaxHoldSettleMs = 500;
-        private const int AgcStepStableMs = 500;     // AGC 衰减切换后稳定时间
+        // AGC=0dB 设参考点前等待时间 + 频点末切换频段前等待时间。
+        // 早先带 "MaxHold" 前缀是因为配合 :TRACE1:MODE MAXH 用，现已不用 MAXH（理由见
+        // ExecuteOneFreqAsync 入口注释）。但这个常量语义仍是"等频谱仪在标准 sweep 模式下
+        // 把新频点的 trace 扫稳定、marker1 找到真实 peak 后再设 DELTA 模式锁定参考点"，
+        // 因此改名 TraceSettleMs 保留。
+        // 500ms 实测不够（marker1 PEAK 尚未收敛，DELTA 参考点是 dangle 值），
+        // 改为 1000ms 留余量。
+        private const int TraceSettleMs = 500;
+        /// <summary>
+        /// AGC=0 设完 marker1 + DELTA 之后、5 档循环启动前的额外等待。
+        /// 让频谱仪在 MAX:PEAK 状态上多扫几帧，
+        /// 确保 marker1 已锁在真 peak 上、DELTA 参考点是有效基准，
+        /// 再开始切各档衰减。500ms 紧贴 marker1 设上即读会读到 dangle 值。
+        /// </summary>
+        private const int MarkerPostSetupDelayMs = 500;
+        // AGC 衰减切换后稳定时间：等待 IF 信号在 AGC 衰减器物理切换 + 接收机内部重锁相 +
+        // 频谱仪在标准 sweep 模式（不用 MAXH，理由见 ExecuteOneFreqAsync 入口注释）
+        // 下扫到新档位的真实 IF peak 之后再读 :CALC:MARK1:Y?，
+        // 避免读到 dangle state 导致 abs(delta)=0。
+        // 500ms 实测不够稳定（每档读数全为 0），改为 1500ms 留余量。
+        private const int AgcStepStableMs = 1500;    // AGC 衰减切换后稳定时间
 
         private const double SaCenterFreqMode12Hz = 70_000_000.0;
         private const double SaCenterFreqMode3Hz = 750_000_000.0;
@@ -63,7 +88,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         public static readonly IReadOnlyDictionary<ReceiverMode, double[]> DefaultTestFreqsMHzPerMode =
             new Dictionary<ReceiverMode, double[]>
             {
-                { ReceiverMode.Mode1, new[] { 225.0 } },
+                { ReceiverMode.Mode1, new[] { 220.0 } },
                 { ReceiverMode.Mode2, new[] { 1090.0 } },
                 { ReceiverMode.Mode3, new[] { 900.0, 1500.0, 2000.0, 3000.0 } },
             };
@@ -250,25 +275,36 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _receiver.SendBandCommand(mode, band.BandIndex);
             await Task.Delay(BandStableMs, ct).ConfigureAwait(false);
 
-            // 重置 SA 状态：先关再开最大保持 + 清 marker
-            _sa.SetMaxHold(false);
-            _sa.SetMaxHold(true);
+            // 重置 SA 状态：清 marker，**不开 MAXH**。
+            // MAXH（最大保持）会保留历史最高值，而 AGC 测试是要测 IF 峰值
+            // 在 AGC 衰减下逐档变低；MAXH 模式下 trace 不会随信号降低而更新，
+            // marker1 PEAK 在每个 AGC 档都跑回到 MAXH 最初累积的最大峰上，
+            // DELTA 的"参考点"也被锁在这个旧峰，导致 :CALC:MARK1:Y? 持续读到
+            // 异常值（Dangle 状态，5 档全为 0）。
+            // 这里只切到标准 sweep 模式（默认即 WRITe，不再 :TRACE1:MODE MAXH），
+            // 同时清掉 marker 让频点从干净状态开始。
             _sa.SetAllMarkOFF();
 
             // 起步 RF 功率
             _rf.SetPower(rfStartPowerDbm);
             await Task.Delay(RfLoStableMs, ct).ConfigureAwait(false);
 
-            // AGC = 0 dB 设参考点（不记 Result）
+            // AGC = 0 dB 设参考点（不记 Result）。
+            // 等 TraceSettleMs 让 marker1 在标准 sweep 模式下找到真 peak，
+            // 再设 :CALC:MARK1:MODE DELTA 锁定参考点（下面 try 块）。
             _receiver.SendAttenuationCommand(_channel, 0);
-            await Task.Delay(MaxHoldSettleMs, ct).ConfigureAwait(false);
+            await Task.Delay(TraceSettleMs, ct).ConfigureAwait(false);
 
             // 激活 marker1 + 设 DELTA 模式
             try
             {
-                _sa.QueryString(":CALC:MARK1:STAT ON");
-                _sa.QueryString(":CALC:MARK1:MAX:PEAK");
-                _sa.QueryString(":CALC:MARK1:MAX:PEAK:SEARCH");
+                // 注意：SCPI 的 STAT ON / MAX:PEAK / MAX:PEAK:SEARCH / MODE DELTA 都是 set 命令（无 '?'），
+                //       必须用 SendCommand；用 QueryString 会因为"等不到响应"触发 IOTimeoutException，
+                //       而该异常的 HResult 又不被 ExecuteWithRetry 识别为瞬态错误，
+                //       最终会走 non-transient 分支触发 MarkInstrumentLost，导致频谱仪被误判为"已断开"。
+                _sa.SendCommand(":CALC:MARK1:STAT ON");
+                _sa.SendCommand(":CALC:MARK1:MAX:PEAK");
+                _sa.SendCommand(":CALC:MARK1:MAX:PEAK:SEARCH");
                 _sa.EnableDeltaMarker();   // :CALC:MARK1:MODE DELTA，参考点 = 当前 peak
             }
             catch (Exception ex)
@@ -278,6 +314,11 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 Logger.Log("[AgcControlTest] " + err);
                 return null;
             }
+
+            // 设完 marker1 + DELTA 之后、5 档循环启动之前多等一拍，
+            // 让频谱仪在标准 sweep 模式下多扫几帧，marker1 锁到真 peak，
+            // DELTA 参考点为有效基准，避免首档衰减读到 dangle 值。
+            await Task.Delay(MarkerPostSetupDelayMs, ct).ConfigureAwait(false);
 
             // 5 档扫描
             // 收集：每档 abs(delta)、单步进误差；最后算累计误差
@@ -300,6 +341,24 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     stepFailReason = $"发 AGC={targetAtten}dB 失败：{ex.Message}";
                     break;
                 }
+
+                // 仅 AGC=60 dB：参考电平压到 −15 dBm 把 IF 信号从噪声底里抬出来
+                // 让频谱仪在更密的单位刻度下能读到真实 delta；其余档保持默认 10 dBm。
+                if (targetAtten == 60)
+                {
+                    try
+                    {
+                        _sa.SetReferenceLevel(Agc60dBReferenceLevelDbm);
+                    }
+                    catch (Exception ex)
+                    {
+                        stepFailReason = $"AGC=60dB 切参考电平到 {Agc60dBReferenceLevelDbm}dBm 失败：{ex.Message}";
+                        break;
+                    }
+                }
+
+                // 衰减命令发出后立即切参考电平（仅 60dB 档），然后等 AgcStepStableMs
+                // 让接收机内部稳态 + 频谱仪 sweeptime 收敛，再读 Y?。
                 await Task.Delay(AgcStepStableMs, ct).ConfigureAwait(false);
 
                 // 读 delta 累积值
@@ -414,9 +473,21 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 "[AgcControlTest] {0} {1}: 累计误差={2:F2}dB → {3}",
                 mode, band.DisplayName, cumulativeError, judgment));
 
-            // 复位：关最大保持（切回 WRITe），DELTA 在下个频点重设
-            _sa.SetMaxHold(false);
-            await Task.Delay(MaxHoldSettleMs, ct).ConfigureAwait(false);
+            // 复位：清 marker + 恢复参考电平（AGC=60 档可能被切到了 −15 dBm） + 等下一频点 trace 收敛。
+            // 不再切 MAXH（见 ExecuteOneFreqAsync 入口注释），
+            // DELTA 在下个频点重设即可。
+            _sa.SetAllMarkOFF();
+            try
+            {
+                _sa.SetReferenceLevel(SaReferenceLevelDbm);   // 恢复默认 10 dBm
+            }
+            catch (Exception ex)
+            {
+                // 恢复失败只记日志，不影响主流程
+                Logger.Log($"[AgcControlTest] {mode} {band.DisplayName} 恢复参考电平到 " +
+                           $"{SaReferenceLevelDbm}dBm 失败：{ex.Message}");
+            }
+            await Task.Delay(TraceSettleMs, ct).ConfigureAwait(false);
 
             return lastWritten;
         }
