@@ -35,9 +35,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
         private const double SaReferenceLevelDbm = 10.0;
         /// <summary>
-        /// AGC=60 dB 单档专用参考电平。AGC=60 时 IF 信号已沉到噪声底附近，
-        /// 默认 10 dBm 参考电平下信号看不清；压到 −15 dBm 抬高屏顶，
-        /// 让 IF 信号在更密的单位刻度下浮出来，从而能读到真实 delta。
+        /// AGC=60 dB 单档专用参考电平（dBm）。AGC=60 时 IF 信号已沉到噪声底附近，
+        /// 默认 10 dBm 参考电平下信号看不清；切到 −10 dBm 把屏顶压缩到 −10 附近
+        /// （让 IF 信号在更密的单位刻度下浮出来），从而能读到真实 delta。
         /// </summary>
         private const double Agc60dBReferenceLevelDbm = -10.0;
         private const double SaSpanHz = 50_000_000.0;
@@ -49,8 +49,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         // ExecuteOneFreqAsync 入口注释）。但这个常量语义仍是"等频谱仪在标准 sweep 模式下
         // 把新频点的 trace 扫稳定、marker1 找到真实 peak 后再设 DELTA 模式锁定参考点"，
         // 因此改名 TraceSettleMs 保留。
-        // 500ms 实测不够（marker1 PEAK 尚未收敛，DELTA 参考点是 dangle 值），
-        // 改为 1000ms 留余量。
+        // 实测 500ms 已够用，无需再放大。
         private const int TraceSettleMs = 500;
         /// <summary>
         /// AGC=0 设完 marker1 + DELTA 之后、5 档循环启动前的额外等待。

@@ -107,6 +107,18 @@ namespace A205AutoTestSystem.InstrumentControl
             SendCommand(string.Format(CultureInfo.InvariantCulture, ":SWE:POIN {0}", points));
         }
 
+        /// <summary>
+        /// 设置扫频步进（Hz）。对应 SCPI 命令 <c>:SOUR:SWE:FREQ:STEP:LIN {value} MHz</c>，
+        /// 是 Keysight N5173B / EXG / PSG 等信号源的"显式线性步进"命令。
+        /// <para>注意：根据 Keysight 信号源行为，<b>必须先设置 STAR 和 STOP</b>
+        /// 才能使用本命令，否则仪表会拒绝执行。</para>
+        /// </summary>
+        public void SetSweepStepLinear(double stepHz)
+        {
+            double stepMHz = stepHz / 1e6;
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":SOUR:SWE:FREQ:STEP:LIN {0} MHz", stepMHz));
+        }
+
         /// <summary>启用/禁用连续扫频。</summary>
         public void SetContinuousSweep(bool enable)
         {

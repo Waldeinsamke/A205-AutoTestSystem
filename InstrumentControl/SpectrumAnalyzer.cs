@@ -34,6 +34,23 @@ namespace A205AutoTestSystem.InstrumentControl
             SendCommand(string.Format(CultureInfo.InvariantCulture, ":FREQ:SPAN {0} MHz", spanMHz));
         }
 
+        /// <summary>设置起始频率（Hz）。按文档命令格式，转换为 MHz 字符串发出。
+        /// 对应 SCPI 命令：<c>:FREQ:STAR</c>。用于带外抑制扫描
+        /// （中频带外抑制测试需要避开 IF 中心 ±4 MHz 的"中频带"，分两段设 START/STOP）。</summary>
+        public void SetStartFrequency(double freqHz)
+        {
+            double freqMHz = freqHz / 1e6;
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":FREQ:STAR {0} MHz", freqMHz));
+        }
+
+        /// <summary>设置终止频率（Hz）。按文档命令格式，转换为 MHz 字符串发出。
+        /// 对应 SCPI 命令：<c>:FREQ:STOP</c>。</summary>
+        public void SetStopFrequency(double freqHz)
+        {
+            double freqMHz = freqHz / 1e6;
+            SendCommand(string.Format(CultureInfo.InvariantCulture, ":FREQ:STOP {0} MHz", freqMHz));
+        }
+
         /// <summary>设置分辨率带宽 RBW（kHz）。</summary>
         public void SetResolutionBandwidth(double bandwidthKHz)
         {

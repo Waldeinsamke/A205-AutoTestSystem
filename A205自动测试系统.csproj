@@ -97,6 +97,7 @@
     <Compile Include="InstrumentControl\TestItems\SaturatedOutputTest.cs" />
     <Compile Include="InstrumentControl\TestItems\AgcControlTest.cs" />
     <Compile Include="InstrumentControl\TestItems\IfRejectionTest.cs" />
+    <Compile Include="InstrumentControl\TestItems\OutOfBandRejectionTest.cs" />
     <Compile Include="InstrumentControl\TestItems\TestCatalog.cs" />
     <Compile Include="InstrumentControl\AutoTestEngine.cs" />
     <Compile Include="InstrumentControl\VisaBaseInstrument.cs" />
