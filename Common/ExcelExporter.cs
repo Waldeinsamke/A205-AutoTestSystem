@@ -49,6 +49,11 @@ namespace A205AutoTestSystem.Common
         private string _filePath;
         private bool _disposed;
 
+        // 共享正文样式：所有正文单元格按用户决策统一水平居中。
+        private ICellStyle _bodyCenterStyle;  // 通用居中（文本类用）
+        private ICellStyle _bodyValueStyle;   // 居中 + 数值 0.0
+        private ICellStyle _bodyTimeStyle;    // 居中 + 时间 yyyy-MM-dd HH:mm:ss
+
         /// <summary>当前已保存到的文件路径（首次 Save 后非 null）。</summary>
         public string FilePath => _filePath;
 
@@ -74,6 +79,23 @@ namespace A205AutoTestSystem.Common
             headerStyle.FillPattern = FillPattern.SolidForeground;
             headerStyle.Alignment = HorizontalAlignment.Center;
 
+            // 正文通用：水平居中（按用户决策，每一列都居中以保持整张表整齐）
+            _bodyCenterStyle = _workbook.CreateCellStyle();
+            _bodyCenterStyle.Alignment = HorizontalAlignment.Center;
+
+            // 正文 - 数值（保留 1 位小数）+ 居中。
+            // DataFormat 单独叠加，不影响 Alignment。
+            _bodyValueStyle = _workbook.CreateCellStyle();
+            _bodyValueStyle.Alignment = HorizontalAlignment.Center;
+            _bodyValueStyle.DataFormat = _workbook.GetCreationHelper()
+                .CreateDataFormat().GetFormat("0.0");
+
+            // 正文 - 时间（yyyy-MM-dd HH:mm:ss）+ 居中。
+            _bodyTimeStyle = _workbook.CreateCellStyle();
+            _bodyTimeStyle.Alignment = HorizontalAlignment.Center;
+            _bodyTimeStyle.DataFormat = _workbook.GetCreationHelper()
+                .CreateDataFormat().GetFormat("yyyy-MM-dd HH:mm:ss");
+
             _headerRow = _sheet.CreateRow(0);
             for (int i = 0; i < Headers.Length; i++)
             {
@@ -88,6 +110,8 @@ namespace A205AutoTestSystem.Common
             {
                 _sheet.SetColumnWidth(c, 18 * 256);
             }
+            // 测试时间列（"yyyy-MM-dd HH:mm:ss" 19 字符）单独加宽，避免显示 "###"
+            _sheet.SetColumnWidth(0, 21 * 256);
             // 频段列稍窄
             _sheet.SetColumnWidth(4, 14 * 256);
             // 备注列宽一点
@@ -108,30 +132,37 @@ namespace A205AutoTestSystem.Common
             IRow row = _sheet.CreateRow(_rowCount);
             _rowCount++;
 
-            // 0: 测试时间 — DateTime 单元格，使用 "yyyy-MM-dd HH:mm:ss" 格式
+            // 0: 测试时间 — DateTime 单元格 + 居中
             ICell timeCell = row.CreateCell(0);
             timeCell.SetCellValue(result.TestTime);
-            ICellStyle timeStyle = _workbook.CreateCellStyle();
-            timeStyle.DataFormat = _workbook.GetCreationHelper()
-                .CreateDataFormat().GetFormat("yyyy-MM-dd HH:mm:ss");
-            timeCell.CellStyle = timeStyle;
+            timeCell.CellStyle = _bodyTimeStyle;
 
             // 1: 温度区间
-            row.CreateCell(1).SetCellValue(SafeStr(result.TemperatureRange));
+            ICell c1 = row.CreateCell(1); c1.SetCellValue(SafeStr(result.TemperatureRange)); c1.CellStyle = _bodyCenterStyle;
             // 2: 通道号
-            row.CreateCell(2).SetCellValue(result.Channel);
+            ICell c2 = row.CreateCell(2); c2.SetCellValue(result.Channel); c2.CellStyle = _bodyCenterStyle;
             // 3: 工作模式
-            row.CreateCell(3).SetCellValue(SafeStr(result.Mode));
+            ICell c3 = row.CreateCell(3); c3.SetCellValue(SafeStr(result.Mode)); c3.CellStyle = _bodyCenterStyle;
             // 4: 频段（M6.x 新增；无频段信息时写空字符串）
-            row.CreateCell(4).SetCellValue(SafeStr(result.BandDisplayName));
+            ICell c4 = row.CreateCell(4); c4.SetCellValue(SafeStr(result.BandDisplayName)); c4.CellStyle = _bodyCenterStyle;
             // 5: 测试项目
-            row.CreateCell(5).SetCellValue(SafeStr(result.TestItem));
-            // 6: 测试值（double）
-            row.CreateCell(6).SetCellValue(result.Value);
+            ICell c5 = row.CreateCell(5); c5.SetCellValue(SafeStr(result.TestItem)); c5.CellStyle = _bodyCenterStyle;
+            // 6: 测试值（double）—— 全局按"保留 1 位小数"显示；NaN 单元格留空（不下发 SetCellValue 防止 #NUM!）。
+            ICell valueCell = row.CreateCell(6);
+            if (!double.IsNaN(result.Value))
+            {
+                valueCell.SetCellValue(result.Value);
+                valueCell.CellStyle = _bodyValueStyle;
+            }
+            else
+            {
+                // NaN 占位也设为居中样式，避免后续沿用默认时左对齐与其它行不一致
+                valueCell.CellStyle = _bodyCenterStyle;
+            }
             // 7: 单位
-            row.CreateCell(7).SetCellValue(SafeStr(result.Unit));
+            ICell c7 = row.CreateCell(7); c7.SetCellValue(SafeStr(result.Unit)); c7.CellStyle = _bodyCenterStyle;
 
-            // 8: 判定结果 — Pass 绿色，Fail 红色
+            // 8: 判定结果 — Pass 绿色，Fail 红色（保留字体色 + 加居中）
             ICell judgmentCell = row.CreateCell(8);
             judgmentCell.SetCellValue(SafeStr(result.Judgment));
             string judgment = SafeStr(result.Judgment);
@@ -142,6 +173,7 @@ namespace A205AutoTestSystem.Common
                 passFont.Color = NPOI.SS.UserModel.IndexedColors.Green.Index;
                 passFont.IsBold = true;
                 passStyle.SetFont(passFont);
+                passStyle.Alignment = HorizontalAlignment.Center;
                 judgmentCell.CellStyle = passStyle;
             }
             else if (judgment == "Fail")
@@ -151,11 +183,19 @@ namespace A205AutoTestSystem.Common
                 failFont.Color = NPOI.SS.UserModel.IndexedColors.Red.Index;
                 failFont.IsBold = true;
                 failStyle.SetFont(failFont);
+                failStyle.Alignment = HorizontalAlignment.Center;
                 judgmentCell.CellStyle = failStyle;
             }
+            else
+            {
+                // 既不是 Pass 也不是 Fail 时仍居中（如空字符串或别的值）
+                judgmentCell.CellStyle = _bodyCenterStyle;
+            }
 
-            // 9: 备注
-            row.CreateCell(9).SetCellValue(SafeStr(result.Remarks));
+            // 9: 备注 —— 按用户决策不居中，保留 NPOI 默认样式（左对齐），避免列宽吃不下导致显示截断
+            ICell c9 = row.CreateCell(9);
+            c9.SetCellValue(SafeStr(result.Remarks));
+            // 不绑 CellStyle：使用 NPOI 工作簿的默认 CellStyle（水平一般对齐）
 
             Logger.Log(string.Format(
                 CultureInfo.InvariantCulture,

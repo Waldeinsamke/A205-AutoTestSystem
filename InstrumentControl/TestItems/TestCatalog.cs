@@ -46,7 +46,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         /// M6.x 全功能测试项清单（按"测试温度"分支）。
         /// <para>三档测试温度：</para>
         /// <list type="bullet">
-        ///   <item><see cref="TemperatureRange.Normal"/>：常温，21 项</item>
+        ///   <item><see cref="TemperatureRange.Normal"/>：常温，19 项</item>
         ///   <item><see cref="TemperatureRange.High"/> / <see cref="TemperatureRange.Low"/>：高/低温，共用 3 项</item>
         /// </list>
         /// </summary>
@@ -85,7 +85,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         }
 
         // ============================================================
-        // 常温：21 项
+        // 常温：19 项（通道间相位差稳定度 / 通道间增益差稳定度已下线，不再保留占位）
         //   1) 信号带宽
         //   2) 线性最大增益
         //   3) 噪声系数
@@ -104,9 +104,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         //  16) 通道间隔离度
         //  17) 通道间增益不一致性（AGC不起控）
         //  18) 通道间增益不一致性（AGC同时起控）
-        //  19) 通道间相位差稳定度
-        //  20) 通道间增益差稳定度
-        //  21) 驻波
+        //  19) 驻波
         // ============================================================
         private static IReadOnlyList<ITestItem> BuildNormalTempItems(
             ReceiverSerialPort receiver,
@@ -123,7 +121,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 ReceiverMode.Mode3
             };
 
-            return new List<ITestItem>(21)
+            return new List<ITestItem>(19)
             {
                 // ---- 已实现 ----
                 new GainTest(
@@ -168,7 +166,13 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 new NotImplementedTestItem("AGC响应时间"),
                 new NotImplementedTestItem("通道延时"),
                 new NotImplementedTestItem("阻塞信号"),
-                new NotImplementedTestItem("镜频抑制"),
+                new ImageRejectionTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: new ReceiverMode[] { ReceiverMode.Mode3 }),
                 new IfRejectionTest(
                     receiver: receiver,
                     rfGenerator: rf,
@@ -184,13 +188,17 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     spectrumAnalyzer: sa,
                     channel: channel,
                     modes: allModes),
-                new NotImplementedTestItem("谐波抑制"),
+                new HarmonicRejectionTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel,
+                    modes: new ReceiverMode[] { ReceiverMode.Mode3 }),
                 new NotImplementedTestItem("带内虚假信号"),
                 new NotImplementedTestItem("通道间隔离度"),
                 new NotImplementedTestItem("通道间增益不一致性（AGC不起控）"),
                 new NotImplementedTestItem("通道间增益不一致性（AGC同时起控）"),
-                new NotImplementedTestItem("通道间相位差稳定度"),
-                new NotImplementedTestItem("通道间增益差稳定度"),
                 new NotImplementedTestItem("驻波"),
             };
         }
