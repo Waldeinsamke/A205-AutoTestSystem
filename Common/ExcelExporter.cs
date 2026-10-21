@@ -138,15 +138,25 @@ namespace A205AutoTestSystem.Common
             timeCell.CellStyle = _bodyTimeStyle;
 
             // 1: 温度区间
-            ICell c1 = row.CreateCell(1); c1.SetCellValue(SafeStr(result.TemperatureRange)); c1.CellStyle = _bodyCenterStyle;
+            ICell c1 = row.CreateCell(1);
+            c1.SetCellValue(SafeStr(result.TemperatureRange));
+            c1.CellStyle = _bodyCenterStyle;
             // 2: 通道号
-            ICell c2 = row.CreateCell(2); c2.SetCellValue(result.Channel); c2.CellStyle = _bodyCenterStyle;
+            ICell c2 = row.CreateCell(2);
+            c2.SetCellValue(result.Channel);
+            c2.CellStyle = _bodyCenterStyle;
             // 3: 工作模式
-            ICell c3 = row.CreateCell(3); c3.SetCellValue(SafeStr(result.Mode)); c3.CellStyle = _bodyCenterStyle;
+            ICell c3 = row.CreateCell(3);
+            c3.SetCellValue(SafeStr(result.Mode));
+            c3.CellStyle = _bodyCenterStyle;
             // 4: 频段（M6.x 新增；无频段信息时写空字符串）
-            ICell c4 = row.CreateCell(4); c4.SetCellValue(SafeStr(result.BandDisplayName)); c4.CellStyle = _bodyCenterStyle;
+            ICell c4 = row.CreateCell(4);
+            c4.SetCellValue(SafeStr(result.BandDisplayName));
+            c4.CellStyle = _bodyCenterStyle;
             // 5: 测试项目
-            ICell c5 = row.CreateCell(5); c5.SetCellValue(SafeStr(result.TestItem)); c5.CellStyle = _bodyCenterStyle;
+            ICell c5 = row.CreateCell(5);
+            c5.SetCellValue(SafeStr(result.TestItem));
+            c5.CellStyle = _bodyCenterStyle;
             // 6: 测试值（double）—— 全局按"保留 1 位小数"显示；NaN 单元格留空（不下发 SetCellValue 防止 #NUM!）。
             ICell valueCell = row.CreateCell(6);
             if (!double.IsNaN(result.Value))
@@ -160,12 +170,14 @@ namespace A205AutoTestSystem.Common
                 valueCell.CellStyle = _bodyCenterStyle;
             }
             // 7: 单位
-            ICell c7 = row.CreateCell(7); c7.SetCellValue(SafeStr(result.Unit)); c7.CellStyle = _bodyCenterStyle;
+            ICell c7 = row.CreateCell(7);
+            c7.SetCellValue(SafeStr(result.Unit));
+            c7.CellStyle = _bodyCenterStyle;
 
             // 8: 判定结果 — Pass 绿色，Fail 红色（保留字体色 + 加居中）
             ICell judgmentCell = row.CreateCell(8);
-            judgmentCell.SetCellValue(SafeStr(result.Judgment));
             string judgment = SafeStr(result.Judgment);
+            judgmentCell.SetCellValue(judgment);
             if (judgment == "Pass")
             {
                 ICellStyle passStyle = _workbook.CreateCellStyle();

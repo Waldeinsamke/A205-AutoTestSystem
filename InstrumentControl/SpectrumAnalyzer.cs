@@ -193,6 +193,52 @@ namespace A205AutoTestSystem.InstrumentControl
             SendCommand(":CALC:MARK1:MODE DELTA");
         }
 
+        /// <summary>
+        /// 读取当前 Marker 的幅值（dBm）。<para>
+        /// 与 <see cref="ReadMarkerValue"/> 等价，仅命名上强调"紧跟一次 marker 移动之后读幅值"，
+        /// 供<c>MAX:NEXT</c> 逐峰搜索场景使用。
+        /// </summary>
+        public double ReadMarkerAmplitude()
+        {
+            return ParseMarkerY(":CALC:MARK1:Y?");
+        }
+
+        /// <summary>
+        /// Marker 跳到"下一个峰"（Peak Next）。对应 SCPI 命令 <c>:CALC:MARK1:MAX:NEXT</c>。
+        /// <para><b>用途（带内虚假信号测试）：</b>RF 扫频经过当前频点时，IF 输出端会出现主信号
+        /// （Mode3 二中频 750 MHz），它比杂散强得多，会被 <c>MAX:PEAK</c> 优先搜到。
+        /// 本方法让 marker 跳到下一个峰，从而拿到"除主信号之外"的最高峰。</para>
+        /// <para><b>仪表行为提示：</b>本命令只在迹线已有峰值搜索结果时有意义；
+        /// 调用前应先执行 <see cref="MeasureMarkerPeak"/>（MAX:PEAK + MAX:PEAK:SEARCH）定位到主峰。
+        /// 跳到下一个峰后用 <see cref="ReadMarkerAmplitude"/> 读幅值、
+        /// 用 <see cref="ReadMarkerFrequency"/> 读频率，二者必须配对读取。</para>
+        /// </summary>
+        public void MoveMarkerToNextPeak()
+        {
+            SendCommand(":CALC:MARK1:MAX:NEXT");
+        }
+
+        /// <summary>
+        /// 读取当前 Marker 的频率（Hz）。对应 SCPI 命令 <c>:CALC:MARK1:X?</c>。
+        /// <para>与 <see cref="ReadMarkerAmplitude"/> 配对使用，用于确认"跳过的那个峰之后
+        /// 落在哪个频率上"，便于判断读到的是杂散还是底噪。</para>
+        /// </summary>
+        public double ReadMarkerFrequency()
+        {
+            string resp = QueryString(":CALC:MARK1:X?");
+            if (string.IsNullOrWhiteSpace(resp))
+            {
+                throw new InvalidOperationException(
+                    "频谱仪 Marker X? 返回空响应（命令：:CALC:MARK1:X?）。");
+            }
+            if (!double.TryParse(resp, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
+            {
+                throw new InvalidOperationException(
+                    $"频谱仪 Marker X? 响应无法解析为数值：'{resp}'。");
+            }
+            return value;
+        }
+
         /// <summary>峰峰值搜索（Peak-to-Peak）。文档：MARK:PTP + MARK:Y?</summary>
         public double ReadPeakToPeak()
         {

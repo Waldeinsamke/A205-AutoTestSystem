@@ -18,8 +18,6 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.GroupBox grpTestConfig;
         private System.Windows.Forms.Label lblConfigChannel;
         private System.Windows.Forms.ComboBox cmbChannel;
-        private System.Windows.Forms.Label lblConfigMode;
-        private System.Windows.Forms.ComboBox cmbMode;
         private System.Windows.Forms.Label lblConfigTemp;
         private System.Windows.Forms.ComboBox cmbTemp;
         private System.Windows.Forms.Button btnLoadTest;
@@ -47,8 +45,6 @@ namespace A205AutoTestSystem.UI
             this.grpTestConfig = new System.Windows.Forms.GroupBox();
             this.lblConfigChannel = new System.Windows.Forms.Label();
             this.cmbChannel = new System.Windows.Forms.ComboBox();
-            this.lblConfigMode = new System.Windows.Forms.Label();
-            this.cmbMode = new System.Windows.Forms.ComboBox();
             this.lblConfigTemp = new System.Windows.Forms.Label();
             this.cmbTemp = new System.Windows.Forms.ComboBox();
             this.btnLoadTest = new System.Windows.Forms.Button();
@@ -71,8 +67,6 @@ namespace A205AutoTestSystem.UI
             // 
             this.grpTestConfig.Controls.Add(this.lblConfigChannel);
             this.grpTestConfig.Controls.Add(this.cmbChannel);
-            this.grpTestConfig.Controls.Add(this.lblConfigMode);
-            this.grpTestConfig.Controls.Add(this.cmbMode);
             this.grpTestConfig.Controls.Add(this.lblConfigTemp);
             this.grpTestConfig.Controls.Add(this.cmbTemp);
             this.grpTestConfig.Controls.Add(this.btnLoadTest);
@@ -104,39 +98,22 @@ namespace A205AutoTestSystem.UI
             this.cmbChannel.TabIndex = 1;
             this.cmbChannel.SelectedIndexChanged += new System.EventHandler(this.OnAutoTestCmbChannelChanged);
             // 
-            // lblConfigMode
-            // 
-            this.lblConfigMode.Location = new System.Drawing.Point(157, 28);
-            this.lblConfigMode.Name = "lblConfigMode";
-            this.lblConfigMode.Size = new System.Drawing.Size(44, 20);
-            this.lblConfigMode.TabIndex = 2;
-            this.lblConfigMode.Text = "模式";
-            this.lblConfigMode.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
-            // cmbMode
-            // 
-            this.cmbMode.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbMode.Location = new System.Drawing.Point(207, 25);
-            this.cmbMode.Name = "cmbMode";
-            this.cmbMode.Size = new System.Drawing.Size(84, 23);
-            this.cmbMode.TabIndex = 3;
-            // 
             // lblConfigTemp
             // 
-            this.lblConfigTemp.Location = new System.Drawing.Point(306, 27);
+            this.lblConfigTemp.Location = new System.Drawing.Point(157, 27);
             this.lblConfigTemp.Name = "lblConfigTemp";
             this.lblConfigTemp.Size = new System.Drawing.Size(38, 21);
-            this.lblConfigTemp.TabIndex = 4;
+            this.lblConfigTemp.TabIndex = 2;
             this.lblConfigTemp.Text = "温度";
             this.lblConfigTemp.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
             // cmbTemp
             // 
             this.cmbTemp.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cmbTemp.Location = new System.Drawing.Point(350, 26);
+            this.cmbTemp.Location = new System.Drawing.Point(201, 26);
             this.cmbTemp.Name = "cmbTemp";
             this.cmbTemp.Size = new System.Drawing.Size(84, 23);
-            this.cmbTemp.TabIndex = 5;
+            this.cmbTemp.TabIndex = 3;
             this.cmbTemp.SelectedIndexChanged += new System.EventHandler(this.OnAutoTestCmbTempChanged);
             // 
             // btnLoadTest

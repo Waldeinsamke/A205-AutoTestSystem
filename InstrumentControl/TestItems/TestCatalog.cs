@@ -195,7 +195,12 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     spectrumAnalyzer: sa,
                     channel: channel,
                     modes: new ReceiverMode[] { ReceiverMode.Mode3 }),
-                new NotImplementedTestItem("带内虚假信号"),
+                new InBandSpuriousTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel),
                 new NotImplementedTestItem("通道间隔离度"),
                 new NotImplementedTestItem("通道间增益不一致性（AGC不起控）"),
                 new NotImplementedTestItem("通道间增益不一致性（AGC同时起控）"),

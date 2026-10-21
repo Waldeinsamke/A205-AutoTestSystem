@@ -50,6 +50,16 @@ namespace A205AutoTestSystem.UI
         /// <summary>是否有"单条运行"在执行（与 _runAllInProgress 互斥）。</summary>
         private bool _runInProgress;
 
+        /// <summary>
+        /// 带内虚假信号的选频点窗体（每次手动运行该项时新建，测完即销毁）。
+        /// <para>该测试项需要人工在 RF 输出端换低通滤波器，因此必须由 UI 提供选频点的交互入口，
+        /// 见 <see cref="AttachFrequencySelector"/>。</para>
+        /// </summary>
+        private InBandSpuriousFreqForm _inBandSpuriousFreqForm;
+
+        /// <summary>带内虚假信号测试项实例（用于注入选频点回调 + 一键运行时识别跳过）。</summary>
+        private InBandSpuriousTest _inBandSpuriousTest;
+
         /// <summary>当前正在运行的行索引（_runInProgress=true 时有效；否则 -1）。
         /// 用于 OnDgvTestsCellContentClick 区分"点当前行■ 停止"和"点其他行"，避免误取消。</summary>
         private int _runningRowIndex = -1;
@@ -89,6 +99,8 @@ namespace A205AutoTestSystem.UI
             {
                 try { Logger.MessageLogged -= OnLogMessage; } catch { }
                 try { _engine.LogEmitted -= OnEngineLog; } catch { }
+                try { _inBandSpuriousFreqForm?.Dispose(); } catch { }
+                _inBandSpuriousFreqForm = null;
 
                 try { _rf?.Dispose(); } catch { }
                 try { _lo?.Dispose(); } catch { }
@@ -118,9 +130,7 @@ namespace A205AutoTestSystem.UI
                 cmbChannel.Items.Add("通道" + ch);
             }
             cmbChannel.SelectedIndex = 0;
-            // cmbMode / cmbTemp.Items 在运行时填充（依需要放在这里）
-            cmbMode.Items.AddRange(new object[] { "Mode1", "Mode2", "Mode3" });
-            cmbMode.SelectedIndex = 0;
+            // cmbTemp.Items 在运行时填充（Designer 内不允许循环，故在此处）
             cmbTemp.Items.AddRange(new object[] { "常温", "高温", "低温" });
             cmbTemp.SelectedIndex = 0;
         }
@@ -420,6 +430,7 @@ namespace A205AutoTestSystem.UI
             {
                 _tests.Add(t);
                 AddTestRowToGrid(t);
+                AttachFrequencySelector(t);
             }
             foreach (var t in items)
             {
@@ -429,6 +440,50 @@ namespace A205AutoTestSystem.UI
             // 加载完成后允许一键运行
             btnRunAll.Enabled = true;
             UpdateProgress(0, $"已加载 {_tests.Count} 个测试项。");
+        }
+
+        /// <summary>
+        /// 若测试项是 <see cref="InBandSpuriousTest"/>，给它注入"选频点窗体"回调。
+        /// <para>带内虚假信号测试要求每个频点人工更换 RF 输出端的低通滤波器，
+        /// 无法一键连跑；由本方法把 UI 交互能力挂到测试项上，
+        /// 测试项每轮await <c>FrequencySelector</c> 等操作者点频点。</para>
+        /// <para>DGV 重建（切通道 / 切温度 / 重新加载）时会再次调用本方法，
+        /// 旧的测试项实例连同其回调一起被丢弃，无需显式解绑。</para>
+        /// </summary>
+        private void AttachFrequencySelector(ITestItem test)
+        {
+            if (!(test is InBandSpuriousTest inBand)) return;
+
+            _inBandSpuriousTest = inBand;
+
+            inBand.FrequencySelector = async () =>
+            {
+                // 每次运行新建窗体：保证每次都是干净的 0/9 计数
+                EnsureFreqForm();
+                return await _inBandSpuriousFreqForm.SelectFrequencyAsync();
+            };
+
+            inBand.FrequencyCompleted = (freqMHz, result) =>
+            {
+                if (_inBandSpuriousFreqForm != null && !_inBandSpuriousFreqForm.IsDisposed)
+                {
+                    _inBandSpuriousFreqForm.NotifyFreqCompleted(freqMHz, result);
+                }
+            };
+        }
+
+        /// <summary>确保选频点窗体已创建且未释放，并挂到主窗体上用于居中显示。</summary>
+        private void EnsureFreqForm()
+        {
+            if (_inBandSpuriousFreqForm != null && !_inBandSpuriousFreqForm.IsDisposed)
+            {
+                return;
+            }
+
+            _inBandSpuriousFreqForm = new InBandSpuriousFreqForm
+            {
+                OwnerForm = FindForm()
+            };
         }
 
         /// <summary>
@@ -690,7 +745,7 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// 切换"运行中" / "非运行中"状态下各入口的可用性。
-        /// <para>disable 范围：一键运行按钮 + 加载测试按钮 + 温度/通道/模式下拉框。
+        /// <para>disable 范围：一键运行按钮 + 加载测试按钮 + 温度/通道下拉框。
         /// 防止"运行中再点运行"或"运行中切温/通道"导致紊乱。</para>
         /// </summary>
         private void SetRunButtonsEnabledState(bool enabled)
@@ -699,7 +754,6 @@ namespace A205AutoTestSystem.UI
             if (btnLoadTest != null) btnLoadTest.Enabled = enabled;
             if (cmbTemp != null) cmbTemp.Enabled = enabled;
             if (cmbChannel != null) cmbChannel.Enabled = enabled;
-            if (cmbMode != null) cmbMode.Enabled = enabled;
         }
 
         /// <summary>
@@ -715,6 +769,18 @@ namespace A205AutoTestSystem.UI
             var row = dgvTests.Rows[rowIndex];
             var test = row.Tag as ITestItem;
             if (test == null) return;
+
+            // 带内虚假信号需要人工在 RF 输出端逐频点换低通滤波器，
+            // 无法在一键运行的无人值守序列里跑，跳过并提示手动单独运行。
+            if (isFromRunAll && test is InBandSpuriousTest)
+            {
+                var skippedCell = row.Cells[ColStatus];
+                skippedCell.Value = "需人工操作";
+                skippedCell.Style.ForeColor = StatusColorReady;
+                UpdateStep("『带内虚假信号』需人工更换低通滤波器，已在本次一键运行中跳过，请手动点该行 ▶ 运行");
+                Logger.Log("[AutoTestPanel] 一键运行跳过『带内虚假信号』：需人工逐频点更换低通滤波器。");
+                return;
+            }
 
             // 防重入：手动点行（默认 isFromRunAll=false）时拦截 _runInProgress。
             // 一键运行（isFromRunAll=true）跳过此检查——因为一键运行在 _runAllInProgress==true 期间
@@ -742,7 +808,6 @@ namespace A205AutoTestSystem.UI
                 if (btnLoadTest != null) btnLoadTest.Enabled = false;
                 if (cmbTemp != null) cmbTemp.Enabled = false;
                 if (cmbChannel != null) cmbChannel.Enabled = false;
-                if (cmbMode != null) cmbMode.Enabled = false;
             }
 
             // 仅当前行按钮变"■ 停止"；其它所有行按钮 ReadOnly=true + 灰化，
@@ -832,7 +897,6 @@ namespace A205AutoTestSystem.UI
                     if (btnLoadTest != null) btnLoadTest.Enabled = true;
                     if (cmbTemp != null) cmbTemp.Enabled = true;
                     if (cmbChannel != null) cmbChannel.Enabled = true;
-                    if (cmbMode != null) cmbMode.Enabled = true;
                 }
 
                 if (wasCancelled)
