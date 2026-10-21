@@ -17,9 +17,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>Mode1 / Mode2：RF 不扫频（保持测试频点单点输入），频谱仪分两段扫描
     ///         (10~66 MHz + 74~3500 MHz，避开 70 MHz IF 中心 ±4 MHz 的"中频带")，
     ///         各自找最大点 Y?，取大作为本频点抑制值。</item>
-    ///   <item>Mode3：RF 信号源分两段扫频（10~1660 MHz + 2340~2650 MHz，步进 10 MHz），
-    ///         频谱仪对应扫 1090~6000 MHz + 100~410 MHz 两段。LO 不扫
-    ///         （按 Q4：仅 RF 扫）。各自找最大点 Y?，取大作为本频点抑制值。</item>
+    ///   <item>Mode3：RF 信号源分两段扫频（10~1660 MHz / 166 点+ 2340~2650 MHz / 32 点，
+    ///         两段步进均为 10 MHz），频谱仪对应扫 1090~6000 MHz + 100~410 MHz 两段。
+    ///         LO 不扫（按 Q4：仅 RF 扫）。各自找最大点 Y?，取大作为本频点抑制值。</item>
     /// </list>
     /// <para>频点（用户给定）：</para>
     /// <list type="bullet">
@@ -35,21 +35,33 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         // 常量
         // ============================================================
 
-        private const double SaReferenceLevelDbm = 10.0;
+        /// <summary>准备阶段频谱仪参考电平（dBm）。此时 IF 端会出现真信号
+    /// （RF −20 dBm + 增益 20 dB ≈ 0 dBm），屏顶必须留足余量避免真信号被裁剪。</summary>
+    private const double SaReferenceLevelDbm = 10.0;
+
+    /// <summary>测试阶段频谱仪参考电平（dBm）。进入频点循环前统一下压到 −10 dBm，
+    /// 并保持到该循环结束——循环内测的是带外杂散/抑制量，信号很弱，
+    /// 压低屏顶能让弱信号占据更多刻度，marker 定位更准、读数更精确。
+    /// <para>注意：该值只在频点循环前后各设一次，循环内各分段（Mode1/2 的两段 SA 扫描、
+    /// Mode3 的两段 RF 扫频）一律不得再改动 RLEV。</para></summary>
+    private const double SaReferenceLevelTestDbm = -10.0;
         private const double SaRbwKHz = 100.0;
         private const double SaVbwKHz = 100.0;
 
         // 频谱仪 sleep 等待扫稳定时间（按 RC3 = 单纯 sleep、不开 MAXH）。
-        // Mode3 RF 真的在扫频（10~1660 / 2340~2650 MHz，需要 15s 让频谱仪扫稳定）；
+        // Mode3 RF 真的在扫频（10~1660 / 2340~2650 MHz，需要 10s 让频谱仪扫稳定）；
         // Mode1/2 RF 不扫频，只需要等待频谱仪完成一次 sweep + 短稳态，
         // 3500 MHz span + 100 kHz RBW 在 PXA 上 sweep 通常 ~50ms~几百 ms，给 2s 保险。
-        private const int Mode3SweepWaitMs = 15_000;
+        private const int Mode3SweepWaitMs = 10_000;
         private const int Mode12SweepWaitMs = 2_000;
 
         private const int ModeStableMs = 1500;
         private const int BandStableMs = 500;
         private const int RfLoStableMs = 200;
         private const int TraceSettleMs = 500;
+
+        /// <summary>读值后停留时间（ms）。让marker 读数在频谱仪屏幕上短暂驻留，便于人工观察确认。</summary>
+        private const int PostReadDelayMs = 200;
 
         private const double SaCenterFreqMode12Hz = 70_000_000.0;
         private const double SaCenterFreqMode3Hz = 750_000_000.0;
@@ -69,10 +81,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private const double Mode3RfSweep2StartHz = 2_340_000_000.0;
         private const double Mode3RfSweep2StopHz = 2_650_000_000.0;
 
-        /// <summary>Mode3 RF 扫频步进（Hz）。用户给定 10 MHz，按 Keysight N5173B SCPI
-        /// 命令 <c>SOUR:SWE:FREQ:STEP:LIN</c> 设置。必须在 STAR/STOP 之后调用，
-        /// 故分别放在两段扫频的 STAR/STOP 之后。</summary>
-        private const double Mode3RfSweepStepHz = 10_000_000.0;
+        /// <summary>Mode3 RF 扫频段 1（10~1660 MHz）的扫频点数。
+    /// <para>改用点数（<c>:SWE:POIN</c>）而非步进（<c>:SOUR:SWE:FREQ:STEP:LIN</c>）：
+    /// 实测步进方式会引起未知异常，改点数规避。</para>
+    /// <para>166 点对应步进 (1660−10)/(166−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
+    private const int Mode3RfSweep1Points = 166;
+
+    /// <summary>Mode3 RF 扫频段 2（2340~2650 MHz）的扫频点数。
+    /// <para>32 点对应步进 (2650−2340)/(32−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
+    private const int Mode3RfSweep2Points = 32;
 
         // ============================================================
         // Mode1/2 频谱仪扫频段（避开 70 MHz IF 中心 ±4 MHz 的"中频带"）
@@ -227,6 +244,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                         continue;
                     }
 
+                    // 参考电平由频点内部控制：频点前置阶段（真信号存在）用 10 dBm 防饱和，
+                    // 设好SA 测量窗口后切到 −10 dBm 精测弱杂散。此处不做统一设置。
                     foreach (double freqMHz in freqs)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -309,17 +328,19 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // ---- Mode3：RF 两段扫频 ----
 
                 // 第 1 段：RF 10~1660 MHz、SA 1090~6000 MHz
+                // 进入段1：开启扫频
                 _rf.SetFrequencyModeSweep();
                 _rf.SetSweepStartFrequency(Mode3RfSweep1StartHz);
                 _rf.SetSweepStopFrequency(Mode3RfSweep1StopHz);
-                // 按用户决策（Q3）：用 StepLinear 显式步进替代 POIN。
-                // Keysight N5173B 上必须 STAR/STOP 后才能用 STEP:LIN。
-                _rf.SetSweepStepLinear(Mode3RfSweepStepHz);
+                // 用点数设置扫频（实测 STEP:LIN 步进方式会引起未知异常，改 POIN 规避）
+                _rf.SetSweepPoints(Mode3RfSweep1Points);
                 _rf.SetContinuousSweep(true);
                 // LO 不动（按 Q4：仅 RF 扫）。
 
                 _sa.SetStartFrequency(Mode3SaSweep1StartHz);
                 _sa.SetStopFrequency(Mode3SaSweep1StopHz);
+                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散
+                _sa.SetReferenceLevel(SaReferenceLevelTestDbm);
                 // Mode3 段 1：频谱仪开 MAXH 让 trace 在 RF 扫频周期内累积最大点
                 _sa.SetMaxHold(true);
                 await Task.Delay(Mode3SweepWaitMs, ct).ConfigureAwait(false);
@@ -328,37 +349,41 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK:SEARCH");
                 double v1 = ReadMarkerYDbm("Mode3 第 1 段", mode, band.DisplayName);
+                await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
 
-                // 切到第 2 段前先关 MAXH（重置累积），避免第 1 段的"历史最大峰"
-                // 污染第 2 段的读值。
+                // 离开段1：关闭 RF 扫频 + 关 MAXH（避免段 1 的历史最大峰污染段 2 读值）
+                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
                 _sa.SetMaxHold(false);
 
                 // 第 2 段：RF 2340~2650 MHz、SA 100~410 MHz
+                // 进入段2：重新开启扫频
+                _rf.SetFrequencyModeSweep();
                 _rf.SetSweepStartFrequency(Mode3RfSweep2StartHz);
                 _rf.SetSweepStopFrequency(Mode3RfSweep2StopHz);
-                _rf.SetSweepStepLinear(Mode3RfSweepStepHz);
-                // N5173B 在切到 2340~2650 MHz 段时会把扫描模式改为单次，
-                // 重新发 :INIT:CONT ON 让它恢复为连续扫频。
+                _rf.SetSweepPoints(Mode3RfSweep2Points);
                 _rf.SetContinuousSweep(true);
+
                 _sa.SetStartFrequency(Mode3SaSweep2StartHz);
                 _sa.SetStopFrequency(Mode3SaSweep2StopHz);
                 // 第 2 段重新开 MAXH，让 trace 在新的扫频段上从头累积。
                 _sa.SetMaxHold(true);
                 await Task.Delay(Mode3SweepWaitMs, ct).ConfigureAwait(false);
 
+                _sa.SendCommand(":CALC:MARK1:STAT ON");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK:SEARCH");
                 double v2 = ReadMarkerYDbm("Mode3 第 2 段", mode, band.DisplayName);
+                await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
+
+                // 离开段2：关闭 RF 扫频 + 关 MAXH（不论是否异常，MAXH 都得关掉）
+                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
+                try { _sa.SetMaxHold(false); } catch { /* best-effort */ }
 
                 maxSegmentDb = Math.Max(v1, v2);
                 maxSegmentStart = (v1 >= v2) ? Mode3SaSweep1StartHz : Mode3SaSweep2StartHz;
                 maxSegmentStop = (v1 >= v2) ? Mode3SaSweep1StopHz : Mode3SaSweep2StopHz;
                 sweepModeDesc = $"RF 扫 {Mode3RfSweep1StartHz / 1e6}~{Mode3RfSweep1StopHz / 1e6}MHz/" +
                                 $"{Mode3RfSweep2StartHz / 1e6}~{Mode3RfSweep2StopHz / 1e6}MHz，SA 对应扫段";
-
-                // 退出 RF 扫频模式 + 关频谱仪 MAXH（不论是否异常，MAXH 都得关掉）
-                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
-                try { _sa.SetMaxHold(false); } catch { /* best-effort */ }
             }
             else
             {
@@ -366,12 +391,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
                 _sa.SetStartFrequency(Mode12FirstSweepStartHz);
                 _sa.SetStopFrequency(Mode12FirstSweepStopHz);
+                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散
+                _sa.SetReferenceLevel(SaReferenceLevelTestDbm);
                 await Task.Delay(Mode12SweepWaitMs, ct).ConfigureAwait(false);
 
                 _sa.SendCommand(":CALC:MARK1:STAT ON");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK:SEARCH");
                 double v1 = ReadMarkerYDbm("Mode1/2 第 1 段", mode, band.DisplayName);
+                await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
 
                 _sa.SetStartFrequency(Mode12SecondSweepStartHz);
                 _sa.SetStopFrequency(Mode12SecondSweepStopHz);
@@ -380,6 +408,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK");
                 _sa.SendCommand(":CALC:MARK1:MAX:PEAK:SEARCH");
                 double v2 = ReadMarkerYDbm("Mode1/2 第 2 段", mode, band.DisplayName);
+                await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
 
                 maxSegmentDb = Math.Max(v1, v2);
                 maxSegmentStart = (v1 >= v2) ? Mode12FirstSweepStartHz : Mode12SecondSweepStartHz;
@@ -424,6 +453,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 mode, band.DisplayName, maxSegmentDb, result.Judgment));
 
             _sa.SetAllMarkOFF();
+
+            // 频点结束：恢复屏顶到 10 dBm。下一个频点的前置阶段（RF 为 CW、IF 端有真信号）
+            // 将在 10 dBm 屏顶下进行，避免真信号饱和被削平。
+            _sa.SetReferenceLevel(SaReferenceLevelDbm);
 
             return result;
         }
