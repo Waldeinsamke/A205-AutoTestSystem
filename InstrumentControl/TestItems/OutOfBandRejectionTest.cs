@@ -36,20 +36,27 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         // ============================================================
 
         /// <summary>准备阶段频谱仪参考电平（dBm）。此时 IF 端会出现真信号
-    /// （RF −20 dBm + 增益 20 dB ≈ 0 dBm），屏顶必须留足余量避免真信号被裁剪。</summary>
-    private const double SaReferenceLevelDbm = 10.0;
+        /// （RF −20 dBm + 增益 20 dB ≈ 0 dBm），屏顶必须留足余量避免真信号被裁剪。</summary>
+        private const double SaReferenceLevelDbm = 10.0;
 
-    /// <summary>测试阶段频谱仪参考电平（dBm）。进入频点循环前统一下压到 −10 dBm，
-    /// 并保持到该循环结束——循环内测的是带外杂散/抑制量，信号很弱，
-    /// 压低屏顶能让弱信号占据更多刻度，marker 定位更准、读数更精确。
-    /// <para>注意：该值只在频点循环前后各设一次，循环内各分段（Mode1/2 的两段 SA 扫描、
-    /// Mode3 的两段 RF 扫频）一律不得再改动 RLEV。</para></summary>
-    private const double SaReferenceLevelTestDbm = -10.0;
+        /// <summary>测试阶段频谱仪参考电平（dBm）。用于测量带外杂散/抑制量——信号很弱，
+        /// 压低屏顶能让弱信号占据更多刻度，marker 定位更准、读数更精确。
+        /// <para><b>设置时机（重要，不要改回"循环前设一次"）</b>：</para>
+        /// <list type="bullet">
+        ///   <item>模式准备阶段保持 <see cref="SaReferenceLevelDbm"/>（10 dBm），
+        ///         因为频点前置阶段 RF 为 CW、IF 端有真信号，10 dBm 才能防止饱和削顶。</item>
+        ///   <item>每个频点内、SA 测量窗口设置完成之后（即真信号已移出屏外），
+        ///         才切到本值。Mode3 与 Mode1/2 各在各自分支内设一次（互斥路径，非重复）。</item>
+        ///   <item>本频点测量全程（含 MAXH 累积期与各分段）不再改动 RLEV。</item>
+        ///   <item>频点结束时恢复 <see cref="SaReferenceLevelDbm"/>，供下一个频点前置阶段使用。</item>
+        /// </list></summary>
+        private const double SaReferenceLevelTestDbm = -10.0;
+
         private const double SaRbwKHz = 100.0;
         private const double SaVbwKHz = 100.0;
 
-        // 频谱仪 sleep 等待扫稳定时间（按 RC3 = 单纯 sleep、不开 MAXH）。
-        // Mode3 RF 真的在扫频（10~1660 / 2340~2650 MHz，需要 10s 让频谱仪扫稳定）；
+        // 频谱仪等待扫稳定时间。
+        // Mode3 RF 真的在扫频（10~1660 / 2340~2650 MHz），需 10s 让 MAXH 累积到稳态；
         // Mode1/2 RF 不扫频，只需要等待频谱仪完成一次 sweep + 短稳态，
         // 3500 MHz span + 100 kHz RBW 在 PXA 上 sweep 通常 ~50ms~几百 ms，给 2s 保险。
         private const int Mode3SweepWaitMs = 10_000;
@@ -339,7 +346,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
                 _sa.SetStartFrequency(Mode3SaSweep1StartHz);
                 _sa.SetStopFrequency(Mode3SaSweep1StopHz);
-                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散
+                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散。
+                // 本频点测量全程不再改 RLEV。
                 _sa.SetReferenceLevel(SaReferenceLevelTestDbm);
                 // Mode3 段 1：频谱仪开 MAXH 让 trace 在 RF 扫频周期内累积最大点
                 _sa.SetMaxHold(true);
@@ -391,7 +399,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
                 _sa.SetStartFrequency(Mode12FirstSweepStartHz);
                 _sa.SetStopFrequency(Mode12FirstSweepStopHz);
-                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散
+                // 测量窗口已切走（真信号已不在屏上）→ 下压屏顶到 −10 dBm 精测弱杂散。
+                // 本频点测量全程（含段 2）不再改 RLEV。
                 _sa.SetReferenceLevel(SaReferenceLevelTestDbm);
                 await Task.Delay(Mode12SweepWaitMs, ct).ConfigureAwait(false);
 
