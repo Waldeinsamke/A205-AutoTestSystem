@@ -41,6 +41,11 @@ namespace A205AutoTestSystem.UI
         // 关机=RF/LO :OUTP 0→断开接收机串口→电源OFF。
         private bool _powerOutputOn = false;
 
+        // RF / LO 信号源射频输出的软件侧状态（:OUTP 1/0）。
+        // 仅由 SetSignalOutputs 统一翻转（供电开机/关机联动），供信号链路拓扑面板判断链路通断。
+        private bool _rfOutputOn = false;
+        private bool _loOutputOn = false;
+
         // 仪表控制区频谱仪 Toggle 按钮的本地状态：
         // 用于按钮 Text/BackColor 反映当前是否已开启。
         // UI 状态与仪表侧 SCPI 命令独立，断连时复位为 false。
@@ -281,6 +286,7 @@ namespace A205AutoTestSystem.UI
                 _receiver.Open(portName, baudRate);
 
                 Logger.Log($"[UI] Receiver connected on {portName} @ {baudRate}.");
+                SyncSignalFlowState();
             }
             catch (Exception ex)
             {
@@ -304,6 +310,7 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _receiver = null;
+                SyncSignalFlowState();
             }
         }
 
@@ -630,6 +637,7 @@ namespace A205AutoTestSystem.UI
                 pnlRfStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
             }
             Logger.Log($"[UI] RF 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            SyncSignalFlowState();
         }
 
         private void DisconnectRf()
@@ -653,6 +661,7 @@ namespace A205AutoTestSystem.UI
                 {
                     pnlRfStatus.BackColor = StatusColorDisconnected;
                 }
+                SyncSignalFlowState();
             }
         }
 
@@ -715,6 +724,7 @@ namespace A205AutoTestSystem.UI
                 pnlLoStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
             }
             Logger.Log($"[UI] LO 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            SyncSignalFlowState();
         }
 
         private void DisconnectLo()
@@ -738,6 +748,7 @@ namespace A205AutoTestSystem.UI
                 {
                     pnlLoStatus.BackColor = StatusColorDisconnected;
                 }
+                SyncSignalFlowState();
             }
         }
 
@@ -796,6 +807,7 @@ namespace A205AutoTestSystem.UI
                 pnlSaStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
             }
             Logger.Log($"[UI] 频谱仪连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            SyncSignalFlowState();
         }
 
         private void DisconnectSa()
@@ -821,6 +833,7 @@ namespace A205AutoTestSystem.UI
                 }
                 // 断连时复位频谱仪 Toggle 按钮本地状态与按钮文字
                 ResetSaToggleStates();
+                SyncSignalFlowState();
             }
         }
 
@@ -898,6 +911,7 @@ namespace A205AutoTestSystem.UI
                 pnlPowerStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
             }
             Logger.Log($"[UI] 电源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            SyncSignalFlowState();
         }
 
         /// <summary>
@@ -954,6 +968,7 @@ namespace A205AutoTestSystem.UI
                 {
                     btnOpenPower.Text = "开启供电";
                 }
+                SyncSignalFlowState();
             }
         }
 
@@ -1030,6 +1045,33 @@ namespace A205AutoTestSystem.UI
         }
 
         // ============================================================
+        // 信号链路拓扑面板状态同步
+        // ============================================================
+
+        /// <summary>
+        /// 把当前四节点就绪状态与供电/信号输出状态一次性推送给信号链路拓扑面板。
+        /// <para>所有状态发生变化的入口（仪表连接变化、串口连接断开、供电启停、信号输出开关）
+        /// 都应在自身逻辑走完后调用本方法，避免多处重复写4~7 个属性赋值。</para>
+        /// <para>面板属性 setter 内部会触发 <c>Invalidate()</c>，本方法已确保在 UI 线程调用；
+        /// 仪表的 <c>ConnectionChanged</c> 回调可能来自 VISA 工作线程，调用方需先切回 UI 线程。</para>
+        /// </summary>
+        private void SyncSignalFlowState()
+        {
+            if (pnlSignalFlow == null || pnlSignalFlow.IsDisposed)
+            {
+                return;
+            }
+
+            pnlSignalFlow.RfReady = _rfGenerator != null && _rfGenerator.IsConnected;
+            pnlSignalFlow.LoReady = _loGenerator != null && _loGenerator.IsConnected;
+            pnlSignalFlow.SpectrumReady = _spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected;
+            pnlSignalFlow.ReceiverReady = _receiver != null && _receiver.IsOpen;
+            pnlSignalFlow.PowerOn = _powerOutputOn;
+            pnlSignalFlow.RfOutputOn = _rfOutputOn;
+            pnlSignalFlow.LoOutputOn = _loOutputOn;
+        }
+
+        // ============================================================
         // 供电联动辅助方法
         // ============================================================
 
@@ -1077,6 +1119,7 @@ namespace A205AutoTestSystem.UI
                 try
                 {
                     _rfGenerator.SetOutputState(on);
+                    _rfOutputOn = on;
                     Logger.Log($"[UI] RF 信号源射频输出已{action}（:OUTP {(on ? 1 : 0)}）。");
                 }
                 catch (Exception ex)
@@ -1094,6 +1137,7 @@ namespace A205AutoTestSystem.UI
                 try
                 {
                     _loGenerator.SetOutputState(on);
+                    _loOutputOn = on;
                     Logger.Log($"[UI] LO 信号源射频输出已{action}（:OUTP {(on ? 1 : 0)}）。");
                 }
                 catch (Exception ex)
@@ -1101,6 +1145,8 @@ namespace A205AutoTestSystem.UI
                     Logger.Log($"[UI] LO 信号源{action}射频输出失败: {ex.Message}");
                 }
             }
+
+            SyncSignalFlowState();
         }
 
         /// <summary>
@@ -1140,6 +1186,7 @@ namespace A205AutoTestSystem.UI
                 _receiver = new ReceiverSerialPort();
                 _receiver.Open(portName, baudRate);
                 Logger.Log($"[UI] 开机序列自动连接接收机串口 {portName} @ {baudRate}。");
+                SyncSignalFlowState();
                 return true;
             }
             catch (Exception ex)
@@ -1175,6 +1222,7 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _receiver = null;
+                SyncSignalFlowState();
             }
         }
 
@@ -1208,6 +1256,7 @@ namespace A205AutoTestSystem.UI
                 _powerOutputOn = true;
                 btnOpenPower.Text = "关闭供电";
                 Logger.Log("[UI] Power output enabled.");
+                SyncSignalFlowState();
 
                 // 2) 自动连接收机串口；失败中止，电源保持上电、信号输出不开启
                 if (!TryAutoConnectReceiver())
@@ -1252,6 +1301,7 @@ namespace A205AutoTestSystem.UI
                     {
                         btnOpenPower.Text = "开启供电";
                     }
+                    SyncSignalFlowState();
                 }
             }
         }

@@ -145,6 +145,10 @@
     <Compile Include="UI\InBandSpuriousFreqForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <!-- 信号链路拓扑面板：仪表控制组底部的纯 GDI+ 自绘控件，无 Designer 文件 -->
+    <Compile Include="UI\SignalFlowPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <!-- M-2026-10：H-6 资源快照判定的纯逻辑（不依赖 WinForms，方便测试链接源文件） -->
     <Compile Include="UI\ResourceSnapshotLogic.cs" />
     <Compile Include="Program.cs" />

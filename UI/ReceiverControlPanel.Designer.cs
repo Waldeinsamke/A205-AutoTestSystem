@@ -143,6 +143,7 @@ namespace A205AutoTestSystem.UI
             this.btnSaHarmonics = new System.Windows.Forms.Button();
             this.btnSaRefLevelUp = new System.Windows.Forms.Button();
             this.btnSaRefLevelDown = new System.Windows.Forms.Button();
+            this.pnlSignalFlow = new A205AutoTestSystem.UI.SignalFlowPanel();
             this.grpSerialConnection.SuspendLayout();
             this.grpParameterConfig.SuspendLayout();
             this.pnlTempGroup.SuspendLayout();
@@ -715,7 +716,7 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentControl.Controls.Add(this.btnSaRefLevelDown);
             this.grpInstrumentControl.Location = new System.Drawing.Point(456, 8);
             this.grpInstrumentControl.Name = "grpInstrumentControl";
-            this.grpInstrumentControl.Size = new System.Drawing.Size(383, 439);
+            this.grpInstrumentControl.Size = new System.Drawing.Size(383, 241);
             this.grpInstrumentControl.TabIndex = 33;
             this.grpInstrumentControl.TabStop = false;
             this.grpInstrumentControl.Text = "仪表控制";
@@ -840,12 +841,29 @@ namespace A205AutoTestSystem.UI
             this.btnSaRefLevelDown.UseVisualStyleBackColor = true;
             this.btnSaRefLevelDown.Click += new System.EventHandler(this.OnSaRefLevelDownClicked);
             // 
+            // pnlSignalFlow
+            // 
+            this.pnlSignalFlow.BackColor = System.Drawing.SystemColors.Control;
+            this.pnlSignalFlow.Location = new System.Drawing.Point(456, 261);
+            this.pnlSignalFlow.LoOutputOn = false;
+            this.pnlSignalFlow.LoReady = false;
+            this.pnlSignalFlow.Name = "pnlSignalFlow";
+            this.pnlSignalFlow.PowerOn = false;
+            this.pnlSignalFlow.ReceiverReady = false;
+            this.pnlSignalFlow.RfOutputOn = false;
+            this.pnlSignalFlow.RfReady = false;
+            this.pnlSignalFlow.Size = new System.Drawing.Size(388, 186);
+            this.pnlSignalFlow.SpectrumReady = false;
+            this.pnlSignalFlow.TabIndex = 54;
+            this.pnlSignalFlow.TabStop = false;
+            // 
             // ReceiverControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.Controls.Add(this.grpInstrumentControl);
             this.Controls.Add(this.grpSerialConnection);
+            this.Controls.Add(this.pnlSignalFlow);
             this.Controls.Add(this.grpParameterConfig);
             this.Controls.Add(this.grpInstrumentStatus);
             this.Controls.Add(this.grpCommunicationLog);
@@ -884,5 +902,8 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.Button btnSaHarmonics;
         private System.Windows.Forms.Button btnSaRefLevelUp;
         private System.Windows.Forms.Button btnSaRefLevelDown;
+
+        // 信号链路拓扑面板（纯自绘，无事件订阅）
+        private A205AutoTestSystem.UI.SignalFlowPanel pnlSignalFlow;
     }
 }
