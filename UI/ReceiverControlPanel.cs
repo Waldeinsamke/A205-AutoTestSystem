@@ -46,6 +46,35 @@ namespace A205AutoTestSystem.UI
         private bool _rfOutputOn = false;
         private bool _loOutputOn = false;
 
+        // ============================================================
+        // 仪表连接健康状态（驱动信号链路拓扑图的三态节点）
+        //
+        // 风险控制设计要点：
+        // - Ready：已连接且通信正常（绿色）
+        // - Idle：从未连接 / 已正常断开 / 用户主动断开（灰色，属预期内状态）
+        // - Fault：出现异常需人工介入（红色告警）。触发来源共四类：
+        //     1) 配置中该仪表地址为空或配置文件缺失；
+        //     2) Connect() 抛异常（设备不存在、超时、线缆松动、资源被占用）；
+        //     3) 已连接后 *IDN? 探测失败（线缆中途掉落，IsConnected 不会自己变 false）；
+        //     4) 连接期间掉线（ConnectionChanged(false) 意外触发）。
+        // 主动点击“断开”走 Disconnect* 系列，属于预期内断开，落到 Idle 而非 Fault。
+        // ============================================================
+        private InstrumentLinkState _rfLinkState = InstrumentLinkState.Idle;
+        private InstrumentLinkState _loLinkState = InstrumentLinkState.Idle;
+        private InstrumentLinkState _receiverLinkState = InstrumentLinkState.Idle;
+        private InstrumentLinkState _spectrumLinkState = InstrumentLinkState.Idle;
+        private InstrumentLinkState _powerLinkState = InstrumentLinkState.Idle;
+
+        // 各节点当前故障原因，仅用于日志追溯；拓扑图只显示"连接异常"字样，不塞长文本。
+        private string _rfFaultReason = string.Empty;
+        private string _loFaultReason = string.Empty;
+        private string _receiverFaultReason = string.Empty;
+        private string _spectrumFaultReason = string.Empty;
+        private string _powerFaultReason = string.Empty;
+
+        // 仪表 VISA 地址配置（启动时从 config\Instruments.xml 读取，一键连接时重新读取）。
+        private InstrumentConfig _instrumentConfig = InstrumentConfig.Load();
+
         // 仪表控制区频谱仪 Toggle 按钮的本地状态：
         // 用于按钮 Text/BackColor 反映当前是否已开启。
         // UI 状态与仪表侧 SCPI 命令独立，断连时复位为 false。
@@ -59,10 +88,6 @@ namespace A205AutoTestSystem.UI
 
         // 抑制初始化阶段事件回调（避免在构建控件时立刻触发副作用）
         private bool _initialized;
-
-        // 仪表状态颜色常量（不写进 .resx，保持代码可读性）
-        private static readonly Color StatusColorDisconnected = Color.Red;
-        private static readonly Color StatusColorConnected = Color.LimeGreen;
 
         // 波特率下拉默认值
         private static readonly int[] BaudRateOptions = { 9600, 19200, 38400, 57600, 115200 };
@@ -181,11 +206,8 @@ namespace A205AutoTestSystem.UI
             RefreshBandCombo(ReceiverMode.Mode1);
             numAgcAtten.Value = 0;
 
-            // 仪表圆点红色
-            pnlRfStatus.BackColor = StatusColorDisconnected;
-            pnlLoStatus.BackColor = StatusColorDisconnected;
-            pnlSaStatus.BackColor = StatusColorDisconnected;
-            pnlPowerStatus.BackColor = StatusColorDisconnected;
+            // 仪表连接状态由信号链路拓扑图（pnlSignalFlow）三态节点呈现，
+            // 此处不再初始化指示灯；初始状态各 LinkState 字段已默认为 Idle。
         }
 
         // ============================================================
@@ -285,12 +307,18 @@ namespace A205AutoTestSystem.UI
                 _receiver = new ReceiverSerialPort();
                 _receiver.Open(portName, baudRate);
 
-                Logger.Log($"[UI] Receiver connected on {portName} @ {baudRate}.");
+                _receiverLinkState = InstrumentLinkState.Ready;
+                _receiverFaultReason = string.Empty;
+                Logger.Log($"[UI] 接收机串口已连接（{portName} @ {baudRate}）。");
                 SyncSignalFlowState();
             }
             catch (Exception ex)
             {
                 _receiver = null;
+                _receiverLinkState = InstrumentLinkState.Fault;
+                _receiverFaultReason = "串口打开失败: " + ex.Message;
+                Logger.Log("[Error] 接收机串口连接故障：" + _receiverFaultReason);
+                SyncSignalFlowState();
                 MessageBox.Show(this, "打开串口失败: " + ex.Message, "错误",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -301,7 +329,7 @@ namespace A205AutoTestSystem.UI
             try
             {
                 _receiver?.Close();
-                Logger.Log("[UI] Receiver serial closed.");
+                Logger.Log("[UI] 接收机串口已断开。");
             }
             catch (Exception ex)
             {
@@ -310,6 +338,12 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _receiver = null;
+                // 主动断开属预期内；若之前已是故障态则保留红色，避免掩盖真实问题
+                if (_receiverLinkState == InstrumentLinkState.Ready)
+                {
+                    _receiverLinkState = InstrumentLinkState.Idle;
+                }
+                _receiverFaultReason = string.Empty;
                 SyncSignalFlowState();
             }
         }
@@ -586,20 +620,25 @@ namespace A205AutoTestSystem.UI
                 }
                 Logger.Log("[UI] RF 信号源 *IDN? 探测失败,按失联处理走重连。");
                 DisconnectRf();
+                // 探测失败属于“原本已连接却失联”，是故障而非空闲
+                return MarkRfFault("*IDN? 探测失败（线缆松动或设备掉线），已释放旧会话");
             }
-            if (string.IsNullOrWhiteSpace(txtRfAddress.Text))
+            string rfAddress = _instrumentConfig.RfGeneratorAddress;
+            if (string.IsNullOrWhiteSpace(rfAddress))
             {
-                pnlRfStatus.BackColor = StatusColorDisconnected;
-                Logger.Log("[Error] RF 连接失败: 地址为空。");
-                return false;
+                return MarkRfFault(string.IsNullOrEmpty(_instrumentConfig.LoadError)
+                    ? "配置文件中 RfGenerator 的 resourceName 为空"
+                    : _instrumentConfig.LoadError);
             }
             try
             {
-                _rfGenerator = new SignalGenerator(txtRfAddress.Text.Trim());
+                _rfGenerator = new SignalGenerator(rfAddress.Trim());
                 _rfGenerator.ConnectionChanged += OnRfConnectionChanged;
                 _rfGenerator.Connect();
-                pnlRfStatus.BackColor = StatusColorConnected;
-                Logger.Log("[UI] RF signal generator connected.");
+                _rfLinkState = InstrumentLinkState.Ready;
+                _rfFaultReason = string.Empty;
+                Logger.Log($"[UI] RF 信号源已连接（{rfAddress.Trim()}）。");
+                SyncSignalFlowState();
                 // 连接成功后确保调制输出保持关闭（CW 模式），失败仅日志
                 DisableModulationQuiet("RF",
                     () => _rfGenerator.EnableModulation(false),
@@ -608,15 +647,13 @@ namespace A205AutoTestSystem.UI
             }
             catch (Exception ex)
             {
-                pnlRfStatus.BackColor = StatusColorDisconnected;
                 if (_rfGenerator != null)
                 {
                     try { _rfGenerator.ConnectionChanged -= OnRfConnectionChanged; } catch { }
                     try { _rfGenerator.Dispose(); } catch { }
                 }
                 _rfGenerator = null;
-                Logger.Log("[Error] RF 连接失败: " + ex.Message);
-                return false;
+                return MarkRfFault("VISA 连接异常: " + ex.Message);
             }
         }
 
@@ -632,11 +669,23 @@ namespace A205AutoTestSystem.UI
                 catch { /* 控件已销毁 */ }
                 return;
             }
-            if (pnlRfStatus != null && !pnlRfStatus.IsDisposed)
+            if (isConnected)
             {
-                pnlRfStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+                _rfLinkState = InstrumentLinkState.Ready;
+                _rfFaultReason = string.Empty;
+                Logger.Log("[UI] RF 信号源连接状态变化：已连接");
             }
-            Logger.Log($"[UI] RF 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            else
+            {
+                // 掉线：曾建立过连接却意外断开，标记为故障；若本来就没连过则保持 Idle
+                bool wasReady = _rfLinkState == InstrumentLinkState.Ready;
+                if (wasReady)
+                {
+                    _rfLinkState = InstrumentLinkState.Fault;
+                    _rfFaultReason = "连接期间掉线（线缆松动或设备断电）";
+                }
+                Logger.Log($"[UI] RF 信号源连接状态变化：已断开{(wasReady ? "（异常掉线，节点标红）" : string.Empty)}");
+            }
             SyncSignalFlowState();
         }
 
@@ -657,9 +706,11 @@ namespace A205AutoTestSystem.UI
             {
                 try { _rfGenerator?.Dispose(); } catch { }
                 _rfGenerator = null;
-                if (pnlRfStatus != null && !pnlRfStatus.IsDisposed)
+                // 主动断开属预期内操作，落回 Idle；若之前已是故障态则保留故障，
+                // 避免"点了断开"就把红色告警洗掉、掩盖真实问题。
+                if (_rfLinkState == InstrumentLinkState.Ready)
                 {
-                    pnlRfStatus.BackColor = StatusColorDisconnected;
+                    _rfLinkState = InstrumentLinkState.Idle;
                 }
                 SyncSignalFlowState();
             }
@@ -676,20 +727,24 @@ namespace A205AutoTestSystem.UI
                 }
                 Logger.Log("[UI] LO 信号源 *IDN? 探测失败,按失联处理走重连。");
                 DisconnectLo();
+                return MarkLoFault("*IDN? 探测失败（线缆松动或设备掉线），已释放旧会话");
             }
-            if (string.IsNullOrWhiteSpace(txtLoAddress.Text))
+            string loAddress = _instrumentConfig.LoGeneratorAddress;
+            if (string.IsNullOrWhiteSpace(loAddress))
             {
-                pnlLoStatus.BackColor = StatusColorDisconnected;
-                Logger.Log("[Error] LO 连接失败: 地址为空。");
-                return false;
+                return MarkLoFault(string.IsNullOrEmpty(_instrumentConfig.LoadError)
+                    ? "配置文件中 LoGenerator 的 resourceName 为空"
+                    : _instrumentConfig.LoadError);
             }
             try
             {
-                _loGenerator = new SignalGeneratorLO(txtLoAddress.Text.Trim());
+                _loGenerator = new SignalGeneratorLO(loAddress.Trim());
                 _loGenerator.ConnectionChanged += OnLoConnectionChanged;
                 _loGenerator.Connect();
-                pnlLoStatus.BackColor = StatusColorConnected;
-                Logger.Log("[UI] LO signal generator connected.");
+                _loLinkState = InstrumentLinkState.Ready;
+                _loFaultReason = string.Empty;
+                Logger.Log($"[UI] LO 信号源已连接（{loAddress.Trim()}）。");
+                SyncSignalFlowState();
                 // 连接成功后确保调制输出保持关闭（CW 模式），失败仅日志
                 DisableModulationQuiet("LO",
                     () => _loGenerator.EnableModulation(false),
@@ -698,15 +753,13 @@ namespace A205AutoTestSystem.UI
             }
             catch (Exception ex)
             {
-                pnlLoStatus.BackColor = StatusColorDisconnected;
                 if (_loGenerator != null)
                 {
                     try { _loGenerator.ConnectionChanged -= OnLoConnectionChanged; } catch { }
                     try { _loGenerator.Dispose(); } catch { }
                 }
                 _loGenerator = null;
-                Logger.Log("[Error] LO 连接失败: " + ex.Message);
-                return false;
+                return MarkLoFault("VISA 连接异常: " + ex.Message);
             }
         }
 
@@ -719,11 +772,22 @@ namespace A205AutoTestSystem.UI
                 catch { /* 控件已销毁 */ }
                 return;
             }
-            if (pnlLoStatus != null && !pnlLoStatus.IsDisposed)
+            if (isConnected)
             {
-                pnlLoStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+                _loLinkState = InstrumentLinkState.Ready;
+                _loFaultReason = string.Empty;
+                Logger.Log("[UI] LO 信号源连接状态变化：已连接");
             }
-            Logger.Log($"[UI] LO 信号源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            else
+            {
+                bool wasReady = _loLinkState == InstrumentLinkState.Ready;
+                if (wasReady)
+                {
+                    _loLinkState = InstrumentLinkState.Fault;
+                    _loFaultReason = "连接期间掉线（线缆松动或设备断电）";
+                }
+                Logger.Log($"[UI] LO 信号源连接状态变化：已断开{(wasReady ? "（异常掉线，节点标红）" : string.Empty)}");
+            }
             SyncSignalFlowState();
         }
 
@@ -744,9 +808,9 @@ namespace A205AutoTestSystem.UI
             {
                 try { _loGenerator?.Dispose(); } catch { }
                 _loGenerator = null;
-                if (pnlLoStatus != null && !pnlLoStatus.IsDisposed)
+                if (_loLinkState == InstrumentLinkState.Ready)
                 {
-                    pnlLoStatus.BackColor = StatusColorDisconnected;
+                    _loLinkState = InstrumentLinkState.Idle;
                 }
                 SyncSignalFlowState();
             }
@@ -763,33 +827,35 @@ namespace A205AutoTestSystem.UI
                 }
                 Logger.Log("[UI] 频谱仪 *IDN? 探测失败,按失联处理走重连。");
                 DisconnectSa();
+                return MarkSpectrumFault("*IDN? 探测失败（线缆松动或设备掉线），已释放旧会话");
             }
-            if (string.IsNullOrWhiteSpace(txtSaAddress.Text))
+            string saAddress = _instrumentConfig.SpectrumAnalyzerAddress;
+            if (string.IsNullOrWhiteSpace(saAddress))
             {
-                pnlSaStatus.BackColor = StatusColorDisconnected;
-                Logger.Log("[Error] 频谱仪连接失败: 地址为空。");
-                return false;
+                return MarkSpectrumFault(string.IsNullOrEmpty(_instrumentConfig.LoadError)
+                    ? "配置文件中 SpectrumAnalyzer 的 resourceName 为空"
+                    : _instrumentConfig.LoadError);
             }
             try
             {
-                _spectrumAnalyzer = new SpectrumAnalyzer(txtSaAddress.Text.Trim());
+                _spectrumAnalyzer = new SpectrumAnalyzer(saAddress.Trim());
                 _spectrumAnalyzer.ConnectionChanged += OnSaConnectionChanged;
                 _spectrumAnalyzer.Connect();
-                pnlSaStatus.BackColor = StatusColorConnected;
-                Logger.Log("[UI] Spectrum analyzer connected.");
+                _spectrumLinkState = InstrumentLinkState.Ready;
+                _spectrumFaultReason = string.Empty;
+                Logger.Log($"[UI] 频谱仪已连接（{saAddress.Trim()}）。");
+                SyncSignalFlowState();
                 return true;
             }
             catch (Exception ex)
             {
-                pnlSaStatus.BackColor = StatusColorDisconnected;
                 if (_spectrumAnalyzer != null)
                 {
                     try { _spectrumAnalyzer.ConnectionChanged -= OnSaConnectionChanged; } catch { }
                     try { _spectrumAnalyzer.Dispose(); } catch { }
                 }
                 _spectrumAnalyzer = null;
-                Logger.Log("[Error] 频谱仪连接失败: " + ex.Message);
-                return false;
+                return MarkSpectrumFault("VISA 连接异常: " + ex.Message);
             }
         }
 
@@ -802,11 +868,22 @@ namespace A205AutoTestSystem.UI
                 catch { /* 控件已销毁 */ }
                 return;
             }
-            if (pnlSaStatus != null && !pnlSaStatus.IsDisposed)
+            if (isConnected)
             {
-                pnlSaStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+                _spectrumLinkState = InstrumentLinkState.Ready;
+                _spectrumFaultReason = string.Empty;
+                Logger.Log("[UI] 频谱仪连接状态变化：已连接");
             }
-            Logger.Log($"[UI] 频谱仪连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            else
+            {
+                bool wasReady = _spectrumLinkState == InstrumentLinkState.Ready;
+                if (wasReady)
+                {
+                    _spectrumLinkState = InstrumentLinkState.Fault;
+                    _spectrumFaultReason = "连接期间掉线（线缆松动或设备断电）";
+                }
+                Logger.Log($"[UI] 频谱仪连接状态变化：已断开{(wasReady ? "（异常掉线，节点标红）" : string.Empty)}");
+            }
             SyncSignalFlowState();
         }
 
@@ -827,9 +904,9 @@ namespace A205AutoTestSystem.UI
             {
                 try { _spectrumAnalyzer?.Dispose(); } catch { }
                 _spectrumAnalyzer = null;
-                if (pnlSaStatus != null && !pnlSaStatus.IsDisposed)
+                if (_spectrumLinkState == InstrumentLinkState.Ready)
                 {
-                    pnlSaStatus.BackColor = StatusColorDisconnected;
+                    _spectrumLinkState = InstrumentLinkState.Idle;
                 }
                 // 断连时复位频谱仪 Toggle 按钮本地状态与按钮文字
                 ResetSaToggleStates();
@@ -864,36 +941,38 @@ namespace A205AutoTestSystem.UI
                 }
                 Logger.Log("[UI] 电源 *IDN? 探测失败,按失联处理走重连。");
                 DisconnectPower();
+                return MarkPowerFault("*IDN? 探测失败（线缆松动或设备掉线），已释放旧会话");
             }
-            if (string.IsNullOrWhiteSpace(txtPowerAddress.Text))
+            string powerAddress = _instrumentConfig.PowerSupplyAddress;
+            if (string.IsNullOrWhiteSpace(powerAddress))
             {
-                pnlPowerStatus.BackColor = StatusColorDisconnected;
-                Logger.Log("[Error] 电源连接失败: 地址为空。");
-                return false;
+                return MarkPowerFault(string.IsNullOrEmpty(_instrumentConfig.LoadError)
+                    ? "配置文件中 PowerSupply 的 resourceName 为空"
+                    : _instrumentConfig.LoadError);
             }
             try
             {
-                _powerSupply = new ODP3063(txtPowerAddress.Text.Trim());
+                _powerSupply = new ODP3063(powerAddress.Trim());
                 _powerSupply.ConnectionChanged += OnPowerConnectionChanged;
                 _powerSupply.Connect();
-                pnlPowerStatus.BackColor = StatusColorConnected;
+                _powerLinkState = InstrumentLinkState.Ready;
+                _powerFaultReason = string.Empty;
+                Logger.Log($"[UI] 电源已连接（{powerAddress.Trim()}）。");
                 // 连接后查询 CH2 实际输出状态，按真实状态同步按钮文字与本地状态。
                 // 读取失败则按默认 OFF 处理 + 日志告警，绝不让读取异常破坏"已连接"的成果。
                 SyncPowerButtonFromInstrument();
-                Logger.Log("[UI] ODP3063 power supply connected.");
+                SyncSignalFlowState();
                 return true;
             }
             catch (Exception ex)
             {
-                pnlPowerStatus.BackColor = StatusColorDisconnected;
                 if (_powerSupply != null)
                 {
                     try { _powerSupply.ConnectionChanged -= OnPowerConnectionChanged; } catch { }
                     try { _powerSupply.Dispose(); } catch { }
                 }
                 _powerSupply = null;
-                Logger.Log("[Error] 电源连接失败: " + ex.Message);
-                return false;
+                return MarkPowerFault("VISA 连接异常: " + ex.Message);
             }
         }
 
@@ -906,11 +985,36 @@ namespace A205AutoTestSystem.UI
                 catch { /* 控件已销毁 */ }
                 return;
             }
-            if (pnlPowerStatus != null && !pnlPowerStatus.IsDisposed)
+            if (isConnected)
             {
-                pnlPowerStatus.BackColor = isConnected ? StatusColorConnected : StatusColorDisconnected;
+                _powerLinkState = InstrumentLinkState.Ready;
+                _powerFaultReason = string.Empty;
+                Logger.Log("[UI] 电源连接状态变化：已连接");
             }
-            Logger.Log($"[UI] 电源连接状态变化: {(isConnected ? "已连接" : "已断开")}");
+            else
+            {
+                // 供电期间掉线是严重风险：接收机可能已断电而界面仍显示"已供电"。
+                // 此处强制复位本地供电状态，让拓扑图的供电节点与链路立即失效。
+                if (_powerOutputOn)
+                {
+                    Logger.Log("[Error] 供电期间电源掉线，强制复位供电状态（接收机可能已断电）。");
+                    _powerOutputOn = false;
+                    _rfOutputOn = false;
+                    _loOutputOn = false;
+                    if (btnOpenPower != null && !btnOpenPower.IsDisposed)
+                    {
+                        btnOpenPower.Text = "开启供电";
+                    }
+                }
+                // 原本已连接却掉线 → 故障；从未连过 → 保持 Idle
+                if (_powerLinkState == InstrumentLinkState.Ready)
+                {
+                    _powerLinkState = InstrumentLinkState.Fault;
+                    _powerFaultReason = "连接期间掉线（线缆松动或设备断电）";
+                    Logger.Log("[Error] 电源连接期间掉线，节点标红。");
+                }
+                Logger.Log("[UI] 电源连接状态变化：已断开");
+            }
             SyncSignalFlowState();
         }
 
@@ -958,45 +1062,95 @@ namespace A205AutoTestSystem.UI
             {
                 try { _powerSupply?.Dispose(); } catch { }
                 _powerSupply = null;
-                if (pnlPowerStatus != null && !pnlPowerStatus.IsDisposed)
-                {
-                    pnlPowerStatus.BackColor = StatusColorDisconnected;
-                }
                 // 下次连接仍按默认 OFF 处理，按钮恢复对应文字
                 _powerOutputOn = false;
+                _rfOutputOn = false;
+                _loOutputOn = false;
                 if (btnOpenPower != null && !btnOpenPower.IsDisposed)
                 {
                     btnOpenPower.Text = "开启供电";
+                }
+                // 主动断开属预期内，落回 Idle；已有 Fault 状态则保留红色
+                if (_powerLinkState == InstrumentLinkState.Ready)
+                {
+                    _powerLinkState = InstrumentLinkState.Idle;
                 }
                 SyncSignalFlowState();
             }
         }
 
         /// <summary>
-        /// 一键连接：RF → LO → 频谱仪 → 电源。单台失败只记日志并继续，全程不弹窗。
+        /// 一键连接：RF → LO → 频谱仪 → 电源。
+        /// <para>先重新加载 config\Instruments.xml，使产线改地址后无需重启程序；
+        /// 单台失败只把该节点标红并写日志，不阻断其余仪表，也<b>不弹窗</b>
+        /// （弹窗会打断操作流），失败详情统一在拓扑图节点与日志中体现。</para>
         /// </summary>
         private void OnConnectAllClicked(object sender, EventArgs e)
         {
             Logger.Log("[UI] ===== 一键连接开始（RF → LO → 频谱仪 → 电源）=====");
+            ReloadInstrumentConfig();
+
             bool r1 = TryConnectRf();
             bool r2 = TryConnectLo();
             bool r3 = TryConnectSa();
             bool r4 = TryConnectPower();
             int ok = (r1 ? 1 : 0) + (r2 ? 1 : 0) + (r3 ? 1 : 0) + (r4 ? 1 : 0);
             Logger.Log($"[UI] ===== 一键连接完成：成功/已连接 {ok} 台，失败 {4 - ok} 台（详见上方日志）=====");
+
+            // 汇总故障清单：把每台故障原因集中打进日志，便于操作工一次定位全部问题
+            LogFaultSummary();
         }
 
         /// <summary>
-        /// 一键断开：电源正在供电时弹窗阻止；否则依次断开 4 台（电源最后）。
+        /// 把当前所有故障节点的原因汇总写入日志（拓扑图上只显示"连接异常"，
+        /// 具体原因必须在这里可查）。
+        /// </summary>
+        private void LogFaultSummary()
+        {
+            var faults = new List<string>();
+            if (_rfLinkState == InstrumentLinkState.Fault)
+            {
+                faults.Add("RF 信号源 → " + _rfFaultReason);
+            }
+            if (_loLinkState == InstrumentLinkState.Fault)
+            {
+                faults.Add("LO 信号源 → " + _loFaultReason);
+            }
+            if (_spectrumLinkState == InstrumentLinkState.Fault)
+            {
+                faults.Add("频谱仪 → " + _spectrumFaultReason);
+            }
+            if (_receiverLinkState == InstrumentLinkState.Fault)
+            {
+                faults.Add("接收机 → " + _receiverFaultReason);
+            }
+            if (_powerLinkState == InstrumentLinkState.Fault)
+            {
+                faults.Add("直流电源 → " + _powerFaultReason);
+            }
+
+            if (faults.Count == 0)
+            {
+                return;
+            }
+
+            Logger.Log($"[UI] ===== 故障汇总：共 {faults.Count} 项异常 =====");
+            foreach (string item in faults)
+            {
+                Logger.Log("[Error] " + item);
+            }
+        }
+
+        /// <summary>
+        /// 一键断开：电源正在供电时<b>拒绝执行并仅记日志</b>（按“不打扰操作流”的要求不弹窗）；
+        /// 否则依次断开 4 台（电源最后）。
         /// 不涉及接收机/矩阵串口（属于"串口连接"组）。
         /// </summary>
         private void OnDisconnectAllClicked(object sender, EventArgs e)
         {
             if (_powerOutputOn)
             {
-                MessageBox.Show(this,
-                    "电源当前正在供电输出，请先点击“关闭供电”完成关机后再执行一键断开。",
-                    "操作被阻止", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Logger.Log("[Warn] 一键断开被阻止：电源正在供电，请先点击“关闭供电”完成关机后再执行。");
                 return;
             }
 
@@ -1045,15 +1199,16 @@ namespace A205AutoTestSystem.UI
         }
 
         // ============================================================
-        // 信号链路拓扑面板状态同步
+        // 信号链路拓扑面板状态同步 + 仪表连接健康（风险控制）
         // ============================================================
 
         /// <summary>
-        /// 把当前四节点就绪状态与供电/信号输出状态一次性推送给信号链路拓扑面板。
-        /// <para>所有状态发生变化的入口（仪表连接变化、串口连接断开、供电启停、信号输出开关）
-        /// 都应在自身逻辑走完后调用本方法，避免多处重复写4~7 个属性赋值。</para>
-        /// <para>面板属性 setter 内部会触发 <c>Invalidate()</c>，本方法已确保在 UI 线程调用；
-        /// 仪表的 <c>ConnectionChanged</c> 回调可能来自 VISA 工作线程，调用方需先切回 UI 线程。</para>
+        /// 把当前四节点三态健康状态与供电/信号输出状态一次性推送给信号链路拓扑面板。
+        /// <para>所有状态发生变化的入口（仪表连接变化、串口连接断开、供电启停、信号输出开关、
+        /// 各TryConnectXxx 内的失败分支）都应在自身逻辑走完后调用本方法，
+        /// 避免多处重复写 7 个属性赋值。</para>
+        /// <para>必须在 UI 线程调用：仪表的 <c>ConnectionChanged</c> 回调可能来自 VISA 工作线程，
+        /// 调用方需先经 <c>InvokeRequired</c> 切回 UI 线程（参见各 OnXxxConnectionChanged）。</para>
         /// </summary>
         private void SyncSignalFlowState()
         {
@@ -1062,13 +1217,104 @@ namespace A205AutoTestSystem.UI
                 return;
             }
 
-            pnlSignalFlow.RfReady = _rfGenerator != null && _rfGenerator.IsConnected;
-            pnlSignalFlow.LoReady = _loGenerator != null && _loGenerator.IsConnected;
-            pnlSignalFlow.SpectrumReady = _spectrumAnalyzer != null && _spectrumAnalyzer.IsConnected;
-            pnlSignalFlow.ReceiverReady = _receiver != null && _receiver.IsOpen;
+            pnlSignalFlow.RfState = _rfLinkState;
+            pnlSignalFlow.LoState = _loLinkState;
+            pnlSignalFlow.SpectrumState = _spectrumLinkState;
+            pnlSignalFlow.ReceiverState = _receiverLinkState;
+            pnlSignalFlow.PowerState = _powerLinkState;
             pnlSignalFlow.PowerOn = _powerOutputOn;
             pnlSignalFlow.RfOutputOn = _rfOutputOn;
             pnlSignalFlow.LoOutputOn = _loOutputOn;
+        }
+
+        /// <summary>
+        /// 线程安全的拓扑图状态同步入口：非 UI 线程时 <c>BeginInvoke</c> 切回 UI 线程。
+        /// </summary>
+        private void SyncSignalFlowStateSafe()
+        {
+            if (IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action(SyncSignalFlowStateSafe)); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+
+            SyncSignalFlowState();
+        }
+
+        /// <summary>
+        /// 标记某台仪表为故障态：记录原因 + 写日志 + 刷新拓扑图，然后返回 false。
+        /// <para>所有"连接失败"分支统一经此方法收口，保证三件事必然同时发生：
+        /// 节点变红、错误进日志、其它台仪表不受影响（调用方直接 <c>return false</c>）。</para>
+        /// </summary>
+        /// <param name="state">要写入的三态字段引用。</param>
+        /// <param name="reasonField">故障原因字段引用（仅日志用）。</param>
+        /// <param name="tag">仪表中文名，用于日志前缀。</param>
+        /// <param name="reason">故障原因描述。</param>
+        private bool MarkInstrumentFault(
+            ref InstrumentLinkState state,
+            ref string reasonField,
+            string tag,
+            string reason)
+        {
+            state = InstrumentLinkState.Fault;
+            reasonField = reason;
+            Logger.Log($"[Error] {tag} 连接故障：{reason}");
+            SyncSignalFlowStateSafe();
+            return false;
+        }
+
+        /// <summary>RF 信号源标记故障（<see cref="MarkInstrumentFault"/> 的 RF 专用包装）。</summary>
+        private bool MarkRfFault(string reason)
+        {
+            return MarkInstrumentFault(ref _rfLinkState, ref _rfFaultReason, "RF 信号源", reason);
+        }
+
+        /// <summary>LO 信号源标记故障。</summary>
+        private bool MarkLoFault(string reason)
+        {
+            return MarkInstrumentFault(ref _loLinkState, ref _loFaultReason, "LO 信号源", reason);
+        }
+
+        /// <summary>频谱仪标记故障。</summary>
+        private bool MarkSpectrumFault(string reason)
+        {
+            return MarkInstrumentFault(
+                ref _spectrumLinkState, ref _spectrumFaultReason, "频谱仪", reason);
+        }
+
+        /// <summary>直流电源标记故障。</summary>
+        private bool MarkPowerFault(string reason)
+        {
+            _powerLinkState = InstrumentLinkState.Fault;
+            _powerFaultReason = reason;
+            Logger.Log($"[Error] 电源 连接故障：{reason}");
+            // 供电链路必须立即失效，否则界面会显示"已供电"的假象。
+            _powerOutputOn = false;
+            if (btnOpenPower != null && !btnOpenPower.IsDisposed)
+            {
+                btnOpenPower.Text = "开启供电";
+            }
+            SyncSignalFlowStateSafe();
+            return false;
+        }
+
+        /// <summary>
+        /// 重新加载仪表地址配置并记录结果。
+        /// 一键连接时调用，使产线修改 config\Instruments.xml 后无需重启程序。
+        /// </summary>
+        private void ReloadInstrumentConfig()
+        {
+            _instrumentConfig = InstrumentConfig.Load();
+            if (!_instrumentConfig.Loaded && !string.IsNullOrEmpty(_instrumentConfig.LoadError))
+            {
+                Logger.Log("[Warn] 仪表配置加载异常，本次连接将按地址为空处理: " + _instrumentConfig.LoadError);
+            }
         }
 
         // ============================================================
@@ -1185,6 +1431,8 @@ namespace A205AutoTestSystem.UI
             {
                 _receiver = new ReceiverSerialPort();
                 _receiver.Open(portName, baudRate);
+                _receiverLinkState = InstrumentLinkState.Ready;
+                _receiverFaultReason = string.Empty;
                 Logger.Log($"[UI] 开机序列自动连接接收机串口 {portName} @ {baudRate}。");
                 SyncSignalFlowState();
                 return true;
@@ -1192,7 +1440,10 @@ namespace A205AutoTestSystem.UI
             catch (Exception ex)
             {
                 _receiver = null;
+                _receiverLinkState = InstrumentLinkState.Fault;
+                _receiverFaultReason = "开机序列自动连接串口失败: " + ex.Message;
                 Logger.Log("[Error] 开机序列自动连接接收机串口失败: " + ex.Message);
+                SyncSignalFlowState();
                 MessageBox.Show(this,
                     "自动连接接收机串口失败: " + ex.Message + "\n（电源已上电，信号输出未开启，可手动补连或关闭供电后重试）",
                     "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1222,6 +1473,13 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _receiver = null;
+                // 关机序列断开串口属预期内操作，落回 Idle；
+                // 若此前已是故障态则保留红色，避免掩盖真实问题。
+                if (_receiverLinkState == InstrumentLinkState.Ready)
+                {
+                    _receiverLinkState = InstrumentLinkState.Idle;
+                }
+                _receiverFaultReason = string.Empty;
                 SyncSignalFlowState();
             }
         }
