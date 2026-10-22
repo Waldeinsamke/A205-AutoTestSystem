@@ -483,8 +483,6 @@ namespace A205AutoTestSystem.UI
             // grpInstrumentStatus
             // 
             this.grpInstrumentStatus.Controls.Add(this.lblStatusHint);
-            this.grpInstrumentStatus.Controls.Add(this.btnConnectAll);
-            this.grpInstrumentStatus.Controls.Add(this.btnDisconnectAll);
             this.grpInstrumentStatus.Location = new System.Drawing.Point(0, 294);
             this.grpInstrumentStatus.Name = "grpInstrumentStatus";
             this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
@@ -504,9 +502,9 @@ namespace A205AutoTestSystem.UI
             // 
             // btnConnectAll
             // 
-            this.btnConnectAll.Location = new System.Drawing.Point(366, 23);
+            this.btnConnectAll.Location = new System.Drawing.Point(17, 183);
             this.btnConnectAll.Name = "btnConnectAll";
-            this.btnConnectAll.Size = new System.Drawing.Size(72, 56);
+            this.btnConnectAll.Size = new System.Drawing.Size(80, 49);
             this.btnConnectAll.TabIndex = 30;
             this.btnConnectAll.Text = "连接";
             this.btnConnectAll.UseVisualStyleBackColor = true;
@@ -514,9 +512,9 @@ namespace A205AutoTestSystem.UI
             // 
             // btnDisconnectAll
             // 
-            this.btnDisconnectAll.Location = new System.Drawing.Point(366, 88);
+            this.btnDisconnectAll.Location = new System.Drawing.Point(105, 183);
             this.btnDisconnectAll.Name = "btnDisconnectAll";
-            this.btnDisconnectAll.Size = new System.Drawing.Size(72, 56);
+            this.btnDisconnectAll.Size = new System.Drawing.Size(80, 49);
             this.btnDisconnectAll.TabIndex = 31;
             this.btnDisconnectAll.Text = "断开";
             this.btnDisconnectAll.UseVisualStyleBackColor = true;
@@ -570,6 +568,8 @@ namespace A205AutoTestSystem.UI
             // grpInstrumentControl
             // 
             this.grpInstrumentControl.Controls.Add(this.btnOpenPower);
+            this.grpInstrumentControl.Controls.Add(this.btnDisconnectAll);
+            this.grpInstrumentControl.Controls.Add(this.btnConnectAll);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakSearch);
             this.grpInstrumentControl.Controls.Add(this.btnSaMarkerAllOff);
             this.grpInstrumentControl.Controls.Add(this.btnSaReset);
@@ -691,7 +691,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaRefLevelUp
             // 
-            this.btnSaRefLevelUp.Location = new System.Drawing.Point(105, 185);
+            this.btnSaRefLevelUp.Location = new System.Drawing.Point(197, 183);
             this.btnSaRefLevelUp.Name = "btnSaRefLevelUp";
             this.btnSaRefLevelUp.Size = new System.Drawing.Size(80, 49);
             this.btnSaRefLevelUp.TabIndex = 52;
@@ -701,7 +701,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaRefLevelDown
             // 
-            this.btnSaRefLevelDown.Location = new System.Drawing.Point(197, 185);
+            this.btnSaRefLevelDown.Location = new System.Drawing.Point(285, 183);
             this.btnSaRefLevelDown.Name = "btnSaRefLevelDown";
             this.btnSaRefLevelDown.Size = new System.Drawing.Size(80, 49);
             this.btnSaRefLevelDown.TabIndex = 53;
@@ -712,7 +712,7 @@ namespace A205AutoTestSystem.UI
             // pnlSignalFlow
             // 
             this.pnlSignalFlow.BackColor = System.Drawing.Color.White;
-            this.pnlSignalFlow.Location = new System.Drawing.Point(455, 248);
+            this.pnlSignalFlow.Location = new System.Drawing.Point(456, 248);
             this.pnlSignalFlow.LoOutputOn = false;
             this.pnlSignalFlow.LoState = A205AutoTestSystem.Common.InstrumentLinkState.Idle;
             this.pnlSignalFlow.Name = "pnlSignalFlow";
@@ -721,7 +721,7 @@ namespace A205AutoTestSystem.UI
             this.pnlSignalFlow.ReceiverState = A205AutoTestSystem.Common.InstrumentLinkState.Idle;
             this.pnlSignalFlow.RfOutputOn = false;
             this.pnlSignalFlow.RfState = A205AutoTestSystem.Common.InstrumentLinkState.Idle;
-            this.pnlSignalFlow.Size = new System.Drawing.Size(384, 199);
+            this.pnlSignalFlow.Size = new System.Drawing.Size(383, 199);
             this.pnlSignalFlow.SpectrumState = A205AutoTestSystem.Common.InstrumentLinkState.Idle;
             this.pnlSignalFlow.TabIndex = 54;
             this.pnlSignalFlow.TabStop = false;
