@@ -928,7 +928,7 @@ namespace A205AutoTestSystem.UI
             if (btnSaMaxHold != null) btnSaMaxHold.Text = "最大保持";
             if (btnSaPeakAuto != null) btnSaPeakAuto.Text = "峰值自动搜索";
             if (btnSaTraceAvg != null) btnSaTraceAvg.Text = "轨迹平均";
-            if (btnSaMinHold != null) btnSaMinHold.Text = "轨迹最小保持";
+            if (btnSaMinHold != null) btnSaMinHold.Text = "最小保持";
         }
 
         private bool TryConnectPower()
@@ -1635,7 +1635,7 @@ namespace A205AutoTestSystem.UI
                 _saTraceAvgOn = false;
                 btnSaTraceAvg.Text = "轨迹平均";
                 _saMinHoldOn = false;
-                btnSaMinHold.Text = "轨迹最小保持";
+                btnSaMinHold.Text = "最小保持";
 
                 // 复位后立即开启连续扫描（*RST 默认是单次，手动恢复为连续模式）。
                 // 注：UI 上当前未保留“连续扫描”按钮与本地 Toggle 状态，
@@ -1738,7 +1738,7 @@ namespace A205AutoTestSystem.UI
             {
                 _spectrumAnalyzer.SetMinHold(next);
                 _saMinHoldOn = next;
-                btnSaMinHold.Text = next ? "轨迹最小保持:开" : "轨迹最小保持";
+                btnSaMinHold.Text = next ? "最小保持:开" : "最小保持";
                 Logger.Log($"[UI] 频谱仪轨迹最小保持：{(next ? "开" : "关")}");
             }
             catch (Exception ex)
