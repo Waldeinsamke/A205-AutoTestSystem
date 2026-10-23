@@ -116,6 +116,7 @@ namespace A205AutoTestSystem.UI
             this.btnSaRefLevelUp = new System.Windows.Forms.Button();
             this.btnSaRefLevelDown = new System.Windows.Forms.Button();
             this.pnlSignalFlow = new A205AutoTestSystem.UI.SignalFlowPanel();
+            this.pnlTestProgress = new A205AutoTestSystem.UI.TestProgressPanel();
             this.grpSerialConnection.SuspendLayout();
             this.grpParameterConfig.SuspendLayout();
             this.pnlTempGroup.SuspendLayout();
@@ -699,6 +700,15 @@ namespace A205AutoTestSystem.UI
             this.pnlSignalFlow.TabIndex = 54;
             this.pnlSignalFlow.TabStop = false;
             // 
+            // pnlTestProgress
+            // 
+            this.pnlTestProgress.BackColor = System.Drawing.Color.White;
+            this.pnlTestProgress.Location = new System.Drawing.Point(0, 294);
+            this.pnlTestProgress.Name = "pnlTestProgress";
+            this.pnlTestProgress.Size = new System.Drawing.Size(449, 157);
+            this.pnlTestProgress.TabIndex = 55;
+            this.pnlTestProgress.TabStop = false;
+            // 
             // ReceiverControlPanel
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
@@ -707,6 +717,7 @@ namespace A205AutoTestSystem.UI
             this.Controls.Add(this.grpInstrumentControl);
             this.Controls.Add(this.grpSerialConnection);
             this.Controls.Add(this.pnlSignalFlow);
+            this.Controls.Add(this.pnlTestProgress);
             this.Controls.Add(this.grpParameterConfig);
             this.Controls.Add(this.grpCommunicationLog);
             this.Name = "ReceiverControlPanel";
@@ -745,5 +756,8 @@ namespace A205AutoTestSystem.UI
 
         // 信号链路拓扑面板（纯自绘，无事件订阅）
         private A205AutoTestSystem.UI.SignalFlowPanel pnlSignalFlow;
+
+        // 测试进度面板（纯自绘，由 AutoTestPanel 推送状态）
+        private A205AutoTestSystem.UI.TestProgressPanel pnlTestProgress;
     }
 }

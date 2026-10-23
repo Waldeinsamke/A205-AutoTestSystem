@@ -255,6 +255,44 @@ namespace A205AutoTestSystem.UI
         }
 
         // ============================================================
+        // 测试进度推送（M7 阶段：供 AutoTestPanel 驱动 pnlTestProgress）
+        // ============================================================
+
+        /// <summary>
+        /// 推入一次测试进度快照到 <c>pnlTestProgress</c>。
+        /// <para>由 <c>AutoTestPanel</c> 在 <c>UpdateProgress</c> 与结果判重处调用。
+        /// 沿用 M6.x 阶段 <c>AttachToReceiver</c> 已建立的面板引用，
+        /// 无需静态事件或经 <c>MainForm</c> 中转。</para>
+        /// <para>调用方需保证已在 UI 线程（<c>UpdateProgress</c> 内部已做 BeginInvoke 切换）。</para>
+        /// </summary>
+        public void UpdateTestProgress(
+            TestProgressPanel.ProgressState state,
+            int total,
+            int completed,
+            int passed,
+            int failed,
+            TimeSpan elapsed,
+            string currentItem)
+        {
+            if (pnlTestProgress == null || pnlTestProgress.IsDisposed) return;
+            pnlTestProgress.PushProgress(state, total, completed, passed, failed, elapsed, currentItem);
+        }
+
+        /// <summary>测试项加载完成后推送"待运行"态（含总项数）。</summary>
+        public void UpdateTestProgressLoaded(int total)
+        {
+            if (pnlTestProgress == null || pnlTestProgress.IsDisposed) return;
+            pnlTestProgress.PushLoaded(total);
+        }
+
+        /// <summary>推送空闲态提示文案（如"资源未就绪：频谱仪未连接"）。</summary>
+        public void UpdateTestProgressHint(string hint)
+        {
+            if (pnlTestProgress == null || pnlTestProgress.IsDisposed) return;
+            pnlTestProgress.PushIdleHint(hint);
+        }
+
+        // ============================================================
         // 频段 ComboBox 动态填充
         // ============================================================
 

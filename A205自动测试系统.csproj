@@ -149,6 +149,10 @@
     <Compile Include="UI\SignalFlowPanel.cs">
       <SubType>Component</SubType>
     </Compile>
+    <!-- 测试进度面板：参数配置组下方的纯 GDI+ 自绘控件，无 Designer 文件 -->
+    <Compile Include="UI\TestProgressPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <!-- 仪表 VISA 地址配置加载器：读取可由用户直接编辑的 config\Instruments.xml -->
     <Compile Include="Common\InstrumentConfig.cs" />
     <!-- 仪表地址配置文件：随部署拷贝到输出目录 config\ 下，可由用户直接编辑 -->

@@ -60,6 +60,23 @@ namespace A205AutoTestSystem.UI
         /// <summary>带内虚假信号测试项实例（用于注入选频点回调 + 一键运行时识别跳过）。</summary>
         private InBandSpuriousTest _inBandSpuriousTest;
 
+        // M7：测试进度推送（一键运行期间累积，驱动 ReceiverControlPanel 的 pnlTestProgress）。
+        // 语义说明：手动单条运行不参与计数——它不构成"批次"，计数只在一键运行时前进，
+        // 否则环上的失败区间会与一键运行的批次语义混淆。
+        private int _progressTotal;
+        private int _progressCompleted;
+        private int _progressPassed;
+        private int _progressFailed;
+        private string _progressCurrentItem = string.Empty;
+
+        /// <summary>当前正在执行的测试项名（供频段文案拼接用）。</summary>
+        private string _currentTestName = string.Empty;
+
+        private DateTime _runAllStartTime;
+
+        /// <summary>运行中刷新耗时读数（500ms 心跳，自身不做 I/O）。</summary>
+        private readonly System.Windows.Forms.Timer _progressTimer;
+
         /// <summary>当前正在运行的行索引（_runInProgress=true 时有效；否则 -1）。
         /// 用于 OnDgvTestsCellContentClick 区分"点当前行■ 停止"和"点其他行"，避免误取消。</summary>
         private int _runningRowIndex = -1;
@@ -88,6 +105,10 @@ namespace A205AutoTestSystem.UI
             // 订阅全局 Logger 与引擎日志
             Logger.MessageLogged += OnLogMessage;
             _engine.LogEmitted += OnEngineLog;
+
+            // M7：测试进度面板的耗时心跳（一键运行期间启动，其余时间停止）
+            _progressTimer = new System.Windows.Forms.Timer { Interval = 500 };
+            _progressTimer.Tick += OnProgressTimerTick;
         }
 
         /// <summary>
@@ -101,6 +122,14 @@ namespace A205AutoTestSystem.UI
                 try { _engine.LogEmitted -= OnEngineLog; } catch { }
                 try { _inBandSpuriousFreqForm?.Dispose(); } catch { }
                 _inBandSpuriousFreqForm = null;
+
+                // M7：进度心跳计时器随面板一起释放
+                if (_progressTimer != null)
+                {
+                    _progressTimer.Tick -= OnProgressTimerTick;
+                    _progressTimer.Stop();
+                    _progressTimer.Dispose();
+                }
 
                 try { _rf?.Dispose(); } catch { }
                 try { _lo?.Dispose(); } catch { }
@@ -428,6 +457,14 @@ namespace A205AutoTestSystem.UI
                 Logger.Log("[AutoTestPanel] 资源不全，不加载测试项：" + reason);
                 UpdateStep("资源未就绪：" + reason);
                 btnRunAll.Enabled = false;
+                // M7：进度面板同步为"未加载 + 原因"，避免残留上一批次数据误导操作者
+                _progressTotal = 0;
+                _progressCompleted = 0;
+                _progressPassed = 0;
+                _progressFailed = 0;
+                _progressCurrentItem = string.Empty;
+                _currentTestName = string.Empty;
+                _receiverPanel?.UpdateTestProgressHint("资源未就绪：" + reason);
                 return;
             }
 
@@ -445,6 +482,16 @@ namespace A205AutoTestSystem.UI
             // 加载完成后允许一键运行
             btnRunAll.Enabled = true;
             UpdateProgress(0, $"已加载 {_tests.Count} 个测试项。");
+
+            // M7：推送"待运行"态（含总项数）。必须走独立方法而非 UpdateProgress——
+            // 后者以 _progressTotal > 0 为推送条件，而此刻批次尚未开始。
+            _progressTotal = 0;
+            _progressCompleted = 0;
+            _progressPassed = 0;
+            _progressFailed = 0;
+            _progressCurrentItem = string.Empty;
+            _currentTestName = string.Empty;
+            _receiverPanel?.UpdateTestProgressLoaded(_tests.Count);
         }
 
         /// <summary>
@@ -797,6 +844,9 @@ namespace A205AutoTestSystem.UI
                 skippedCell.Value = "需人工操作";
                 skippedCell.Style.ForeColor = StatusColorReady;
                 UpdateStep("『带内虚假信号』需人工更换低通滤波器，已在本次一键运行中跳过，请手动点该行 ▶ 运行");
+                // M7：跳过项也要更新当前项，避免底部一直显示上一项的名字
+                _currentTestName = test.TestName;
+                _progressCurrentItem = BuildCurrentItemText(test.TestName) + "（已跳过）";
                 Logger.Log("[AutoTestPanel] 一键运行跳过『带内虚假信号』：需人工逐频点更换低通滤波器。");
                 return;
             }
@@ -846,10 +896,23 @@ namespace A205AutoTestSystem.UI
             statusCell.Value = "运行中…";
             statusCell.Style.ForeColor = StatusColorRunning;
 
+            // M7：测试项「开始执行」时即更新当前项文案（而非等跑完）。
+            // 此前只在判重处赋值，导致第 N 项运行期间显示的是第 N-1 项的结果。
+            if (isFromRunAll)
+            {
+                _currentTestName = test.TestName;
+                _progressCurrentItem = BuildCurrentItemText(test.TestName);
+                PushProgressSnapshot();
+            }
+
             bool wasCancelled = false;
             try
             {
-                var progress = new Progress<string>(msg => UpdateStep(msg));
+                var progress = new Progress<string>(msg =>
+                {
+                    UpdateStep(msg);
+                    TryUpdateCurrentItemFromProgress(msg);
+                });
                 TestResult result = await test.ExecuteAsync(progress, _runCts.Token)
                                               .ConfigureAwait(true);
 
@@ -863,6 +926,26 @@ namespace A205AutoTestSystem.UI
                         "{0} ({1} {2})",
                         result.Judgment, valStr, result.Unit);
                     statusCell.Style.ForeColor = result.Judgment == "Pass" ? StatusColorPass : StatusColorFail;
+
+                    // M7：一键运行期间累计批次进度（手动单条运行不计入批次）
+                    if (isFromRunAll)
+                    {
+                        _progressCompleted++;
+                        if (result.Judgment == "Pass")
+                        {
+                            _progressPassed++;
+                        }
+                        else
+                        {
+                            _progressFailed++;
+                        }
+                        // 跑完后用真实结果回填频段（结果里的 BandDisplayName 比上报文本更准确）
+                        string bandName = result.BandDisplayName;
+                        _progressCurrentItem = BuildCurrentItemText(
+                            string.IsNullOrEmpty(result.TestItem) ? _currentTestName : result.TestItem,
+                            bandName);
+                        PushProgressSnapshot();
+                    }
 
                     // M7：测试项 ExecuteAsync 内部已经 Record 到 TestReportManager；
                     // 这里只要 PendingRowCount > 0 就允许导出。
@@ -946,6 +1029,16 @@ namespace A205AutoTestSystem.UI
             btnRunAll.Text = "■ 停止测试";   // 同一个按钮变"停止"语义
 
             int total = dgvTests.Rows.Count;
+
+            // M7：初始化批次进度计数与耗时起点，并启动耗时心跳
+            _progressTotal = total;
+            _progressCompleted = 0;
+            _progressPassed = 0;
+            _progressFailed = 0;
+            _progressCurrentItem = string.Empty;
+            _currentTestName = string.Empty;
+            _runAllStartTime = DateTime.Now;
+            _progressTimer.Start();
             try
             {
                 UpdateProgress(0, $"一键运行：共 {total} 项");
@@ -970,6 +1063,23 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 _runAllInProgress = false;
+                _progressTimer.Stop();
+
+                // M7：终态快照。必须在 _runAllInProgress 置 false 之后调用，
+                // 否则 PushProgressSnapshot 会把终态误判为 Running。
+                // 注意：中止判定必须在 _runCts 置 null 之前完成——
+                // cts 释放后引用丢失，再判断永远是"未中止"。
+                bool abortedAtExit = _runCts != null && _runCts.IsCancellationRequested;
+                if (_progressTotal > 0 && _receiverPanel != null)
+                {
+                    _receiverPanel.UpdateTestProgress(
+                        abortedAtExit
+                            ? TestProgressPanel.ProgressState.Aborted
+                            : TestProgressPanel.ProgressState.Finished,
+                        _progressTotal, _progressCompleted, _progressPassed, _progressFailed,
+                        DateTime.Now - _runAllStartTime, _progressCurrentItem);
+                }
+
                 // 一键运行退出时释放 cts（单条路径里 RunSingleTestAsync 自己已释放，
                 // 但 for-break / 异常路径可能没释放，这里兜底）
                 try { _runCts?.Dispose(); } catch { }
@@ -1046,6 +1156,104 @@ namespace A205AutoTestSystem.UI
                 progressBar.Value = Math.Max(0, Math.Min(100, percent));
             }
             UpdateStep(step);
+
+            // M7：同步驱动接收机控制页的测试进度面板。
+            // _progressTotal 为 0 表示当前不在一键运行序列中（如加载测试、手动单条运行），
+            // 此时不推送，避免把手动的单次执行误显示成批次进度。
+            if (_progressTotal > 0)
+            {
+                PushProgressSnapshot();
+            }
+        }
+
+        /// <summary>
+        /// M7：把当前累积的批次进度推给 <c>ReceiverControlPanel</c> 的进度面板。
+        /// </summary>
+        private void PushProgressSnapshot()
+        {
+            if (_receiverPanel == null) return;
+
+            TestProgressPanel.ProgressState state = _runAllInProgress
+                ? TestProgressPanel.ProgressState.Running
+                : (_runCts != null && _runCts.IsCancellationRequested
+                    ? TestProgressPanel.ProgressState.Aborted
+                    : TestProgressPanel.ProgressState.Finished);
+
+            TimeSpan elapsed = _runAllStartTime == default(DateTime)
+                ? TimeSpan.Zero
+                : DateTime.Now - _runAllStartTime;
+
+            _receiverPanel.UpdateTestProgress(
+                state,
+                _progressTotal,
+                _progressCompleted,
+                _progressPassed,
+                _progressFailed,
+                elapsed,
+                _progressCurrentItem);
+        }
+
+        /// <summary>运行中刷新耗时读数（不重算计数，仅重绘）。</summary>
+        private void OnProgressTimerTick(object sender, EventArgs e)
+        {
+            if (!_runAllInProgress) return;
+            PushProgressSnapshot();
+        }
+
+        /// <summary>
+        /// M7：生成底部"当前项"文案。
+        /// <para>通道取自接收机面板当前选择（整个批次固定不变），
+        /// 频段部分在测试项开始时为空，随 <c>progress.Report</c> 上报的频点动态补充。</para>
+        /// </summary>
+        private string BuildCurrentItemText(string testName, string bandText = null)
+        {
+            System.Text.StringBuilder sb = new System.Text.StringBuilder(testName ?? string.Empty);
+            if (!string.IsNullOrEmpty(bandText))
+            {
+                sb.Append(' ').Append(bandText);
+            }
+            int ch = _receiverPanel != null ? _receiverPanel.SelectedChannel : 0;
+            if (ch > 0)
+            {
+                sb.Append(" CH").Append(ch);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// M7：从测试项的进度上报文本中提取频段信息，更新"当前项"。
+        /// <para>测试项（如 <c>GainTest</c>）在进入具体频点时会以
+        /// <c>"[GainTest] Mode1 频段108 等 RF/LO 稳定200ms…"</c> 形式上报，
+        /// 这里按 "频段" 关键字截取到空白为止，得到 "频段108"。
+        /// 这样无需改动 <see cref="ITestItem"/> 接口即可获得运行中的频点信息。</para>
+        /// </summary>
+        private void TryUpdateCurrentItemFromProgress(string message)
+        {
+            if (!_runAllInProgress || string.IsNullOrEmpty(message)) return;
+
+            const string marker = "频段";
+            int idx = message.IndexOf(marker, StringComparison.Ordinal);
+            if (idx < 0) return;
+
+            int start = idx;
+            int end = idx;
+            while (end < message.Length && !char.IsWhiteSpace(message[end]))
+            {
+                end++;
+            }
+            // 词元形如"频段108"，去掉结尾标点
+            while (end > start && (message[end - 1] == '，' || message[end - 1] == ','
+                || message[end - 1] == '。' || message[end - 1] == ':' || message[end - 1] == '：'))
+            {
+                end--;
+            }
+
+            string bandText = message.Substring(start, end - start);
+            string updated = BuildCurrentItemText(_currentTestName, bandText);
+            if (updated == _progressCurrentItem) return;
+
+            _progressCurrentItem = updated;
+            PushProgressSnapshot();
         }
 
         private void UpdateStep(string step)
