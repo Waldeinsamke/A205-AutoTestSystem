@@ -49,10 +49,6 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.NumericUpDown numAgcAtten;
         private System.Windows.Forms.Button btnAgcSet;
         private System.Windows.Forms.Label lblAgcAtten;
-
-        // 仪表状态区（地址与连接状态已迁移到配置文件 + 信号链路拓扑图）
-        private System.Windows.Forms.GroupBox grpInstrumentStatus;
-        private System.Windows.Forms.Label lblStatusHint;
         private System.Windows.Forms.Button btnConnectAll;
         private System.Windows.Forms.Button btnDisconnectAll;
 
@@ -100,8 +96,6 @@ namespace A205AutoTestSystem.UI
             this.lblAgcAtten = new System.Windows.Forms.Label();
             this.numAgcAtten = new System.Windows.Forms.NumericUpDown();
             this.btnAgcSet = new System.Windows.Forms.Button();
-            this.grpInstrumentStatus = new System.Windows.Forms.GroupBox();
-            this.lblStatusHint = new System.Windows.Forms.Label();
             this.btnConnectAll = new System.Windows.Forms.Button();
             this.btnDisconnectAll = new System.Windows.Forms.Button();
             this.grpCommunicationLog = new System.Windows.Forms.GroupBox();
@@ -127,7 +121,6 @@ namespace A205AutoTestSystem.UI
             this.pnlTempGroup.SuspendLayout();
             this.pnlModeGroup.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).BeginInit();
-            this.grpInstrumentStatus.SuspendLayout();
             this.grpCommunicationLog.SuspendLayout();
             this.grpInstrumentControl.SuspendLayout();
             this.SuspendLayout();
@@ -480,29 +473,9 @@ namespace A205AutoTestSystem.UI
             this.btnAgcSet.UseVisualStyleBackColor = true;
             this.btnAgcSet.Click += new System.EventHandler(this.OnAgcSetClicked);
             // 
-            // grpInstrumentStatus
-            // 
-            this.grpInstrumentStatus.Controls.Add(this.lblStatusHint);
-            this.grpInstrumentStatus.Location = new System.Drawing.Point(0, 294);
-            this.grpInstrumentStatus.Name = "grpInstrumentStatus";
-            this.grpInstrumentStatus.Padding = new System.Windows.Forms.Padding(10, 5, 10, 10);
-            this.grpInstrumentStatus.Size = new System.Drawing.Size(449, 153);
-            this.grpInstrumentStatus.TabIndex = 2;
-            this.grpInstrumentStatus.TabStop = false;
-            this.grpInstrumentStatus.Text = "仪表连接（地址读自 config\\Instruments.xml）";
-            // 
-            // lblStatusHint
-            // 
-            this.lblStatusHint.Location = new System.Drawing.Point(18, 30);
-            this.lblStatusHint.Name = "lblStatusHint";
-            this.lblStatusHint.Size = new System.Drawing.Size(335, 96);
-            this.lblStatusHint.TabIndex = 1;
-            this.lblStatusHint.Text = "仪表 VISA 地址已改为配置文件管理，请编辑程序目录下的 config\\Instruments.xml 后点击“连接”。\r\n\r\n各仪表的连接状态（含异常标红）请" +
-    "查看右侧『信号链路』拓扑图，失败原因见下方日志。";
-            // 
             // btnConnectAll
             // 
-            this.btnConnectAll.Location = new System.Drawing.Point(17, 183);
+            this.btnConnectAll.Location = new System.Drawing.Point(16, 183);
             this.btnConnectAll.Name = "btnConnectAll";
             this.btnConnectAll.Size = new System.Drawing.Size(80, 49);
             this.btnConnectAll.TabIndex = 30;
@@ -512,7 +485,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnDisconnectAll
             // 
-            this.btnDisconnectAll.Location = new System.Drawing.Point(105, 183);
+            this.btnDisconnectAll.Location = new System.Drawing.Point(106, 183);
             this.btnDisconnectAll.Name = "btnDisconnectAll";
             this.btnDisconnectAll.Size = new System.Drawing.Size(80, 49);
             this.btnDisconnectAll.TabIndex = 31;
@@ -557,7 +530,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnOpenPower
             // 
-            this.btnOpenPower.Location = new System.Drawing.Point(17, 20);
+            this.btnOpenPower.Location = new System.Drawing.Point(16, 20);
             this.btnOpenPower.Name = "btnOpenPower";
             this.btnOpenPower.Size = new System.Drawing.Size(80, 49);
             this.btnOpenPower.TabIndex = 22;
@@ -582,7 +555,7 @@ namespace A205AutoTestSystem.UI
             this.grpInstrumentControl.Controls.Add(this.btnSaHarmonics);
             this.grpInstrumentControl.Controls.Add(this.btnSaRefLevelUp);
             this.grpInstrumentControl.Controls.Add(this.btnSaRefLevelDown);
-            this.grpInstrumentControl.Location = new System.Drawing.Point(456, 8);
+            this.grpInstrumentControl.Location = new System.Drawing.Point(455, 213);
             this.grpInstrumentControl.Name = "grpInstrumentControl";
             this.grpInstrumentControl.Size = new System.Drawing.Size(383, 238);
             this.grpInstrumentControl.TabIndex = 33;
@@ -591,7 +564,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaPeakSearch
             // 
-            this.btnSaPeakSearch.Location = new System.Drawing.Point(17, 130);
+            this.btnSaPeakSearch.Location = new System.Drawing.Point(16, 130);
             this.btnSaPeakSearch.Name = "btnSaPeakSearch";
             this.btnSaPeakSearch.Size = new System.Drawing.Size(80, 49);
             this.btnSaPeakSearch.TabIndex = 40;
@@ -601,7 +574,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMarkerAllOff
             // 
-            this.btnSaMarkerAllOff.Location = new System.Drawing.Point(285, 130);
+            this.btnSaMarkerAllOff.Location = new System.Drawing.Point(286, 130);
             this.btnSaMarkerAllOff.Name = "btnSaMarkerAllOff";
             this.btnSaMarkerAllOff.Size = new System.Drawing.Size(80, 49);
             this.btnSaMarkerAllOff.TabIndex = 41;
@@ -611,7 +584,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaReset
             // 
-            this.btnSaReset.Location = new System.Drawing.Point(285, 20);
+            this.btnSaReset.Location = new System.Drawing.Point(286, 20);
             this.btnSaReset.Name = "btnSaReset";
             this.btnSaReset.Size = new System.Drawing.Size(80, 49);
             this.btnSaReset.TabIndex = 42;
@@ -621,7 +594,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMaxHold
             // 
-            this.btnSaMaxHold.Location = new System.Drawing.Point(105, 75);
+            this.btnSaMaxHold.Location = new System.Drawing.Point(106, 75);
             this.btnSaMaxHold.Name = "btnSaMaxHold";
             this.btnSaMaxHold.Size = new System.Drawing.Size(80, 49);
             this.btnSaMaxHold.TabIndex = 43;
@@ -631,7 +604,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaPeakAuto
             // 
-            this.btnSaPeakAuto.Location = new System.Drawing.Point(197, 130);
+            this.btnSaPeakAuto.Location = new System.Drawing.Point(196, 130);
             this.btnSaPeakAuto.Name = "btnSaPeakAuto";
             this.btnSaPeakAuto.Size = new System.Drawing.Size(80, 49);
             this.btnSaPeakAuto.TabIndex = 46;
@@ -641,7 +614,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaBwAuto
             // 
-            this.btnSaBwAuto.Location = new System.Drawing.Point(285, 75);
+            this.btnSaBwAuto.Location = new System.Drawing.Point(286, 75);
             this.btnSaBwAuto.Name = "btnSaBwAuto";
             this.btnSaBwAuto.Size = new System.Drawing.Size(80, 49);
             this.btnSaBwAuto.TabIndex = 47;
@@ -651,7 +624,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaTraceAvg
             // 
-            this.btnSaTraceAvg.Location = new System.Drawing.Point(17, 75);
+            this.btnSaTraceAvg.Location = new System.Drawing.Point(16, 75);
             this.btnSaTraceAvg.Name = "btnSaTraceAvg";
             this.btnSaTraceAvg.Size = new System.Drawing.Size(80, 49);
             this.btnSaTraceAvg.TabIndex = 48;
@@ -661,7 +634,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaMinHold
             // 
-            this.btnSaMinHold.Location = new System.Drawing.Point(197, 75);
+            this.btnSaMinHold.Location = new System.Drawing.Point(196, 75);
             this.btnSaMinHold.Name = "btnSaMinHold";
             this.btnSaMinHold.Size = new System.Drawing.Size(80, 49);
             this.btnSaMinHold.TabIndex = 49;
@@ -671,7 +644,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaDeltaMarker
             // 
-            this.btnSaDeltaMarker.Location = new System.Drawing.Point(105, 130);
+            this.btnSaDeltaMarker.Location = new System.Drawing.Point(106, 130);
             this.btnSaDeltaMarker.Name = "btnSaDeltaMarker";
             this.btnSaDeltaMarker.Size = new System.Drawing.Size(80, 49);
             this.btnSaDeltaMarker.TabIndex = 50;
@@ -681,7 +654,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaHarmonics
             // 
-            this.btnSaHarmonics.Location = new System.Drawing.Point(105, 20);
+            this.btnSaHarmonics.Location = new System.Drawing.Point(106, 20);
             this.btnSaHarmonics.Name = "btnSaHarmonics";
             this.btnSaHarmonics.Size = new System.Drawing.Size(80, 49);
             this.btnSaHarmonics.TabIndex = 51;
@@ -691,7 +664,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaRefLevelUp
             // 
-            this.btnSaRefLevelUp.Location = new System.Drawing.Point(197, 183);
+            this.btnSaRefLevelUp.Location = new System.Drawing.Point(196, 183);
             this.btnSaRefLevelUp.Name = "btnSaRefLevelUp";
             this.btnSaRefLevelUp.Size = new System.Drawing.Size(80, 49);
             this.btnSaRefLevelUp.TabIndex = 52;
@@ -701,7 +674,7 @@ namespace A205AutoTestSystem.UI
             // 
             // btnSaRefLevelDown
             // 
-            this.btnSaRefLevelDown.Location = new System.Drawing.Point(285, 183);
+            this.btnSaRefLevelDown.Location = new System.Drawing.Point(286, 183);
             this.btnSaRefLevelDown.Name = "btnSaRefLevelDown";
             this.btnSaRefLevelDown.Size = new System.Drawing.Size(80, 49);
             this.btnSaRefLevelDown.TabIndex = 53;
@@ -712,7 +685,7 @@ namespace A205AutoTestSystem.UI
             // pnlSignalFlow
             // 
             this.pnlSignalFlow.BackColor = System.Drawing.Color.White;
-            this.pnlSignalFlow.Location = new System.Drawing.Point(456, 248);
+            this.pnlSignalFlow.Location = new System.Drawing.Point(455, 8);
             this.pnlSignalFlow.LoOutputOn = false;
             this.pnlSignalFlow.LoState = A205AutoTestSystem.Common.InstrumentLinkState.Idle;
             this.pnlSignalFlow.Name = "pnlSignalFlow";
@@ -735,7 +708,6 @@ namespace A205AutoTestSystem.UI
             this.Controls.Add(this.grpSerialConnection);
             this.Controls.Add(this.pnlSignalFlow);
             this.Controls.Add(this.grpParameterConfig);
-            this.Controls.Add(this.grpInstrumentStatus);
             this.Controls.Add(this.grpCommunicationLog);
             this.Name = "ReceiverControlPanel";
             this.Size = new System.Drawing.Size(844, 718);
@@ -746,7 +718,6 @@ namespace A205AutoTestSystem.UI
             this.pnlModeGroup.ResumeLayout(false);
             this.pnlModeGroup.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).EndInit();
-            this.grpInstrumentStatus.ResumeLayout(false);
             this.grpCommunicationLog.ResumeLayout(false);
             this.grpInstrumentControl.ResumeLayout(false);
             this.ResumeLayout(false);

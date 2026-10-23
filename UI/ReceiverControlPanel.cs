@@ -12,11 +12,12 @@ namespace A205AutoTestSystem.UI
 {
     /// <summary>
     /// 接收机控制面板（M5 阶段实现）。
-    /// <para>布局（严格按 spec §5.2）：</para>
+    /// <para>当前界面布局：</para>
     /// <list type="number">
     /// <item>串口连接区（接收机 + 矩阵）</item>
     /// <item>接收机参数配置区（温度 / 通道 / 模式 / 频段 / AGC 衰减）</item>
-    /// <item>仪表连接状态区（RF / LO / 频谱仪）</item>
+    /// <item>仪表控制区（一键连接/断开 + 供电开关 + 频谱仪快捷按钮）</item>
+    /// <item>信号链路拓扑面板（纯 GDI+ 自绘，呈现各仪表与链路的实时状态）</item>
     /// <item>通信日志区（RichTextBox + 清除）</item>
     /// </list>
     /// <para>控件创建已移至 <c>ReceiverControlPanel.Designer.cs</c> 的 <c>InitializeComponent()</c>，
@@ -206,8 +207,8 @@ namespace A205AutoTestSystem.UI
             RefreshBandCombo(ReceiverMode.Mode1);
             numAgcAtten.Value = 0;
 
-            // 仪表连接状态由信号链路拓扑图（pnlSignalFlow）三态节点呈现，
-            // 此处不再初始化指示灯；初始状态各 LinkState 字段已默认为 Idle。
+            // 仪表连接状态由信号链路拓扑图（pnlSignalFlow）三态节点呈现；
+            // 初始状态各 LinkState 字段已默认为 Idle，无需额外初始化。
         }
 
         // ============================================================
@@ -604,8 +605,8 @@ namespace A205AutoTestSystem.UI
         //
         // 约定：
         // - TryConnectXxx：已连接则跳过并返回 true；连接失败（地址空/异常）只记日志、不弹窗，
-        //   失败时释放半成品对象并置 null、状态灯置红，返回 false，保证一键连接可继续下一台。
-        // - DisconnectXxx：best-effort，异常只记日志，最终置 null、状态灯置红。
+        //   失败时释放半成品对象并置 null、把拓扑节点标红，返回 false，保证一键连接可继续下一台。
+        // - DisconnectXxx：best-effort，异常只记日志，最终置 null、把拓扑节点标红。
 
         private bool TryConnectRf()
         {
@@ -658,7 +659,7 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// RF 信号源 ConnectionChanged 事件回调：失联(IsConnected=false)时把状态灯变红,
+        /// RF 信号源 ConnectionChanged 事件回调：失联(IsConnected=false)时把拓扑节点标红,
         /// 避免线缆掉了但 UI 还显示绿色(原 IsConnected 字段不会自己变 false)。
         /// </summary>
         private void OnRfConnectionChanged(bool isConnected)
@@ -1579,7 +1580,7 @@ namespace A205AutoTestSystem.UI
             {
                 return true;
             }
-            MessageBox.Show(this, "请先在『仪表连接状态』区连接频谱仪。", "提示",
+            MessageBox.Show(this, "请先在『仪表控制』区点击“连接”以连接频谱仪。", "提示",
                 MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return false;
         }

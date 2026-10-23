@@ -272,7 +272,7 @@ namespace A205AutoTestSystem.UI
             if (!_receiverPanel.AreInstrumentsReady)
             {
                 MessageBox.Show(this,
-                    "请先在『接收机控制』页一键连好三台仪表（RF/LO/SA 状态灯全绿）。",
+                    "请先在『接收机控制』页一键连好三台仪表（RF/LO/SA 在信号链路图上均显示就绪）。",
                     "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -366,7 +366,7 @@ namespace A205AutoTestSystem.UI
             // ReceiverControlPanel 持有的活实例——那是我们"借用"的对象，不是"持有"。
             // 误释放会跑到 VisaBaseInstrument.Disconnect 的非短路分支，
             // 写"disconnected from"日志 + 触发 ConnectionChanged(false) →
-            // 状态灯被误变红 + AutoTestPanel 拿到的引用指向已 dispose 的尸体。
+            // 拓扑节点被误标红 + AutoTestPanel 拿到的引用指向已 dispose 的尸体。
             // 同对象跳过；不同对象才 Dispose 旧引用（之前可能是不同连接批次留下的旧实例）。
             if (!ReferenceEquals(_rf, rf)) { try { _rf?.Dispose(); } catch { } }
             if (!ReferenceEquals(_lo, lo)) { try { _lo?.Dispose(); } catch { } }

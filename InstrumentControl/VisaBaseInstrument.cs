@@ -289,7 +289,7 @@ namespace A205AutoTestSystem.InstrumentControl
 
         /// <summary>
         /// 把仪表标记为"已失联"：清 <see cref="IsConnected"/> 标志、触发
-        /// <see cref="ConnectionChanged"/> 事件让 UI 状态灯自动变红、安全释放底层
+        /// <see cref="ConnectionChanged"/> 事件让 UI 链路图节点自动标红、安全释放底层
         /// VISA transport 句柄。
         /// <para>仅在 <see cref="IsConnected"/> == true 时执行一次，避免重复触发事件。
         /// 释放阶段的异常由 <see cref="SafeDisposeTransport"/> 内部吞掉，不会影响外层抛错链路。</para>
