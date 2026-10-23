@@ -12,7 +12,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     /// <summary>
     /// 输入 P-1（1dB 压缩点）测试。
     /// <para>业务逻辑：在线性最大增益已稳定的基础上，按 1dB 步进逐次增大 RF 信号源功率，
-    /// 同步读频谱仪 DELTA marker 累积值；若某次步进增量 < 0.95 dB（增益压缩 ≥ 0.05 dB），
+    /// 同步读频谱仪 DELTA marker 累积值；若某次步进增量 < 0.90 dB（增益压缩 ≥ 0.1 dB），
     /// 记录此时的 RF 信号源功率作为 P-1 指标值。
     /// （业务上 P-1 越大代表接收机线性工作区越宽，所以下限判定：Mode1/3 ≥ -10 dBm、Mode2 ≥ 0 dBm。）</para>
     /// <para>与 GainTest 风格一致：</para>
@@ -27,7 +27,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>RF/LO SetFrequency（不动 LO/频段命令以外的命令）</item>
     ///   <item>开最大保持 + 等一帧 + 读 IF peak（作为 DELTA 参考点）</item>
     ///   <item>设 DELTA marker（参考点 = 上一步的 IF peak）</item>
-    ///   <item>步进循环：RF 功率 +1 dB → 等 500ms → 读 delta Y → 计算单步增量 < 0.95 则记 P-1 = 当前 RF 功率</item>
+    ///   <item>步进循环：RF 功率 +1 dB → 等 500ms → 读 delta Y → 计算单步增量 < 0.90 则记 P-1 = 当前 RF 功率</item>
     ///   <item>写 TestResult；复位：关最大保持</item>
     ///   <item>下个频点重新设 DELTA marker（Q5：单频点只设一次）</item>
     /// </list>
@@ -63,11 +63,11 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         /// <summary>RF 功率步进（dB）。按用户要求 1 dB。</summary>
         private const double PowerStepDbm = 1.0;
 
-        /// <summary>RF 信号源最大允许输出功率（dBm）。按用户要求不超过 10 dBm。</summary>
-        private const double MaxRfPowerDbm = 10.0;
+        /// <summary>RF 信号源最大允许输出功率（dBm）。按用户要求不超过 15 dBm。</summary>
+        private const double MaxRfPowerDbm = 15.0;
 
-        /// <summary>单步增量阈值（dB）。低于此值判停为 1dB 压缩点。0.95 = 压缩 ≥ 0.05 dB。</summary>
-        private const double StepIncrementThresholdDb = 0.95;
+        /// <summary>单步增量阈值（dB）。低于此值判停为 1dB 压缩点。0.90 = 压缩 ≥ 0.1 dB。</summary>
+        private const double StepIncrementThresholdDb = 0.90;
 
         // ============================================================
         // 模式联动参数
@@ -303,7 +303,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _receiver.SendBandCommand(mode, band.BandIndex);
             await Task.Delay(BandStableMs, ct).ConfigureAwait(false);
 
-            // 重置 SA 状态：设参考电平 25 dBm（按用户要求，替代原最大保持；容纳大步进到 +10 dBm 时的 IF 峰值）。
+            // 重置 SA 状态：设参考电平 25 dBm（按用户要求，替代原最大保持；容纳大步进到 +15 dBm 时的 IF 峰值）。
             // 关闭所有 marker（包括 DELTA），让下一段从干净状态开始
             _sa.SetReferenceLevel(25.0);
             // 等 50ms 让频谱仪处理完 RLEV 命令（保证开输出前 SA 显示顶端已生效，避免屏幕读数饱和）
@@ -377,7 +377,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 currentPowerDbm += PowerStepDbm;
 
                 // 达上限保护：触顶立即 break，不再继续循环（修复前会多跑一轮：
-                // 重发 :POW 10 dBm、等 500ms、多读一次 :CALC:MARK1:Y?，劣化用户体验）。
+                // 重发 :POW 15 dBm、等 500ms、多读一次 :CALC:MARK1:Y?，劣化用户体验）。
                 // 判据故意用 ">=" 而非 ">"，让"刚好到上限"也立即退出（不留双发）。
                 if (currentPowerDbm >= MaxRfPowerDbm)
                 {
@@ -444,14 +444,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                      && lowerLimit.HasValue
                      && p1ResultValue >= lowerLimit.Value;
 
-            // 备注：判停时累积 delta + 是否触达 10 dBm 上限
+            // 备注：判停时累积 delta + 是否触达 15 dBm 上限
             string remarks = string.Format(
                 CultureInfo.InvariantCulture,
                 "RF={0:F3}MHz, IF={1:F3}MHz, refPeak={2:F2}dBm, steps={3}, P-1={4:F2}dBm, finalDelta={5}dB{6}",
                 freqMHz, ifFreqHz / 1e6, referencePeakDbm, stepCount,
                 double.IsNaN(p1ResultValue) ? 0.0 : p1ResultValue,
                 finalDeltaStr,
-                reachedUpperLimit ? ", 触达10dBm上限未压缩" : "");
+                reachedUpperLimit ? ", 触达15dBm上限未压缩" : "");
 
             TestResult result = new TestResult
             {

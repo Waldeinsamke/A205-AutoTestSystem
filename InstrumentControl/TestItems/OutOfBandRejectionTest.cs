@@ -10,8 +10,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 {
     /// <summary>
     /// 中频带外抑制测试。
-    /// <para>物理含义：测量接收机对"中频中心左右两侧"邻近带外杂散/谐波信号的抑制度，
-    /// 单位 dBm（按用户 Q3-B 决策：先按 dBm 把测试跑通，后续可以切换为 dBc）。</para>
+    /// <para>物理含义：测量接收机对"中频中心左右两侧"邻近带外杂散/谐波信号的抑制度。</para>
+    /// <para>报表口径：频谱仪直接读到的是杂散峰的绝对功率（dBm，如 −70 dBm），
+    /// 取绝对值后作为抑制量（dB，如 70 dB）参与判定与报表，Remarks 里保留原始实测功率。</para>
     /// <para>测试方法（按产品手册 + 用户决策）：</para>
     /// <list type="bullet">
     ///   <item>Mode1 / Mode2：RF 不扫频（保持测试频点单点输入），频谱仪分两段扫描
@@ -27,7 +28,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>Mode2：960 MHz、1090 MHz、1224 MHz、1600 MHz</item>
     ///   <item>Mode3：2000 MHz</item>
     /// </list>
-    /// <para>阈值（用户给定）：Mode1 / 2 ≥ 25 dBm；Mode3 ≥ 60 dBm。</para>
+    /// <para>阈值（用户给定）：Mode1 / 2 ≥ 25 dB；Mode3 ≥ 60 dB（与频谱仪实测绝对值取绝对值后比较）。</para>
     /// </summary>
     public class OutOfBandRejectionTest : ITestItem
     {
@@ -171,7 +172,13 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         }
 
         public string TestName => "中频带外抑制";
-        public string Unit => "dBm";
+
+        /// <summary>
+        /// 单位：dB（抑制量）。
+        /// <para>频谱仪直接读到的是带外杂散峰的绝对功率（dBm，如 −70 dBm），
+        /// 本测试按绝对值取抑制量后报表，Remarks 里同时保留原始实测功率。</para>
+        /// </summary>
+        public string Unit => "dB";
 
         private static double GetLowerLimitByMode(ReceiverMode mode)
         {
@@ -426,15 +433,18 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             }
 
             double limit = GetLowerLimitByMode(mode);
-            bool pass = !double.IsNaN(maxSegmentDb) && maxSegmentDb >= limit;
+            // 判定用绝对值：频谱仪读到的带外杂散峰是负的绝对功率（dBm，如 −70 dBm），
+            // 取绝对值后才是"抑制量"语义（70 dB），再与阈值比较。
+            double suppressDb = double.IsNaN(maxSegmentDb) ? double.NaN : Math.Abs(maxSegmentDb);
+            bool pass = !double.IsNaN(suppressDb) && suppressDb >= limit;
             string remarks = string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} {1} ({2}/{3}), IF={4:F0}MHz, {5}, SA扫max段={6:F0}~{7:F0}MHz, max={8:F2}dBm (≥{9}dBm{10})",
+                "{0} {1} ({2}/{3}), IF={4:F0}MHz, {5}, SA扫max段={6:F0}~{7:F0}MHz, 实测={8:F2}dBm, |抑制|={9:F2}dB (≥{10}dB{11})",
                 mode, band.DisplayName, done, total,
                 ifFreqHz / 1e6,
                 sweepModeDesc,
                 maxSegmentStart / 1e6, maxSegmentStop / 1e6,
-                maxSegmentDb, limit,
+                maxSegmentDb, suppressDb, limit,
                 pass ? "合格" : "不合格");
 
             TestResult result = new TestResult
@@ -445,21 +455,21 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 BandIndex = band.BandIndex,
                 BandDisplayName = band.DisplayName,
                 TestItem = TestName,
-                Value = maxSegmentDb,
+                Value = suppressDb,
                 Unit = Unit,
-                Judgment = double.IsNaN(maxSegmentDb) ? "Fail" : (pass ? "Pass" : "Fail"),
+                Judgment = double.IsNaN(suppressDb) ? "Fail" : (pass ? "Pass" : "Fail"),
                 Remarks = remarks,
             };
             TestReportManager.Instance.Record(result);
 
             progress.Report(string.Format(
                 CultureInfo.InvariantCulture,
-                "[OutOfBandRejectionTest] {0} {1} ({2}/{3}): max={4:F2}dBm (≥{5}dBm) → {6}",
-                mode, band.DisplayName, done, total, maxSegmentDb, limit, result.Judgment));
+                "[OutOfBandRejectionTest] {0} {1} ({2}/{3}): 实测={4:F2}dBm, |抑制|={5:F2}dB (≥{6}dB) → {7}",
+                mode, band.DisplayName, done, total, maxSegmentDb, suppressDb, limit, result.Judgment));
             Logger.Log(string.Format(
                 CultureInfo.InvariantCulture,
-                "[OutOfBandRejectionTest] {0} {1}: max={2:F2}dBm → {3}",
-                mode, band.DisplayName, maxSegmentDb, result.Judgment));
+                "[OutOfBandRejectionTest] {0} {1}: 实测={2:F2}dBm, |抑制|={3:F2}dB → {4}",
+                mode, band.DisplayName, maxSegmentDb, suppressDb, result.Judgment));
 
             _sa.SetAllMarkOFF();
 

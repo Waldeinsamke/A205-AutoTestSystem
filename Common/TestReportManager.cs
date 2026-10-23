@@ -12,6 +12,10 @@ namespace A205AutoTestSystem.Common
     /// 末尾调用 <see cref="Record"/> 把结果塞进当前批次的 <see cref="ExcelExporter"/>。</para>
     /// <para>落盘（消费者）：UI 的「导出 Excel」按钮调用 <see cref="SaveCurrentReport"/>，
     /// 把当前批次写为 <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。</para>
+    /// <para>温度区间兜底：各测试项构造时不知道当前温度档位（<see cref="TestCatalog"/>
+    /// 用完即丢），导致 <see cref="TestResult.TemperatureRange"/> 默认为空、Excel 该列为空白。
+    /// UI 在「加载测试」时调用 <see cref="SetTemperatureContext"/> 写入档位，
+    /// <see cref="Record"/> 发现结果缺温度时按此兜底。</para>
     /// <para>线程安全：所有公共方法都用 <see cref="_lock"/> 串行化，
     /// 防止 WinForms 异步测试项并发调用导致行乱序。</para>
     /// </summary>
@@ -22,6 +26,12 @@ namespace A205AutoTestSystem.Common
 
         private readonly object _lock = new object();
         private ExcelExporter _exporter;
+
+        /// <summary>
+        /// 当前温度档位的显示名（"常温" / "高温" / "低温"），供 <see cref="Record"/> 兜底填充。
+        /// 默认 null：尚未经 <see cref="SetTemperatureContext"/> 设置时不做任何兜底。
+        /// </summary>
+        private string _temperatureContext;
 
         /// <summary>进程内单例。</summary>
         public static TestReportManager Instance
@@ -59,8 +69,26 @@ namespace A205AutoTestSystem.Common
         }
 
         /// <summary>
+        /// 设置当前温度档位的显示名，供后续 <see cref="Record"/> 兜底填充
+        /// <see cref="TestResult.TemperatureRange"/>。
+        /// <para>由 UI 在「加载测试」确定档位时调用（须早于任何测试项执行）；
+        /// 传 null / 空串表示清除上下文，此后再记录的结果温度列保持空白。</para>
+        /// </summary>
+        public void SetTemperatureContext(string displayName)
+        {
+            lock (_lock)
+            {
+                _temperatureContext = string.IsNullOrWhiteSpace(displayName) ? null : displayName;
+            }
+        }
+
+        /// <summary>
         /// 由测试项在 <c>ExecuteAsync</c> 末尾调用，把结果追加到当前批次。
         /// <para>第一次调用时会惰性创建 <see cref="ExcelExporter"/>。</para>
+        /// <para>温度兜底：测试项本身不掌握温度档位（<see cref="TestCatalog"/> 构造时
+        /// 用完即丢），若结果未带 <see cref="TestResult.TemperatureRange"/>，
+        /// 则用 <see cref="SetTemperatureContext"/> 设定的档位名补上，
+        /// 避免 Excel 温度列出现空白。</para>
         /// </summary>
         /// <param name="result">测试结果（不可为 null）。</param>
         public void Record(TestResult result)
@@ -73,6 +101,12 @@ namespace A205AutoTestSystem.Common
                     _exporter = new ExcelExporter();
                     Logger.Log("[Report] 新批次开始，等待测试结果…");
                 }
+
+                if (string.IsNullOrWhiteSpace(result.TemperatureRange) && _temperatureContext != null)
+                {
+                    result.TemperatureRange = _temperatureContext;
+                }
+
                 _exporter.AppendResult(result);
                 Logger.Log(string.Format(
                     CultureInfo.InvariantCulture,

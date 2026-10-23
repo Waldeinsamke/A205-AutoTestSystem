@@ -22,6 +22,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>按模式取参数：IF=70/750 MHz、SA 中心=70/750 MHz、SA Span=8/300 MHz、
     ///         RF 功率=Mode1/3=-20 dBm / Mode2=-10 dBm、LO=3 dBm</item>
     ///   <item>接收机：先通道后模式（receiver.SendChannelThenModeCommand）+ 频段（receiver.SendBandCommand）</item>
+    ///   <item>等模式切换稳定 1000ms（ModeStableMs），接收机内部重整通路后再配置仪表</item>
     ///   <item>LO 单频：按 RF 中心算 LoFrequencyRule，再 SetFrequency + SetPower + SetOutputState(true)</item>
     ///   <item>RF 扫频：FREQ:MODE SWE / FREQ:STAR / FREQ:STOP / SWE:POIN 1000 / POW / INIT:CONT 1；
     ///         扫频参数设完立即 OUTP 1（SetOutputState(true)）</item>
@@ -48,6 +49,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
         /// <summary>真机模式下频谱仪最大保持的稳定时间（ms）。默认 10 s，后续如测试有冗余可调小。</summary>
         private const int RealMachineSettleDelayMs = 10_000;
+
+        /// <summary>
+        /// 模式切换后稳定时间（ms）。
+        /// <para>取 1000ms，与 GainTest / InputP1Test 口径一致：
+        /// 通道+模式命令发完后接收机内部要重整本振与滤波通路，
+        /// 紧接着就配置 RF 扫频与频谱仪，全程只有数十毫秒，等不到接收机真正切稳。</para>
+        /// </summary>
+        private const int ModeStableMs = 1000;
 
         // 模式联动频谱仪参数（与 GainTest / ReceiverControlPanel 保持一致；如修改需同步）
         // SA 中心 = IF 中心；SA Span 按模式区分带宽。
@@ -215,6 +224,11 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             // 1) 接收机：先通道后模式（复用 UI 同款 SendChannelThenModeCommand）+ 频段
             _receiver.SendChannelThenModeCommand(_channel, mode);
             _receiver.SendBandCommand(mode, plan.BandIndex);
+
+            // 等模式切换稳定（接收机内部重整本振/滤波通路后再配置仪表）
+            progress.Report($"[BandwidthTest] {mode} 模式切换稳定 {ModeStableMs}ms…");
+            Logger.Log($"[BandwidthTest] {mode} 模式切换稳定 {ModeStableMs}ms");
+            await Task.Delay(ModeStableMs, ct).ConfigureAwait(false);
 
             // 2) LO：按 RF 中心算本振频率（LoFrequencyRule），单频 + 固定功率 + 打开输出
             double loFreqHz = LoFrequencyRule.Calculate(plan.CenterMHz * 1_000_000.0, (int)mode);

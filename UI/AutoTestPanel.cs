@@ -403,6 +403,11 @@ namespace A205AutoTestSystem.UI
                 default: temperature = TemperatureRange.Normal; break;
             }
 
+            // 把温度档位登记到 TestReportManager：测试项自身不掌握档位
+            // （TestCatalog 构造时用完即丢），若不在此处登记，结果的
+            // TemperatureRange 会留空、导出 Excel 时温度列整列为空。
+            TestReportManager.Instance.SetTemperatureContext(TemperatureToDisplayName(temperature));
+
             // H-6 修复：先一次性快照全部资源状态（receiver + 三仪表），
             // 后续分支判断统一使用这份快照，避免分支间状态分散读取导致
             // "DGV 重建时看到的资源"与"测试项实际执行时看到的资源"不一致。
@@ -714,6 +719,20 @@ namespace A205AutoTestSystem.UI
                 ? test.UpperLimit.Value.ToString("F2", CultureInfo.InvariantCulture)
                 : "+∞";
             return $"[{lo}, {hi}]";
+        }
+
+        /// <summary>
+        /// 温度枚举 → 报表/界面显示名。与 <c>cmbTemp.Items</c> 的
+        /// "常温" / "高温" / "低温" 一一对应，保证 Excel 温度列与界面下拉口径一致。
+        /// </summary>
+        private static string TemperatureToDisplayName(TemperatureRange temperature)
+        {
+            switch (temperature)
+            {
+                case TemperatureRange.High: return "高温";
+                case TemperatureRange.Low: return "低温";
+                default: return "常温";
+            }
         }
 
         /// <summary>
