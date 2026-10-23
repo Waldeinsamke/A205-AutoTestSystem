@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 460" width="100%" role="img" aria-label="离屏渲染管线：同一个 OnPaint 方法被两条输出路径复用">
+  <title>离屏渲染管线</title>
+  <desc>同一个 OnPaint 方法，分别接入屏幕设备上下文与内存位图设备上下文，输出到显示器或 PNG 文件。</desc>
+
+  <!--
+    画布底色：不透明，且不依赖 CSS 变量。
+    这样无论宿主页面是什么主题，文字都有稳定对比度，不会出现"深色字落在深色底"而隐形。
+  -->
+  <rect x="0" y="0" width="720" height="460" fill="#FFFFFF"/>
+
+  <style>
+    svg {
+      --canvas: #FFFFFF;
+      --surface: #FAFAFB;
+      --surface-muted: #EFEFF2;
+      --border: rgba(23, 23, 23, 0.14);
+      --text: #171717;
+      --text-muted: #52525B;
+      --brand: #0FDC78;
+      --brand-soft: #E5FFF2;
+      --brand-text: #004D26;
+    }
+    @media (prefers-color-scheme: dark) {
+      svg {
+        --canvas: #141414;
+        --surface: #1F1F1F;
+        --surface-muted: #2C2C2C;
+        --border: rgba(229, 229, 229, 0.20);
+        --text: #F0F0F0;
+        --text-muted: #B4B4BE;
+        --brand: #32F08C;
+        --brand-soft: #10402A;
+        --brand-text: #B4FFD9;
+      }
+    }
+
+    /*
+      兜底规则：每条规则都先写死浅色，再在 dark 下覆盖。
+      即使宿主渲染器不支持 CSS 自定义属性（或整个 style 块被忽略），
+      文字与描边仍有明确的浅色值，不会与背景同色。
+    */
+    .th { fill: #171717; font: 500 15px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .t  { fill: #171717; font: 400 13px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .ts { fill: #52525B; font: 400 12px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .tm { fill: #52525B; font: 500 12px Consolas, "SF Mono", monospace; }
+
+    .box  { fill: #FAFAFB; stroke: rgba(23,23,23,.14); }
+    .boxm { fill: #EFEFF2; }
+    .boxb { fill: #E5FFF2; stroke: #0FDC78; }
+    .onb  { fill: #004D26; font: 500 14px Consolas, monospace; }
+    .onn  { fill: #004D26; font: 400 12px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .arr  { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+    .arrh { stroke: #0FDC78; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+    .rule { stroke: rgba(23,23,23,.14); stroke-width: 1; }
+
+    @media (prefers-color-scheme: dark) {
+      .th { fill: #F0F0F0; }
+      .t  { fill: #F0F0F0; }
+      .ts { fill: #B4B4BE; }
+      .tm { fill: #B4B4BE; }
+
+      .box  { fill: #1F1F1F; stroke: rgba(229,229,229,.20); }
+      .boxm { fill: #2C2C2C; }
+      .boxb { fill: #10402A; stroke: #32F08C; }
+      .onb  { fill: #B4FFD9; }
+      .onn  { fill: #B4FFD9; }
+      .arr  { stroke: #B4B4BE; }
+      .arrh { stroke: #32F08C; }
+      .rule { stroke: rgba(229,229,229,.20); }
+    }
+  </style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8"
+            markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+    <marker id="arh" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8"
+            markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#0FDC78"/>
+    </marker>
+  </defs>
+
+  <!-- ============ 上半：同一个 OnPaint，两条出口 ============ -->
+  <text class="th" x="40" y="36">同一个 OnPaint，两条出口</text>
+
+  <rect class="boxb" x="40" y="58" width="200" height="86" rx="8"/>
+  <text class="onb" x="140" y="88" text-anchor="middle">OnPaint(e)</text>
+  <text class="onn" x="140" y="110" text-anchor="middle">你的绘制代码</text>
+  <text class="onn" x="140" y="130" text-anchor="middle">圆环 文字 数字块</text>
+
+  <path class="arrh" d="M240 84 L298 84" marker-end="url(#arh)"/>
+  <path class="arrh" d="M240 120 L298 120" marker-end="url(#arh)"/>
+
+  <rect class="box" x="306" y="58" width="150" height="40" rx="8"/>
+  <text class="t" x="381" y="76" text-anchor="middle">屏幕设备上下文</text>
+  <text class="tm" x="381" y="92" text-anchor="middle">screen DC</text>
+
+  <rect class="box" x="306" y="100" width="150" height="44" rx="8" stroke="#0FDC78" stroke-width="1.6"/>
+  <text class="t" x="381" y="120" text-anchor="middle">内存位图设备上下文</text>
+  <text class="tm" x="381" y="137" text-anchor="middle" fill="#004D26">Graphics.FromImage</text>
+
+  <path class="arr" d="M456 78 L512 78" marker-end="url(#ar)"/>
+  <path class="arr" d="M456 122 L512 122" marker-end="url(#ar)"/>
+
+  <rect class="box" x="518" y="58" width="162" height="40" rx="8"/>
+  <text class="t" x="599" y="83" text-anchor="middle">显示器画面</text>
+
+  <rect class="box" x="518" y="100" width="162" height="44" rx="8"/>
+  <text class="t" x="599" y="120" text-anchor="middle">PNG 文件</text>
+  <text class="tm" x="599" y="137" text-anchor="middle">bmp.Save(path)</text>
+
+  <line class="rule" x1="40" y1="176" x2="680" y2="176"/>
+
+  <!-- ============ 中段：Graphics 只是画笔的出口 ============ -->
+  <text class="th" x="40" y="206">关键：Graphics 只是「画笔的出口」</text>
+
+  <rect class="boxm" x="40" y="222" width="640" height="60" rx="8"/>
+  <text class="t" x="60" y="247">DrawString / DrawArc / FillRectangle 都不关心画到哪里，</text>
+  <text class="t" x="60" y="269">它们只往传进来的 Graphics 对象上写图元。</text>
+
+  <text class="ts" x="40" y="310">换成屏幕 DC 就显示到屏幕；换成内存 DC 就落进 Bitmap —— 绘制代码一字不改。</text>
+
+  <!-- ============ 下段：探针做的三件事 ============ -->
+  <text class="th" x="40" y="348">探针做的三件事</text>
+
+  <circle cx="52" cy="376" r="11" class="boxb"/>
+  <text class="tm" x="52" y="380" text-anchor="middle" fill="#004D26">1</text>
+  <text class="t" x="74" y="381">编译期把控件源码一起编进来，生成独立 exe，不引用主工程</text>
+
+  <circle cx="52" cy="408" r="11" class="boxb"/>
+  <text class="tm" x="52" y="412" text-anchor="middle" fill="#004D26">2</text>
+  <text class="t" x="74" y="413">用反射调用 protected OnPaint，手动构造 PaintEventArgs</text>
+
+  <circle cx="52" cy="440" r="11" class="boxb"/>
+  <text class="tm" x="52" y="444" text-anchor="middle" fill="#004D26">3</text>
+  <text class="t" x="74" y="445">Save 成 PNG，再读图核对 —— 形成验证闭环</text>
+</svg>

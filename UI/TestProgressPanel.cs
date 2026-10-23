@@ -8,7 +8,7 @@ namespace A205AutoTestSystem.UI
 {
     /// <summary>
     /// 测试进度面板（纯 GDI+ 自绘，无图表控件依赖）。
-    /// <para>显示当前批��的测试进度：进度环（含失败区间红弧）、总项数 / 通过 / 失败 /
+    /// <para>显示当前批次的测试进度：进度环（含失败区间红弧）、总项数 / 通过 / 失败 /
     /// 本轮耗时四个数字块，以及底部当前测试项。所有状态由
     /// <see cref="ReceiverControlPanel.UpdateTestProgress"/> 推送，
     /// 本控件不主动查询任何资源，也不做 I/O。</para>
@@ -140,7 +140,7 @@ namespace A205AutoTestSystem.UI
         private int _failedCount;
         private TimeSpan _elapsed;
         private string _currentItem = string.Empty;
-        private string _idleHint = "尚未加载测试项";
+        private string _idleHint = "未加载测试项";
 
         /// <summary>呼吸动画相位（弧度）。</summary>
         private float _breathPhase;
@@ -285,7 +285,7 @@ namespace A205AutoTestSystem.UI
         {
             string sub = _totalCount > 0
                 ? "共 " + _totalCount + " 个测试项，等待开始"
-            : "加载后显示批次进度";
+            : "加载后显示测试进度";
 
             using (SolidBrush brush = new SolidBrush(CaptionTextColor))
             {

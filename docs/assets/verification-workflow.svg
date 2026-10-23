@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 250" width="100%" role="img" aria-label="自绘控件 UI 验证的四阶段流程：设计期、实现期、验证期、集成运行">
+  <title>自绘控件 UI 验证四阶段流程</title>
+  <desc>四个阶段横向排列，箭头串联，每阶段标注目的与产出。</desc>
+
+  <!-- 画布底色：不透明且不依赖 CSS 变量，保证任何宿主主题下文字都可读 -->
+  <rect x="0" y="0" width="720" height="250" fill="#FFFFFF"/>
+
+  <style>
+    /* 兜底规则：每条都先写死浅色值，dark 下再覆盖。
+       即使渲染器不支持 CSS 自定义属性，文字与描边仍有明确取值。 */
+    .th  { fill: #171717; font: 500 14px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .t   { fill: #171717; font: 400 12px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .ts  { fill: #52525B; font: 400 11px "PingFang SC", "Microsoft YaHei", system-ui, sans-serif; }
+    .num { font: 500 12px Consolas, monospace; }
+
+    .box  { fill: #FAFAFB; stroke: rgba(23,23,23,.14); }
+    .boxa { fill: #E5FFF2; stroke: #0FDC78; }
+    .boxw { fill: #FDF0D9; stroke: #EFAA17; }
+    .arr  { stroke: #52525B; stroke-width: 1.5; fill: none; stroke-linecap: round; }
+    .rule { stroke: rgba(23,23,23,.14); stroke-width: 1; }
+
+    @media (prefers-color-scheme: dark) {
+      .th { fill: #F0F0F0; }
+      .t  { fill: #F0F0F0; }
+      .ts { fill: #B4B4BE; }
+
+      .box  { fill: #1F1F1F; stroke: rgba(229,229,229,.20); }
+      .boxa { fill: #10402A; stroke: #32F08C; }
+      .boxw { fill: #3A2C0C; stroke: #EFAA17; }
+      .arr  { stroke: #B4B4BE; }
+      .rule { stroke: rgba(229,229,229,.20); }
+    }
+  </style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8"
+            markerUnits="userSpaceOnUse" orient="auto">
+      <path d="M1 1 L7 4 L1 7 Z" fill="#52525B"/>
+    </marker>
+  </defs>
+
+  <!-- 阶段一 -->
+  <rect class="boxa" x="20" y="40" width="152" height="96" rx="8"/>
+  <circle cx="44" cy="62" r="11" class="boxa"/>
+  <text class="num" x="44" y="66" text-anchor="middle" fill="#004D26">1</text>
+  <text class="th" x="62" y="67">设计期</text>
+  <text class="ts" x="34" y="90">HTML / SVG 示意图</text>
+  <line class="rule" x1="34" y1="100" x2="158" y2="100"/>
+  <text class="ts" x="34" y="116">低成本迭代布局草图</text>
+  <text class="ts" x="34" y="130">产出：视觉方案草图</text>
+
+  <path class="arr" d="M176 88 L204 88" marker-end="url(#ar)"/>
+  <text class="ts" x="190" y="76" text-anchor="middle">确认</text>
+
+  <!-- 阶段二 -->
+  <rect class="box" x="208" y="40" width="152" height="96" rx="8"/>
+  <circle cx="232" cy="62" r="11" class="box"/>
+  <text class="num" x="232" y="66" text-anchor="middle" fill="#171717">2</text>
+  <text class="th" x="250" y="67">实现期</text>
+  <text class="ts" x="222" y="90">C# + GDI+ 自绘</text>
+  <line class="rule" x1="222" y1="100" x2="346" y2="100"/>
+  <text class="ts" x="222" y="116">手写坐标，无自动布局</text>
+  <text class="ts" x="222" y="130">产出：控件 .cs 文件</text>
+
+  <path class="arr" d="M364 88 L392 88" marker-end="url(#ar)"/>
+  <text class="ts" x="378" y="68" text-anchor="middle">编译通过</text>
+  <text class="ts" x="378" y="82" text-anchor="middle">≠ 布局正确</text>
+
+  <!-- 阶段三 -->
+  <rect class="boxa" x="396" y="40" width="152" height="96" rx="8"/>
+  <circle cx="420" cy="62" r="11" class="boxa"/>
+  <text class="num" x="420" y="66" text-anchor="middle" fill="#004D26">3</text>
+  <text class="th" x="438" y="67">验证期</text>
+  <text class="ts" x="410" y="90">离屏渲染探针</text>
+  <line class="rule" x1="410" y1="100" x2="534" y2="100"/>
+  <text class="ts" x="410" y="116">反射调 OnPaint 出图</text>
+  <text class="ts" x="410" y="130">产出：PNG + 断言日志</text>
+
+  <path class="arr" d="M552 88 L580 88" marker-end="url(#ar)"/>
+  <text class="ts" x="566" y="68" text-anchor="middle">静态 PASS</text>
+  <text class="ts" x="566" y="82" text-anchor="middle">≠ 全部正确</text>
+
+  <!-- 阶段四 -->
+  <rect class="box" x="584" y="40" width="116" height="96" rx="8"/>
+  <circle cx="608" cy="62" r="11" class="box"/>
+  <text class="num" x="608" y="66" text-anchor="middle" fill="#171717">4</text>
+  <text class="th" x="626" y="67">集成运行</text>
+  <text class="ts" x="598" y="90">VS 内实跑</text>
+  <line class="rule" x1="598" y1="100" x2="686" y2="100"/>
+  <text class="ts" x="598" y="116">动画 / 交互 / DPI</text>
+  <text class="ts" x="598" y="130">依赖真实父容器</text>
+
+  <!-- 底部提示 -->
+  <rect class="boxw" x="20" y="160" width="680" height="66" rx="8"/>
+  <text class="th" x="36" y="186">探针验证不到的部分</text>
+  <text class="ts" x="36" y="208">动画（Timer 驱动）、交互（MouseClick）、依赖真实父容器的取色逻辑、高 DPI 表现、跨控件数据推送链路</text>
+</svg>
