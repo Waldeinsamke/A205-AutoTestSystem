@@ -55,8 +55,12 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private const double Mode2Center = 10.0, Mode2Tol = 1.0;   // [ 9.0, 11.0]
         private const double Mode3Center = 20.0, Mode3Tol = 1.5;   // [18.5, 21.5]
 
-        /// <summary>取某模式下增益的判据上下限（dB）。不在表内的模式抛异常。</summary>
-        private static (double Lower, double Upper) GetGainLimits(ReceiverMode mode)
+        /// <summary>
+        /// 取某模式下增益的判据上下限（dB）。不在表内的模式抛异常。
+        /// <para>供「通道间增益不一致性」测试项复用——它需要同一套规格
+        /// 来判断"哪个增益值最靠近指标边界"（即最差值）。</para>
+        /// </summary>
+        public static (double Lower, double Upper) GetGainLimits(ReceiverMode mode)
         {
             switch (mode)
             {
@@ -306,6 +310,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                         };
                         TestReportManager.Instance.Record(result);
                         lastResult = result;
+
+                        // 写入增益结果仓库：供「通道间增益不一致性」等纯计算型测试项取用。
+                        GainResultRepository.Record(_channel, mode.ToString(), band.DisplayName, gain);
 
                         progress.Report(string.Format(
                             CultureInfo.InvariantCulture,

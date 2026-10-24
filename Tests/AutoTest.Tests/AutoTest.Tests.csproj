@@ -72,6 +72,12 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\lib\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
+    <!-- M-2026-10: NPOI 2.7 在反序列化 .xlsx 时需要 AsSpan() 方法，
+         依赖 System.Runtime.CompilerServices.Unsafe.dll（与 ExcelExporter.Tests 同源）。-->
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\lib\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <!-- 被测源（不含 NI VISA 传输实现）-->
@@ -90,6 +96,10 @@
     <Compile Include="..\..\InstrumentControl\TestResult.cs">
       <Link>InstrumentControl\TestResult.cs</Link>
     </Compile>
+    <!-- 增益结果仓库（GainTest 写入 / ChannelGainInconsistencyTest 读取）-->
+    <Compile Include="..\..\InstrumentControl\GainResultRepository.cs">
+      <Link>InstrumentControl\GainResultRepository.cs</Link>
+    </Compile>
     <Compile Include="..\..\InstrumentControl\AutoTestEngine.cs">
       <Link>InstrumentControl\AutoTestEngine.cs</Link>
     </Compile>
@@ -98,6 +108,9 @@
     </Compile>
     <Compile Include="..\..\InstrumentControl\TestItems\GainTest.cs">
       <Link>InstrumentControl\TestItems\GainTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs">
+      <Link>InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs</Link>
     </Compile>
     <Compile Include="..\..\InstrumentControl\TestItems\BandwidthTest.cs">
       <Link>InstrumentControl\TestItems\BandwidthTest.cs</Link>

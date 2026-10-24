@@ -90,8 +90,11 @@
     <Compile Include="MatrixControl\IChannelSwitcher.cs" />
     <Compile Include="MatrixControl\MatrixSerialPort.cs" />
     <Compile Include="InstrumentControl\TestResult.cs" />
+    <!-- 线性最大增益实测值仓库（供通道间增益不一致性等纯计算型测试项取用）-->
+    <Compile Include="InstrumentControl\GainResultRepository.cs" />
     <Compile Include="InstrumentControl\TestItems\ITestItem.cs" />
     <Compile Include="InstrumentControl\TestItems\GainTest.cs" />
+    <Compile Include="InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs" />
     <Compile Include="InstrumentControl\TestItems\BandwidthTest.cs" />
     <Compile Include="InstrumentControl\TestItems\InputP1Test.cs" />
     <Compile Include="InstrumentControl\TestItems\SaturatedOutputTest.cs" />

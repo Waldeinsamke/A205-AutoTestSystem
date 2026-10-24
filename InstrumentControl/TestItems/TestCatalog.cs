@@ -202,7 +202,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     spectrumAnalyzer: sa,
                     channel: channel),
                 new NotImplementedTestItem("通道间隔离度"),
-                new NotImplementedTestItem("通道间增益不一致性（AGC不起控）"),
+                // 通道间增益不一致性（AGC不起控）：纯计算项，
+                // 数据来自 GainTest 写入的 GainResultRepository，不碰硬件。
+                new ChannelGainInconsistencyTest(channel: channel, modes: allModes),
                 new NotImplementedTestItem("通道间增益不一致性（AGC同时起控）"),
                 new NotImplementedTestItem("驻波"),
             };

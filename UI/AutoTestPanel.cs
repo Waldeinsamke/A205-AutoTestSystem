@@ -261,6 +261,11 @@ namespace A205AutoTestSystem.UI
             {
                 LoadDefaultTestsToGrid();
             }
+
+            // 4) 温度档变了 → 线性最大增益的实测值不可跨温度档复用，
+            //    清空增益仓库（避免「通道间增益不一致性」引用到上一档的旧数据）。
+            //    注：切通道不清空——仓库按通道分键，切回通道1 无需重跑线性最大增益。
+            GainResultRepository.Clear();
         }
 
 
@@ -328,6 +333,10 @@ namespace A205AutoTestSystem.UI
                 // 4) 关闭两台信号源的 RF 输出——确保自动测试开始前频谱仪没有任何显示，
                 //    避免之前残留的载波 / LO 漏信号被误判。失败仅记日志，不弹窗 / 不中断加载流程。
                 TurnOffBothSignalGenerators();
+
+                // 5) 重新加载测试项 → 线性最大增益要重跑，旧数据作废，清空增益仓库。
+                //    （「通道间增益不一致性」依赖仓库里的增益实测值）
+                GainResultRepository.Clear();
 
                 UpdateStep("已加载真机测试资源（60+3 模式测试项已就绪，可点 ▶ 运行 或 一键运行）");
                 Logger.Log("[AutoTestPanel] 加载测试成功。");
