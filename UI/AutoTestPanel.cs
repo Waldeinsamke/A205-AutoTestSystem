@@ -356,10 +356,29 @@ namespace A205AutoTestSystem.UI
         /// 关闭 RF / LO 两台信号源的 RF 输出。
         /// <para>目的：自动测试开始前让频谱仪不显示任何信号，
         /// 避免上次残留的载波 / LO 漏信号被误判为频谱异常。</para>
-        /// <para>失败容忍：仪器为 null、未连接、或命令抛错 → 仅记日志，不弹窗、不中断加载流程。</para>
+        /// <para><b>必须经由 <see cref="ReceiverControlPanel.TurnOffSignalOutputs"/> 执行</b>：
+        /// 信号源输出状态由接收机控制面板统一管理，本面板只是"借用"了它的仪表实例。
+        /// 若在此直接发 :OUTP 命令，接收机控制面板的 <c>_rfOutputOn</c> / <c>_loOutputOn</c>、
+        /// 「开启信号」按钮文字与拓扑图节点副标题都会与硬件实际状态脱节。</para>
+        /// <para>失败容忍：未连接、单台命令抛错 → 仅记日志，不弹窗、不中断加载流程。</para>
         /// </summary>
         private void TurnOffBothSignalGenerators()
         {
+            if (_receiverPanel != null)
+            {
+                try
+                {
+                    _receiverPanel.TurnOffSignalOutputs();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[AutoTestPanel] 关闭两台信号源输出失败: " + ex.Message);
+                }
+                return;
+            }
+
+            // 未注入接收机控制面板（理论上不会发生）→ 退回到直接操作仪表实例
+            Logger.Log("[AutoTestPanel] 接收机控制面板未注入，直接关闭信号源输出（状态无法同步到界面）。");
             if (_rf != null && _rf.IsConnected)
             {
                 try

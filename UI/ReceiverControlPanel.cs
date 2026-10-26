@@ -1495,6 +1495,20 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
+        /// 关闭 RF / LO 两台信号源的射频输出（:OUTP 0），并同步按钮与拓扑图状态。
+        /// <para><b>供 AutoTestPanel 调用</b>：「加载测试」前需要清掉上次残留的载波 / LO 漏信号。
+        /// 该动作必须经由本方法执行，而不是让 AutoTestPanel 直接发 :OUTP 命令——
+        /// 否则本面板的 <c>_rfOutputOn</c> / <c>_loOutputOn</c>、「开启信号」按钮文字
+        /// 与拓扑图节点副标题都会与硬件实际状态脱节。</para>
+        /// <para><b>失败容忍</b>：未连接的信号源跳过并记日志，单台失败不影响另一台，不弹窗。</para>
+        /// </summary>
+        public void TurnOffSignalOutputs()
+        {
+            // SetSignalOutputs 内部已同步按钮文字与拓扑图状态
+            SetSignalOutputs(false);
+        }
+
+        /// <summary>
         /// 复位「开启信号 / 关闭信号」按钮的本地状态（回到"开启信号"）。
         /// <para>调用时机：任一信号源被断开、电源被断开、面板被释放——这些场景下
         /// 射频输出已不复存在，按钮若仍显示"关闭信号"，操作者点一下会变成"开启"，
@@ -1512,6 +1526,10 @@ namespace A205AutoTestSystem.UI
         /// <summary>
         /// 批量开/关 RF、LO 射频输出（:OUTP 1/0）。逐台独立容错：
         /// 未连接则跳过并记日志，单台失败不影响另一台。
+        /// <para><b>按钮同步</b>：本方法结束时统一把「开启信号 / 关闭信号」按钮置为
+        /// 与 <paramref name="on"/> 一致的状态——所有开关输出的入口（开启供电、
+        /// 关闭供电、信号按钮、AutoTestPanel 加载测试前清残留）都走这里，
+        /// 按钮文字因此始终反映硬件真实状态，不会出现"按钮说已关、实际还开着"的错位。</para>
         /// </summary>
         private void SetSignalOutputs(bool on)
         {
@@ -1551,6 +1569,13 @@ namespace A205AutoTestSystem.UI
                 {
                     Logger.Log($"[UI] LO 信号源{action}射频输出失败: {ex.Message}");
                 }
+            }
+
+            // 按钮文字与实际输出状态保持一致
+            _signalOutputOn = on;
+            if (btnSignalOutput != null && !btnSignalOutput.IsDisposed)
+            {
+                btnSignalOutput.Text = on ? "关闭信号" : "开启信号";
             }
 
             SyncSignalFlowState();
@@ -1803,22 +1828,19 @@ namespace A205AutoTestSystem.UI
         /// 「开启信号 / 关闭信号」按钮：统一控制 RF、LO 两台信号源的射频输出（:OUTP 1/0）。
         /// <para><b>按钮语义</b>：初始为"开启信号"；点击后开启两台信号源的射频输出，
         /// 按钮变为"关闭信号"；再次点击则关闭输出，按钮回到"开启信号"。</para>
-        /// <para><b>与「开启供电」按钮相互独立</b>：开启供电会顺带开 RF/LO 输出，
-        /// 但不改动本按钮文字——本按钮只反映用户在此按钮上的直接操作。</para>
+        /// <para><b>状态始终与硬件一致</b>：本按钮文字不是"仅记录用户在本按钮上的操作"，
+        /// 而是反映两台信号源射频输出的<b>真实状态</b>。因此"开启供电"顺带打开输出、
+        /// "关闭供电"关闭输出、AutoTestPanel「加载测试」清理残留输出——这些入口都会同步按钮文字。</para>
         /// <para><b>容错</b>：逐台独立处理，未连接的信号源跳过并记日志，不弹窗。</para>
         /// </summary>
         private void OnSignalOutputClicked(object sender, EventArgs e)
         {
             bool target = !_signalOutputOn;
 
-            // SetSignalOutputs 内部逐台容错：未连接跳过记日志，单台失败不影响另一台
+            // SetSignalOutputs 内部逐台容错：未连接跳过记日志，单台失败不影响另一台；
+            // 同时它会统一同步按钮文字与拓扑图状态。
             SetSignalOutputs(target);
 
-            _signalOutputOn = target;
-            if (btnSignalOutput != null && !btnSignalOutput.IsDisposed)
-            {
-                btnSignalOutput.Text = target ? "关闭信号" : "开启信号";
-            }
             Logger.Log($"[UI] 信号输出按钮切换为「{(target ? "关闭信号" : "开启信号")}」。");
         }
 
