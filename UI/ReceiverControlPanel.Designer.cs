@@ -102,6 +102,7 @@ namespace A205AutoTestSystem.UI
             this.rtbLog = new System.Windows.Forms.RichTextBox();
             this.btnLogClear = new System.Windows.Forms.Button();
             this.btnOpenPower = new System.Windows.Forms.Button();
+            this.btnSignalOutput = new System.Windows.Forms.Button();
             this.grpInstrumentControl = new System.Windows.Forms.GroupBox();
             this.btnSaPeakSearch = new System.Windows.Forms.Button();
             this.btnSaMarkerAllOff = new System.Windows.Forms.Button();
@@ -539,9 +540,20 @@ namespace A205AutoTestSystem.UI
             this.btnOpenPower.UseVisualStyleBackColor = true;
             this.btnOpenPower.Click += new System.EventHandler(this.OnOpenPowerClicked);
             // 
+            // btnSignalOutput
+            //
+            this.btnSignalOutput.Location = new System.Drawing.Point(196, 20);
+            this.btnSignalOutput.Name = "btnSignalOutput";
+            this.btnSignalOutput.Size = new System.Drawing.Size(80, 49);
+            this.btnSignalOutput.TabIndex = 56;
+            this.btnSignalOutput.Text = "开启信号";
+            this.btnSignalOutput.UseVisualStyleBackColor = true;
+            this.btnSignalOutput.Click += new System.EventHandler(this.OnSignalOutputClicked);
+            //
             // grpInstrumentControl
-            // 
+            //
             this.grpInstrumentControl.Controls.Add(this.btnOpenPower);
+            this.grpInstrumentControl.Controls.Add(this.btnSignalOutput);
             this.grpInstrumentControl.Controls.Add(this.btnDisconnectAll);
             this.grpInstrumentControl.Controls.Add(this.btnConnectAll);
             this.grpInstrumentControl.Controls.Add(this.btnSaPeakSearch);
@@ -738,6 +750,7 @@ namespace A205AutoTestSystem.UI
         #endregion
 
         private System.Windows.Forms.Button btnOpenPower;
+        private System.Windows.Forms.Button btnSignalOutput;
         private System.Windows.Forms.GroupBox grpInstrumentControl;
 
         // 仪表控制区（频谱仪快捷按钮）

@@ -25,6 +25,16 @@ namespace A205AutoTestSystem.UI
     /// 本控件不主动查询任何仪表或串口，也不持有 Timer 轮询；
     /// 唯一的 <see cref="System.Windows.Forms.Timer"/> 仅用于链路流动虚线的重绘动画，
     /// 不做任何 I/O，且无活动链路时自动停止。</para>
+    /// <para><b>链路的两个维度（重要语义约定）</b>：</para>
+    /// <list type="bullet">
+    /// <item><b>虚实 + 颜色 = 连接是否建立</b>：两端仪表都 <see cref="InstrumentLinkState.Ready"/>
+    /// → 亮绿虚线；否则灰色实线。断开接收机串口会让全部连线变灰实线；
+    /// 而<b>关掉信号源输出不会影响虚线</b>——连接确实还在。</item>
+    /// <item><b>虚线流动 = 有信号/电正在通过</b>：供电中 + 输出开 + 两端就绪 → 流动；
+    /// 仅就绪而未供电/未开输出 → 静态虚线。</item>
+    /// </list>
+    /// <para>把"连上了"与"在跑"分成两个维度，是为了让操作员一眼区分
+    /// "线没接"与"接了但没发信号"这两种完全不同的故障。</para>
     /// <para>绘制坐标系为固定的 <c>371×190</c> 逻辑单位，再按实际控件尺寸等比缩放并居中，
     /// 以适配高 DPI 下 WinForms 自动缩放带来的控件尺寸变化。</para>
     /// </summary>
@@ -158,48 +168,54 @@ namespace A205AutoTestSystem.UI
 
         // ============================================================
         // 状态属性：外部状态变化时直接赋值，控件自行重绘
+        //
+        // 每个 setter 除 Invalidate() 外还调用 SyncAnimationState()：
+        // 动画计时器的启停此前只挂在 OnHandleCreated / OnVisibleChanged 上，
+        // 导致"连接仪表 → 开启供电"这类纯状态推送后虚线不流动，
+        // 必须切走再切回 Tab 页（触发 OnVisibleChanged）才会动。
+        // 状态一变就同步判据，动画的启停不再依赖任何外部事件。
         // ============================================================
 
         /// <summary>RF 信号源连接状态（就绪 / 未连接 / 故障）。</summary>
         public InstrumentLinkState RfState
         {
             get { return _rfState; }
-            set { _rfState = value; Invalidate(); }
+            set { _rfState = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>LO 信号源连接状态（就绪 / 未连接 / 故障）。</summary>
         public InstrumentLinkState LoState
         {
             get { return _loState; }
-            set { _loState = value; Invalidate(); }
+            set { _loState = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>接收机串口连接状态（就绪 / 未连接 / 故障）。</summary>
         public InstrumentLinkState ReceiverState
         {
             get { return _receiverState; }
-            set { _receiverState = value; Invalidate(); }
+            set { _receiverState = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>频谱仪连接状态（就绪 / 未连接 / 故障）。</summary>
         public InstrumentLinkState SpectrumState
         {
             get { return _spectrumState; }
-            set { _spectrumState = value; Invalidate(); }
+            set { _spectrumState = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>RF 信号源射频输出是否已开启（:OUTP 1）。</summary>
         public bool RfOutputOn
         {
             get { return _rfOutputOn; }
-            set { _rfOutputOn = value; Invalidate(); }
+            set { _rfOutputOn = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>LO 信号源射频输出是否已开启（:OUTP 1）。</summary>
         public bool LoOutputOn
         {
             get { return _loOutputOn; }
-            set { _loOutputOn = value; Invalidate(); }
+            set { _loOutputOn = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>
@@ -210,7 +226,7 @@ namespace A205AutoTestSystem.UI
         public InstrumentLinkState PowerState
         {
             get { return _powerState; }
-            set { _powerState = value; Invalidate(); }
+            set { _powerState = value; Invalidate(); SyncAnimationState(); }
         }
 
         /// <summary>
@@ -220,12 +236,71 @@ namespace A205AutoTestSystem.UI
         public bool PowerOn
         {
             get { return _powerOn; }
-            set { _powerOn = value; Invalidate(); }
+            set { _powerOn = value; Invalidate(); SyncAnimationState(); }
         }
 
         // ============================================================
         // 绘制
         // ============================================================
+
+        /// <summary>
+        /// 四条链路的绘制状态。
+        /// <para><b>Connected</b>（虚实+颜色）= 连接是否建立；<b>Flowing</b>（虚线是否流动）= 有信号/电在跑。</para>
+        /// </summary>
+        private struct LinkStates
+        {
+            public bool RfConnected;
+            public bool RfFlowing;
+            public bool LoConnected;
+            public bool LoFlowing;
+            public bool SaConnected;
+            public bool SaFlowing;
+            public bool PowerConnected;
+            public bool PowerFlowing;
+
+            /// <summary>是否至少有一条链路正在流动（决定动画计时器是否需要运行）。</summary>
+            public bool AnyFlowing => RfFlowing || LoFlowing || SaFlowing || PowerFlowing;
+        }
+
+        /// <summary>
+        /// 计算四条链路的绘制状态——<b>唯一判据来源</b>。
+        /// <para>OnPaint（画什么）与 SyncAnimationState（动不动）都调用本方法，
+        /// 保证两者永远一致。历史上两处各写一份判据，曾出现"关掉信号输出后
+        /// 频谱仪连线仍在流动"的不一致。</para>
+        /// <para><b>connected</b>：两端仪表都 Ready 即可，与供电/输出无关——
+        /// 关掉输出时连接依然存在，只是没有信号在跑。</para>
+        /// <para><b>flowing</b>：
+        /// <list type="bullet">
+        /// <item>RF / LO 线：供电中 + 本机输出开 + 两端就绪；</item>
+        /// <item>供电线：供电中 + 两端就绪（画的是"电"）；</item>
+        /// <item>频谱仪线：接收机→频谱仪测的是 IF 输出，软件无法直接观测 IF 上有无信号，
+        /// 故以"供电中 **且** 至少一台信号源在输出"作代理——全关输出时 IF 上确实没有信号。</item>
+        /// </list>
+        /// </summary>
+        private LinkStates ComputeLinkStates()
+        {
+            bool receiverReady = _receiverState == InstrumentLinkState.Ready;
+            bool anySourceOutput = _rfOutputOn || _loOutputOn;
+
+            return new LinkStates
+            {
+                RfConnected = _rfState == InstrumentLinkState.Ready && receiverReady,
+                RfFlowing = _rfState == InstrumentLinkState.Ready && receiverReady
+                    && _powerOn && _rfOutputOn,
+
+                LoConnected = _loState == InstrumentLinkState.Ready && receiverReady,
+                LoFlowing = _loState == InstrumentLinkState.Ready && receiverReady
+                    && _powerOn && _loOutputOn,
+
+                SaConnected = receiverReady && _spectrumState == InstrumentLinkState.Ready,
+                SaFlowing = receiverReady && _spectrumState == InstrumentLinkState.Ready
+                    && _powerOn && anySourceOutput,
+
+                PowerConnected = _powerState == InstrumentLinkState.Ready && receiverReady,
+                PowerFlowing = _powerState == InstrumentLinkState.Ready && receiverReady
+                    && _powerOn
+            };
+        }
 
         /// <summary>
         /// 用缓存的页面底色填充，避免重绘时残留上一帧残影。
@@ -265,21 +340,15 @@ namespace A205AutoTestSystem.UI
 
             try
             {
-                // 链路只在“输出已开 + 对应两端节点就绪”时点亮；
-                // 任一端处于故障态时链路视为不可用，保持灰色。
-                bool rfLink = _powerOn && _rfOutputOn
-                    && _rfState == InstrumentLinkState.Ready
-                    && _receiverState == InstrumentLinkState.Ready;
-                bool loLink = _powerOn && _loOutputOn
-                    && _loState == InstrumentLinkState.Ready
-                    && _receiverState == InstrumentLinkState.Ready;
-                bool saLink = _powerOn
-                    && _receiverState == InstrumentLinkState.Ready
-                    && _spectrumState == InstrumentLinkState.Ready;
-                // 供电连线：仅在电源已就绪且真正输出时点亮
-                bool powerLink = _powerOn
-                    && _powerState == InstrumentLinkState.Ready
-                    && _receiverState == InstrumentLinkState.Ready;
+                // ---- 链路：两个维度分开 ----
+                // connected（虚实+颜色）= 两端仪表是否都已就绪（连接是否建立）
+                // flowing（虚线是否流动） = 是否有信号/电正在通过
+                // 注：虚线**不再**受输出开关影响——关掉信号源输出时连接依然存在，
+                //     只应表现为"虚线不流动"，而不是"线变灰实线"。
+                //
+                // 判据统一由 ComputeLinkStates() 提供，OnPaint 与 SyncAnimationState 共用，
+                // 避免两处各写一份判据而互相漂移（历史上正是这样漏掉了"关输出后频谱仪线仍在流动"）。
+                LinkStates links = ComputeLinkStates();
 
                 DrawHeader(g);
 
@@ -298,11 +367,11 @@ namespace A205AutoTestSystem.UI
                 float powerCenterX = powerX + MidWidth / 2f;
 
                 DrawLink(g, new PointF(srcX + SrcWidth, 42f), new PointF(srcX + SrcWidth + 19f, 42f),
-                    new PointF(rxX, 58f), rfLink);
+                    new PointF(rxX, 58f), links.RfConnected, links.RfFlowing);
                 DrawLink(g, new PointF(srcX + SrcWidth, 98f), new PointF(srcX + SrcWidth + 19f, 98f),
-                    new PointF(rxX, 84f), loLink);
+                    new PointF(rxX, 84f), links.LoConnected, links.LoFlowing);
                 DrawLink(g, new PointF(rxX + MidWidth, 70f), new PointF(rxX + MidWidth + 18f, 70f),
-                    new PointF(saX, 70f), saLink);
+                    new PointF(saX, 70f), links.SaConnected, links.SaFlowing);
                 // 供电连线：电源节点上边 → 接收机节点底边，两端水平中心一致（powerCenterX）。
                 // 终点必须精确落在节点边缘（rxY + NodeHeight），否则箭头会停在半空看起来没连上；
                 // 与其它链路一样走贝塞尔曲线，视觉风格保持统一。
@@ -310,11 +379,17 @@ namespace A205AutoTestSystem.UI
                 float powerTop = 118f;
                 DrawLink(g, new PointF(powerCenterX, powerTop),
                     new PointF(powerCenterX, (powerTop + rxBottom) / 2f),
-                    new PointF(powerCenterX, rxBottom), powerLink);
+                    new PointF(powerCenterX, rxBottom), links.PowerConnected, links.PowerFlowing);
 
-                DrawNode(g, new RectangleF(srcX, 22f, SrcWidth, 40f), "RF 信号源", "输出开",
+                // 节点副标题反映该节点自身的真实状态：
+                // RF/LO = 输出开/输出关；接收机 = 串口在线；频谱仪 = VISA 在线；电源 = 供电中/未供电。
+                // 注意：副标题文案必须由真实状态推导，不能硬编码——否则会出现
+                // "已关闭输出但节点仍写输出开"的假状态。
+                DrawNode(g, new RectangleF(srcX, 22f, SrcWidth, 40f), "RF 信号源",
+                    _rfOutputOn ? "输出开" : "输出关",
                     _rfState, _rfOutputOn);
-                DrawNode(g, new RectangleF(srcX, 80f, SrcWidth, 40f), "LO 信号源", "输出开",
+                DrawNode(g, new RectangleF(srcX, 80f, SrcWidth, 40f), "LO 信号源",
+                    _loOutputOn ? "输出开" : "输出关",
                     _loState, _loOutputOn);
                 DrawNode(g, new RectangleF(rxX, 49f, MidWidth, NodeHeight), "接收机", "串口在线",
                     _receiverState, _receiverState == InstrumentLinkState.Ready);
@@ -369,10 +444,24 @@ namespace A205AutoTestSystem.UI
             }
         }
 
-        /// <summary>绘制二次贝塞尔链路；active 时使用流动虚线并带箭头。</summary>
-        private void DrawLink(Graphics g, PointF start, PointF control, PointF end, bool active)
+        /// <summary>
+        /// 绘制二次贝塞尔链路。
+        /// <para><b>两个维度分开表达</b>（这是本控件的核心语义约定）：</para>
+        /// <list type="bullet">
+        /// <item><b>虚实 + 颜色 = 连接是否建立</b>：两端仪表都就绪 → 亮绿虚线；
+        /// 否则灰色实线。断开接收机串口 → 全部变灰实线；关掉信号源输出
+        /// <b>不会</b>影响虚线，因为连接确实还在。</item>
+        /// <item><b>流动动画 = 有信号/电在跑</b>：供电中 + 输出开 + 两端就绪 → 虚线流动；
+        /// 仅就绪而未供电/未开输出 → 静态虚线。</item>
+        /// </list>
+        /// <para>这样"连上了"与"在跑"是两件独立的事，关掉输出不会把连接状态一起抹掉，
+        /// 动画也不会在无信号时误导操作者。</para>
+        /// </summary>
+        /// <param name="connected">两端仪表是否都已就绪（决定虚实与颜色）。</param>
+        /// <param name="flowing">是否有信号/电正在通过（决定虚线是否流动）。</param>
+        private void DrawLink(Graphics g, PointF start, PointF control, PointF end, bool connected, bool flowing)
         {
-            Color color = active ? LinkActive : LinkIdle;
+            Color color = connected ? LinkActive : LinkIdle;
 
             using (GraphicsPath path = new GraphicsPath())
             using (Pen pen = new Pen(color, 2f))
@@ -380,11 +469,13 @@ namespace A205AutoTestSystem.UI
             {
                 path.AddBezier(start, control, control, end);
 
-                if (active)
+                if (connected)
                 {
+                    // 已连接即用虚线（表示"这是一条已建立的链路"）
                     pen.DashStyle = DashStyle.Custom;
                     pen.DashPattern = new float[] { 5f, 7f };
-                    pen.DashOffset = _dashOffset;
+                    // 有信号/电在跑时才推进虚线偏移，形成流动效果
+                    pen.DashOffset = flowing ? _dashOffset : 0f;
                 }
 
                 g.DrawPath(pen, path);
@@ -535,10 +626,9 @@ namespace A205AutoTestSystem.UI
             {
                 return "全部在线 · 点击“开启供电”建立测试链路";
             }
-            if (!_rfOutputOn || !_loOutputOn)
-            {
-                return "已供电 · 信号源输出未开启，暂不可测试";
-            }
+            // 注：此处不再判断 RF/LO 输出是否开启。
+            // 输出状态已由节点副标题（"输出开"/"输出关"）与链路连线亮度表达，重复描述反而冗余；
+            // 且原文案"暂不可测试"是主观判断——软件并未阻止运行，实际照跑照出结果，容易误导。
             return "链路贯通 · 可开始测试";
         }
 
@@ -616,16 +706,19 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// 依据"是否存在活动链路"启停动画计时器。
-        /// 链路定义与 <see cref="OnPaint"/> 中保持一致，避免动画空转。
+        /// <para>判据直接取自 <see cref="ComputeLinkStates"/>——与 OnPaint 画虚线用的是同一份，
+        /// 因此"虚线在动"与"图上画的是流动态"永远一致，不会两处判据各自漂移。</para>
         /// </summary>
         private void SyncAnimationState()
         {
-            bool receiverReady = _receiverState == InstrumentLinkState.Ready;
-            bool needAnimation = _powerOn
-                && ((_rfOutputOn && _rfState == InstrumentLinkState.Ready && receiverReady)
-                    || (_loOutputOn && _loState == InstrumentLinkState.Ready && receiverReady)
-                    || (_spectrumState == InstrumentLinkState.Ready && receiverReady)
-                    || (_powerState == InstrumentLinkState.Ready));
+            // 计时器在构造函数末尾才创建；setter 可能在构造完成前被调用（设计器赋值），
+            // 此时直接返回，避免空引用。
+            if (_animationTimer == null)
+            {
+                return;
+            }
+
+            bool needAnimation = ComputeLinkStates().AnyFlowing;
 
             if (needAnimation && !_animationTimer.Enabled && !IsDisposed && IsHandleCreated)
             {
@@ -639,12 +732,9 @@ namespace A205AutoTestSystem.UI
 
         private void OnAnimationTick(object sender, EventArgs e)
         {
-            // 链路可能已全部断开但计时器尚未停止，兜底再确认一次
-            if (!_powerOn)
-            {
-                _animationTimer.Stop();
-                return;
-            }
+            // 不在此处按 _powerOn 硬停止：动画的启停统一由 SyncAnimationState 的
+            // needAnimation 判据决定，避免两套判据各说各话。
+            // （"未供电但仪表仍连着"时链路是静态虚线——虚线样式要保留，只是不流动。）
             _dashOffset -= 1.6f;
             if (_dashOffset <= -24f)
             {

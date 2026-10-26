@@ -65,6 +65,11 @@ namespace A205AutoTestSystem.UI
         private bool _rfOutputOn = false;
         private bool _loOutputOn = false;
 
+        // btnSignalOutput 的本地状态：两台信号源射频输出是否已开启。
+        // 与 _powerOutputOn 相互独立——"开启供电"会顺带开 RF/LO 输出，
+        // 但不改变本按钮的文字（按钮只反映用户在本按钮上的直接操作）。
+        private bool _signalOutputOn = false;
+
         // ============================================================
         // 仪表连接健康状态（驱动信号链路拓扑图的三态节点）
         //
@@ -769,6 +774,8 @@ namespace A205AutoTestSystem.UI
                 {
                     _rfLinkState = InstrumentLinkState.Idle;
                 }
+                // RF 已断开，射频输出不复存在 → 复位信号按钮状态
+                ResetSignalOutputButtonState();
                 SyncSignalFlowState();
             }
         }
@@ -869,6 +876,8 @@ namespace A205AutoTestSystem.UI
                 {
                     _loLinkState = InstrumentLinkState.Idle;
                 }
+                // LO 已断开，射频输出不复存在 → 复位信号按钮状态
+                ResetSignalOutputButtonState();
                 SyncSignalFlowState();
             }
         }
@@ -1069,6 +1078,8 @@ namespace A205AutoTestSystem.UI
                     _powerOutputOn = false;
                     _rfOutputOn = false;
                     _loOutputOn = false;
+                    // 电源掉线 → 射频输出已失效 → 复位信号按钮状态
+                    ResetSignalOutputButtonState();
                     if (btnOpenPower != null && !btnOpenPower.IsDisposed)
                     {
                         btnOpenPower.Text = "开启供电";
@@ -1141,6 +1152,8 @@ namespace A205AutoTestSystem.UI
             // ② 关闭 RF / LO 射频输出（:OUTP 0），避免退出后仍在发射载波
             try { SetSignalOutputs(false); }
             catch (Exception ex) { Logger.Log("[Error] 退出收口：关闭 RF/LO 输出失败: " + ex.Message); }
+            // 输出已关 → 复位信号按钮状态
+            ResetSignalOutputButtonState();
 
             // ③ 关闭电源输出（:OUTP:STAT 0），避免产品持续带电
             if (_powerSupply != null && _powerSupply.IsConnected)
@@ -1197,6 +1210,8 @@ namespace A205AutoTestSystem.UI
                 _powerOutputOn = false;
                 _rfOutputOn = false;
                 _loOutputOn = false;
+                // 电源已断开 → 复位信号按钮状态
+                ResetSignalOutputButtonState();
                 if (btnOpenPower != null && !btnOpenPower.IsDisposed)
                 {
                     btnOpenPower.Text = "开启供电";
@@ -1480,6 +1495,21 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
+        /// 复位「开启信号 / 关闭信号」按钮的本地状态（回到"开启信号"）。
+        /// <para>调用时机：任一信号源被断开、电源被断开、面板被释放——这些场景下
+        /// 射频输出已不复存在，按钮若仍显示"关闭信号"，操作者点一下会变成"开启"，
+        /// 语义会翻转错乱。</para>
+        /// </summary>
+        private void ResetSignalOutputButtonState()
+        {
+            _signalOutputOn = false;
+            if (btnSignalOutput != null && !btnSignalOutput.IsDisposed)
+            {
+                btnSignalOutput.Text = "开启信号";
+            }
+        }
+
+        /// <summary>
         /// 批量开/关 RF、LO 射频输出（:OUTP 1/0）。逐台独立容错：
         /// 未连接则跳过并记日志，单台失败不影响另一台。
         /// </summary>
@@ -1758,6 +1788,8 @@ namespace A205AutoTestSystem.UI
                     //   - 仪表掉线/通信失败:状态也复位,允许后续"一键断开"重新走一遍清理路径,
                     //     不会再卡死在"必须先关闭供电"。
                     _powerOutputOn = false;
+                    // 关机序列已关闭 RF/LO 射频输出 → 复位信号按钮状态
+                    ResetSignalOutputButtonState();
                     if (btnOpenPower != null && !btnOpenPower.IsDisposed)
                     {
                         btnOpenPower.Text = "开启供电";
@@ -1765,6 +1797,29 @@ namespace A205AutoTestSystem.UI
                     SyncSignalFlowState();
                 }
             }
+        }
+
+        /// <summary>
+        /// 「开启信号 / 关闭信号」按钮：统一控制 RF、LO 两台信号源的射频输出（:OUTP 1/0）。
+        /// <para><b>按钮语义</b>：初始为"开启信号"；点击后开启两台信号源的射频输出，
+        /// 按钮变为"关闭信号"；再次点击则关闭输出，按钮回到"开启信号"。</para>
+        /// <para><b>与「开启供电」按钮相互独立</b>：开启供电会顺带开 RF/LO 输出，
+        /// 但不改动本按钮文字——本按钮只反映用户在此按钮上的直接操作。</para>
+        /// <para><b>容错</b>：逐台独立处理，未连接的信号源跳过并记日志，不弹窗。</para>
+        /// </summary>
+        private void OnSignalOutputClicked(object sender, EventArgs e)
+        {
+            bool target = !_signalOutputOn;
+
+            // SetSignalOutputs 内部逐台容错：未连接跳过记日志，单台失败不影响另一台
+            SetSignalOutputs(target);
+
+            _signalOutputOn = target;
+            if (btnSignalOutput != null && !btnSignalOutput.IsDisposed)
+            {
+                btnSignalOutput.Text = target ? "关闭信号" : "开启信号";
+            }
+            Logger.Log($"[UI] 信号输出按钮切换为「{(target ? "关闭信号" : "开启信号")}」。");
         }
 
         // -------- 日志清除按钮
