@@ -51,7 +51,7 @@ namespace A205AutoTestSystem.UI
         // 阈值 0.95A = 950mA（模块带载才有电流）。
         private const double SupplyCurrentThresholdA = 0.9;
         private static readonly int[] SupplyCheckChannels = { 1, 2 };
-        private const int SupplyCheckInitialDelayMs = 300;  // 开启输出后首次读电流前的等待
+        private const int SupplyCheckInitialDelayMs = 500;  // 开启输出后首次读电流前的等待
         private const int SupplyCheckRetryDelayMs = 500;   // 未达阈值时的重试间隔
         private const int SupplyCheckMaxAttempts = 3;      // 最多尝试次数
 
