@@ -228,7 +228,18 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 关闭输出
                 try { _rf.SetOutputState(false); } catch { /* best-effort */ }
                 try { _lo.SetOutputState(false); } catch { /* best-effort */ }
-                Logger.Log("[AgcControlTest] RF/LO 输出已关闭（finally）。");
+
+                // 复位 AGC 衰减到 0 dB。
+                // 本测试项在 5 档扫描（4/8/16/32/60 dB）后会话残留最后一档的衰减，
+                // 若不在此归零，接收机的衰减状态会被后续测试项继承：
+                //   - ImageRejectionTest：不发任何衰减命令，直接读 IF 真信号峰作 DELTA 参考点，
+                //     带着 60 dB 衰减会把参考点压到噪声底，导致镜频抑制读数虚高（虚假 Pass）。
+                //   - 手动单独运行本测试项后，接收机也会停留在高衰减状态。
+                // 注意：频点之间无需复位——每个频点开头（ExecuteOneFreqAsync 内）本就会
+                // 发 SendAttenuationCommand(_channel, 0) 设 DELTA 参考点。
+                try { _receiver.SendAttenuationCommand(_channel, 0); } catch { /* best-effort */ }
+
+                Logger.Log("[AgcControlTest] RF/LO 输出已关闭，AGC 衰减已复位 0dB（finally）。");
             }
 
             return lastResult;
