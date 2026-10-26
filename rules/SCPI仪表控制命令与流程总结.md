@@ -203,18 +203,30 @@
 
 ### 2.4 ODP3063 电源
 
-继承自 `InstrumentBase`，类文件：`Instruments/ODP3063.cs`
+继承自 `VisaBaseInstrument`，类文件：`InstrumentControl/ODP3063.cs`
 
-> 注：代码中只操作第二路通道（CH2）。
+> **通道选择规则**：电压/电流设置与测量回读都作用于**当前选中通道**，必须先发
+> `INSTrument:NSELect {n}` 选定通道再发后续命令。本类把"选通道"封装进各操作方法内部，
+> 调用方无需关心当前选中的是哪一路。
+>
+> **供电开关规则**：本仪表**无法单独开关某一个通道**，只能三个通道一起开或一起关。
+> 开关走 `:OUTP:STAT {0|1}`（**不带通道号**，作用于全部通道），该命令**不依赖**当前选中通道，
+> 因此开关前不插入 `NSELect`。
+>
+> **供电通道**：本系统用 CH2 给 A205 接收模块供电（`ODP3063.SupplyChannel = 2`）。
+> 该常量**只决定电压/电流参数设到哪一路**；供电**开关**（`SetSupplyOutput`）作用于全部三路，与之无关。
 
 | SCPI 命令 | C# 方法 | 用途 |
 |-----------|---------|------|
-| `:SOUR2:VOLT {voltage}` | `SetChannel2Voltage(double voltage)` | 设置 CH2 输出电压（V） |
-| `:SOUR2:CURR {current}` | `SetChannel2Current(double current)` | 设置 CH2 输出电流（A） |
-| `:OUTP2:STAT {0\|1}` | `EnableChannel2Output(bool enable)` | 启用/禁用 CH2 输出 |
-| `:OUTP2:STAT?` | `QueryChannel2OutputStatus()` | 查询 CH2 输出状态 |
-| `:SOUR2:VOLT:PROT {voltage}` | `SetChannel2OverVoltageProtection(double voltage)` | 设置 CH2 过压保护值 |
-| `:SOUR2:CURR:PROT {current}` | `SetChannel2OverCurrentProtection(double current)` | 设置 CH2 过流保护值 |
+| `INSTrument:NSELect {n}` | `SelectChannel(int channel)` | 选择通道（1~3），后续设置/测量命令作用于该通道 |
+| `VOLT {voltage}` | `SetSupplyVoltage(double voltage)` | 设置供电通道输出电压（V）；内部先发 `NSELect 2` |
+| `CURR {current}` | `SetSupplyCurrent(double current)` | 设置供电通道限流值（A）；内部先发 `NSELect 2` |
+| `MEAS:VOLT?` | `MeasureSupplyVoltage()` | 读取供电通道实际输出电压（V）；内部先发 `NSELect 2` |
+| `MEAS:CURR?` | `MeasureSupplyCurrent()` | 读取供电通道实际输出电流（A）；内部先发 `NSELect 2` |
+| `:OUTP:STAT {0\|1}` | `SetSupplyOutput(bool enable)` | 三通道一起启用/禁用供电（不带通道号） |
+| `:OUTP:STAT?` | `QuerySupplyOutputStatus()` | 查询供电输出状态（不带通道号，三通道统一） |
+| `SYSTem:REMote` | `SetRemoteMode()` | 切换到远程控制（锁定前面板按键） |
+| `SYSTem:LOCal` | `SetLocalMode()` | 交还本地面板控制 |
 
 ---
 

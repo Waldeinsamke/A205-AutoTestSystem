@@ -65,6 +65,9 @@
     <Compile Include="..\..\InstrumentControl\SpectrumAnalyzer.cs">
       <Link>InstrumentControl\SpectrumAnalyzer.cs</Link>
     </Compile>
+    <Compile Include="..\..\InstrumentControl\ODP3063.cs">
+      <Link>InstrumentControl\ODP3063.cs</Link>
+    </Compile>
     <Compile Include="..\..\Common\Logger.cs">
       <Link>Common\Logger.cs</Link>
     </Compile>

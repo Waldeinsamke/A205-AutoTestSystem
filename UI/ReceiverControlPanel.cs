@@ -998,7 +998,18 @@ namespace A205AutoTestSystem.UI
                 _powerLinkState = InstrumentLinkState.Ready;
                 _powerFaultReason = string.Empty;
                 Logger.Log($"[UI] 电源已连接（{powerAddress.Trim()}）。");
-                // 连接后查询 CH2 实际输出状态，按真实状态同步按钮文字与本地状态。
+                // 切到远程控制模式：锁定前面板按键，避免操作者在本机面板上误改参数
+                // 导致上位机侧读到的电压/电流与预期不符。失败仅告警，不阻断连接。
+                try
+                {
+                    _powerSupply.SetRemoteMode();
+                    Logger.Log("[UI] 电源已切换到远程控制模式（SYSTem:REMote）。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Warn] 电源切换远程模式失败（继续使用前面板当前状态）: " + ex.Message);
+                }
+                // 连接后查询供电输出状态（三通道统一开关），按真实状态同步按钮文字与本地状态。
                 // 读取失败则按默认 OFF 处理 + 日志告警，绝不让读取异常破坏"已连接"的成果。
                 SyncPowerButtonFromInstrument();
                 SyncSignalFlowState();
@@ -1059,7 +1070,7 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 连接电源后调用：读取 CH2 实际输出状态，同步 <see cref="btnOpenPower"/> 文字
+        /// 连接电源后调用：读取供电输出状态（三通道统一开关），同步 <see cref="btnOpenPower"/> 文字
         /// 与 <see cref="_powerOutputOn"/> 本地状态。
         /// 接受 "1"/"0"、"ON"/"OFF"（大小写不敏感、含空白也容忍）。
         /// 读取失败 → 按默认 OFF 处理 + 日志告警，不抛异常、不弹窗。
@@ -1069,8 +1080,8 @@ namespace A205AutoTestSystem.UI
             bool on = false;
             try
             {
-                string raw = _powerSupply.QueryChannel2OutputStatus();
-                Logger.Log($"[UI] 电源 CH2 输出状态原始返回: \"{raw}\"");
+                string raw = _powerSupply.QuerySupplyOutputStatus();
+                Logger.Log($"[UI] 电源输出状态原始返回（三通道统一）: \"{raw}\"");
                 string trimmed = raw == null ? string.Empty : raw.Trim();
                 on = trimmed == "1"
                      || string.Equals(trimmed, "ON", StringComparison.OrdinalIgnoreCase);
@@ -1091,6 +1102,17 @@ namespace A205AutoTestSystem.UI
             try
             {
                 try { _powerSupply.ConnectionChanged -= OnPowerConnectionChanged; } catch { }
+                // 断开前交还本地面板控制权，避免仪表被"锁"在远程模式而无法由操作者手动调整。
+                // 失败仅告警，不影响断开流程。
+                try
+                {
+                    _powerSupply.SetLocalMode();
+                    Logger.Log("[UI] 电源已交还本地面板控制（SYSTem:LOCal）。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Warn] 电源交还本地控制失败: " + ex.Message);
+                }
                 _powerSupply.Disconnect();
                 Logger.Log("[UI] ODP3063 power supply disconnected.");
             }
@@ -1542,7 +1564,7 @@ namespace A205AutoTestSystem.UI
                 // 1) 电源上电；失败则中止，本地状态保持 OFF
                 try
                 {
-                    _powerSupply.EnableChannel2Output(true);
+                    _powerSupply.SetSupplyOutput(true);
                 }
                 catch (Exception ex)
                 {
@@ -1578,7 +1600,7 @@ namespace A205AutoTestSystem.UI
                 //    避免仪表掉线后 _powerOutputOn 卡在 true 导致"一键断开"被永久阻塞。
                 try
                 {
-                    _powerSupply.EnableChannel2Output(false);
+                    _powerSupply.SetSupplyOutput(false);
                     Logger.Log("[UI] Power output disabled.");
                 }
                 catch (Exception ex)

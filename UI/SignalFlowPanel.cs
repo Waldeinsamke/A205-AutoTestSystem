@@ -214,7 +214,7 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 直流电源 CH2 是否正在供电。供电是整条链路的总开关，
+        /// 直流电源是否正在供电（三通道统一开关）。供电是整条链路的总开关，
         /// 同时决定电源节点副标题显示"供电中"还是"未供电"。
         /// </summary>
         public bool PowerOn
@@ -276,7 +276,7 @@ namespace A205AutoTestSystem.UI
                 bool saLink = _powerOn
                     && _receiverState == InstrumentLinkState.Ready
                     && _spectrumState == InstrumentLinkState.Ready;
-                // 供电连线：仅在电源已就绪且 CH2 真正输出时点亮
+                // 供电连线：仅在电源已就绪且真正输出时点亮
                 bool powerLink = _powerOn
                     && _powerState == InstrumentLinkState.Ready
                     && _receiverState == InstrumentLinkState.Ready;

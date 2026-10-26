@@ -16,6 +16,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
     /// <item>非瞬态错误 / 非重试场景下不重试，直接抛出。</item>
     /// <item>连接 / 断开事件正确触发。</item>
     /// <item><see cref="SignalGenerator.ExitSweep"/> 扫频退出语义（停扫描 + 切回 CW 两条命令缺一不可）。</item>
+    /// <item><see cref="ODP3063"/> 通道选择与供电开关语义（设置/测量前须 NSELect，供电开关不插入 NSELect）。</item>
     /// </list>
     /// </summary>
     public static class Program
@@ -39,6 +40,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             if (filter.Contains("Events"))   TestConnectionEvents();
             if (filter.Contains("Guard"))    TestGuardChecks();
             if (filter.Contains("Sweep"))    TestSweepExit();
+            if (filter.Contains("Power"))    TestOdp3063();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");
@@ -60,7 +62,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             {
                 set.Add("Command"); set.Add("Query"); set.Add("Retry");
                 set.Add("NoRetry"); set.Add("Events"); set.Add("Guard");
-                set.Add("Sweep");
+                set.Add("Sweep"); set.Add("Power");
                 return set;
             }
             foreach (var arg in args)
@@ -84,7 +86,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             {
                 set.Add("Command"); set.Add("Query"); set.Add("Retry");
                 set.Add("NoRetry"); set.Add("Events"); set.Add("Guard");
-                set.Add("Sweep");
+                set.Add("Sweep"); set.Add("Power");
             }
             return set;
         }
@@ -447,6 +449,184 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             Assert.CurrentTestName = "Guard: 未连接调用抛 InvalidOperationException";
 
             sg.Dispose();
+        }
+
+        // ====================================================================
+        // ODP3063 直流电源
+        // ====================================================================
+
+        /// <summary>
+        /// 验证 ODP3063 的通道选择与供电开关语义。
+        /// <para>核心约束：电压/电流设置与测量回读都作用于"当前选中通道"，
+        /// 必须先发 <c>INSTrument:NSELect {n}</c>；而供电开关走 <c>:OUTP:STAT</c>（不带通道号），
+        /// 三通道一起开关，不依赖当前选中通道，因此开关前不应插入 NSELect。</para>
+        /// </summary>
+        private static void TestOdp3063()
+        {
+            Console.WriteLine("[Test] ODP3063 通道选择与供电开关语义");
+
+            // --- 选通道：命令格式与通道号
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                psu.SelectChannel(1);
+                psu.SelectChannel(2);
+                psu.SelectChannel(3);
+
+                Assert.CurrentTestName = "ODP3063.SelectChannel 命令格式";
+                Assert.Equal(3, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 1\n", transport.SendHistory[0]);
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[1]);
+                Assert.Equal("INSTrument:NSELect 3\n", transport.SendHistory[2]);
+
+                psu.Dispose();
+            }
+
+            // --- 选通道越界应抛 ArgumentOutOfRangeException
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                Assert.CurrentTestName = "ODP3063.SelectChannel 越界抛异常";
+                Assert.Throws<ArgumentOutOfRangeException>(() => psu.SelectChannel(0));
+                Assert.Throws<ArgumentOutOfRangeException>(() => psu.SelectChannel(4));
+
+                psu.Dispose();
+            }
+
+            // --- 设电压：必须先 NSELect 供电通道，再发 VOLT
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                psu.SetSupplyVoltage(12.0);
+
+                Assert.CurrentTestName = "ODP3063.SetSupplyVoltage 先选通道再设电压";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[0]);
+                Assert.Equal("VOLT 12\n", transport.SendHistory[1]);
+
+                psu.Dispose();
+            }
+
+            // --- 设电流：同样先选通道
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                psu.SetSupplyCurrent(1.0);
+
+                Assert.CurrentTestName = "ODP3063.SetSupplyCurrent 先选通道再设电流";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[0]);
+                Assert.Equal("CURR 1\n", transport.SendHistory[1]);
+
+                psu.Dispose();
+            }
+
+            // --- 读实际电压：先选通道再查，且正确解析返回值
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse("MEAS:VOLT?", "11.98");
+
+                double v = psu.MeasureSupplyVoltage();
+
+                Assert.CurrentTestName = "ODP3063.MeasureSupplyVoltage 先选通道再回读";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[0]);
+                Assert.Equal("MEAS:VOLT?\n", transport.SendHistory[1]);
+                Assert.Equal(11.98, v);
+
+                psu.Dispose();
+            }
+
+            // --- 读实际电流：先选通道再查
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse("MEAS:CURR?", "0.995");
+
+                double c = psu.MeasureSupplyCurrent();
+
+                Assert.CurrentTestName = "ODP3063.MeasureSupplyCurrent 先选通道再回读";
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[0]);
+                Assert.Equal("MEAS:CURR?\n", transport.SendHistory[1]);
+                Assert.Equal(0.995, c);
+
+                psu.Dispose();
+            }
+
+            // --- 供电开关：只发 :OUTP:STAT（不带通道号），**不**插入 NSELect（三通道一起开关）
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                psu.SetSupplyOutput(true);
+                psu.SetSupplyOutput(false);
+
+                Assert.CurrentTestName = "ODP3063.SetSupplyOutput 不插入 NSELect";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal(":OUTP:STAT 1\n", transport.SendHistory[0]);
+                Assert.Equal(":OUTP:STAT 0\n", transport.SendHistory[1]);
+
+                psu.Dispose();
+            }
+
+            // --- 查询供电状态：不插入 NSELect
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse(":OUTP:STAT?", "1");
+
+                string raw = psu.QuerySupplyOutputStatus();
+
+                Assert.CurrentTestName = "ODP3063.QuerySupplyOutputStatus 不插入 NSELect";
+                Assert.Equal(1, transport.SendHistory.Count);
+                Assert.Equal(":OUTP:STAT?\n", transport.SendHistory[0]);
+                Assert.Equal("1", raw);
+
+                psu.Dispose();
+            }
+
+            // --- 远/本地控制权切换
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                psu.SetRemoteMode();
+                psu.SetLocalMode();
+
+                Assert.CurrentTestName = "ODP3063 远程/本地模式切换";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal("SYSTem:REMote\n", transport.SendHistory[0]);
+                Assert.Equal("SYSTem:LOCal\n", transport.SendHistory[1]);
+
+                psu.Dispose();
+            }
+
+            // --- 测量回读解析失败：异常消息应带命令原文，便于定位
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse("MEAS:VOLT?", "ERR");
+
+                Assert.CurrentTestName = "ODP3063 测量解析失败抛异常";
+                Assert.Throws<InvalidOperationException>(() => psu.MeasureSupplyVoltage());
+
+                psu.Dispose();
+            }
         }
 
         // ====================================================================
