@@ -4,7 +4,7 @@ using System.IO;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 using A205AutoTestSystem.Common;
-using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.Tests.ExcelExporterTests
 {

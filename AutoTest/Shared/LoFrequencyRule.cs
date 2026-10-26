@@ -1,6 +1,6 @@
 using System;
 
-namespace A205AutoTestSystem.InstrumentControl
+namespace A205AutoTestSystem.AutoTest.Shared
 {
     /// <summary>
     /// 本振信号频率计算规则（LO 跟随 RF 动态计算）。

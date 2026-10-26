@@ -89,15 +89,15 @@
     <Compile Include="ReceiverControl\ReceiverSerialPort.cs" />
     <Compile Include="MatrixControl\IChannelSwitcher.cs" />
     <Compile Include="MatrixControl\MatrixSerialPort.cs" />
-    <Compile Include="InstrumentControl\TestResult.cs" />
+    <Compile Include="Models\TestResult.cs" />
     <!-- 线性最大增益实测值仓库（供通道间增益不一致性等纯计算型测试项取用）-->
-    <Compile Include="InstrumentControl\GainResultRepository.cs" />
-    <Compile Include="InstrumentControl\TestItems\ITestItem.cs" />
+    <Compile Include="AutoTest\Shared\GainResultRepository.cs" />
+    <Compile Include="AutoTest\ITestItem.cs" />
     <Compile Include="InstrumentControl\TestItems\GainTest.cs" />
     <Compile Include="InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs" />
     <Compile Include="InstrumentControl\TestItems\ChannelGainInconsistencyAgcOnTest.cs" />
     <!-- 通道间增益不一致性（AGC不起控 / AGC起控）共用的比对算法 -->
-    <Compile Include="InstrumentControl\TestItems\GainConsistencyCalculator.cs" />
+    <Compile Include="AutoTest\Shared\GainConsistencyCalculator.cs" />
     <Compile Include="InstrumentControl\TestItems\BandwidthTest.cs" />
     <Compile Include="InstrumentControl\TestItems\InputP1Test.cs" />
     <Compile Include="InstrumentControl\TestItems\SaturatedOutputTest.cs" />
@@ -107,8 +107,8 @@
     <Compile Include="InstrumentControl\TestItems\HarmonicRejectionTest.cs" />
     <Compile Include="InstrumentControl\TestItems\InBandSpuriousTest.cs" />
     <Compile Include="InstrumentControl\TestItems\ImageRejectionTest.cs" />
-    <Compile Include="InstrumentControl\TestItems\TestCatalog.cs" />
-    <Compile Include="InstrumentControl\AutoTestEngine.cs" />
+    <Compile Include="AutoTest\TestCatalog.cs" />
+    <Compile Include="AutoTest\AutoTestEngine.cs" />
     <Compile Include="InstrumentControl\VisaBaseInstrument.cs" />
     <Compile Include="InstrumentControl\NationalInstrumentsVisaTransport.cs" />
     <Compile Include="InstrumentControl\SignalGenerator.cs" />
@@ -116,7 +116,7 @@
     <Compile Include="InstrumentControl\SpectrumAnalyzer.cs" />
     <Compile Include="InstrumentControl\ODP3063.cs" />
     <!-- 本振频率计算规则（LO 随 RF 动态计算）-->
-    <Compile Include="InstrumentControl\LoFrequencyRule.cs" />
+    <Compile Include="AutoTest\Shared\LoFrequencyRule.cs" />
     <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -166,7 +166,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <!-- M-2026-10：H-6 资源快照判定的纯逻辑（不依赖 WinForms，方便测试链接源文件） -->
-    <Compile Include="UI\ResourceSnapshotLogic.cs" />
+    <Compile Include="AutoTest\Shared\ResourceSnapshotLogic.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

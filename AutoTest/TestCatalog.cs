@@ -3,9 +3,12 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using A205AutoTestSystem.Common;
+using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 using A205AutoTestSystem.ReceiverControl;
 
-namespace A205AutoTestSystem.InstrumentControl.TestItems
+namespace A205AutoTestSystem.AutoTest
 {
     /// <summary>
     /// 测试项目录。M6 阶段集中维护当前可用的全部测试项清单；

@@ -1,6 +1,6 @@
 using System;
 
-namespace A205AutoTestSystem.InstrumentControl
+namespace A205AutoTestSystem.Models
 {
     /// <summary>
     /// 单条测试结果数据模型。字段对齐规划书 §6.1。
@@ -23,7 +23,7 @@ namespace A205AutoTestSystem.InstrumentControl
         public string TestItem { get; set; } = string.Empty;
 
         /// <summary>
-        /// 频段编号（与 <see cref="ReceiverControl.ModeBandTable.BandInfo.BandIndex"/> 对齐）。
+        /// 频段编号（与 <c>ReceiverControl.ModeBandTable.BandInfo.BandIndex</c> 对齐）。
         /// <para>本字段是 <c>int?</c>：<c>null</c> 表示本条结果与频段无关
         /// （例如带宽测试、未实现 stub 等）。</para>
         /// </summary>

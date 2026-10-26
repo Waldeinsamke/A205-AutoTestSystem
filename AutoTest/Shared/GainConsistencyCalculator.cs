@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace A205AutoTestSystem.InstrumentControl.TestItems
+namespace A205AutoTestSystem.AutoTest.Shared
 {
     /// <summary>
     /// 通道间增益不一致性的共用比对算法。

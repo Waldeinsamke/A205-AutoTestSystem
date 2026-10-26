@@ -1,6 +1,6 @@
 using System;
 
-namespace A205AutoTestSystem.UI
+namespace A205AutoTestSystem.AutoTest.Shared
 {
     /// <summary>
     /// H-6 资源快照判定的纯逻辑（从 AutoTestPanel 抽出）。

@@ -83,8 +83,8 @@
     <Compile Include="..\..\Common\TestReportManager.cs">
       <Link>Common\TestReportManager.cs</Link>
     </Compile>
-    <Compile Include="..\..\InstrumentControl\TestResult.cs">
-      <Link>InstrumentControl\TestResult.cs</Link>
+    <Compile Include="..\..\Models\TestResult.cs">
+      <Link>Models\TestResult.cs</Link>
     </Compile>
     <!-- 测试程序本体 -->
     <Compile Include="Program.cs" />

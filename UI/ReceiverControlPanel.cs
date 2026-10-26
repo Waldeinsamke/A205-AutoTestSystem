@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO.Ports;
 using System.Windows.Forms;
+using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.MatrixControl;

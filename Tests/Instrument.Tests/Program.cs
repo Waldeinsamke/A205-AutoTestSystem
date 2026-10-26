@@ -374,7 +374,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
         // ====================================================================
 
         /// <summary>
-        /// 把 <paramref name="transport"/> 注入到 <paramref name="instrument"/>，
+        /// 把 <paramref name="transport"/> 注入到 <paramref name="baseInstrument"/>，
         /// 调用 Connect()（此时 CreateTransport 不会被调用，因为我们提前注入了）。
         /// </summary>
         private static void InjectAndConnect(VisaBaseInstrument baseInstrument, IVisaTransport transport)

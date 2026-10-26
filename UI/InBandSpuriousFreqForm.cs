@@ -5,8 +5,8 @@ using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using A205AutoTestSystem.Common;
-using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.UI
 {
@@ -25,7 +25,7 @@ namespace A205AutoTestSystem.UI
     ///   <item>9 个频点全部点完 → 窗体自动关闭，本次运行结束，报表一次性拿到 9 条结果</item>
     /// </list>
     /// <para><b>关闭窗体 / 点『取消测试』= 放弃剩余频点</b>，已测完的频点结果仍保留在报表中。</para>
-    /// <para>窗体为模态（<see cref="FormDialog"/> + <see cref="FormBorderStyle.FixedDialog"/>），
+    /// <para>窗体为模态（<c>FormDialog</c> + <see cref="FormBorderStyle.FixedDialog"/>），
     /// 避免操作者在测试跑动期间去改仪表设置。所有控件在代码中创建，不走 Designer。</para>
     /// <para><b>线程约束：</b>本窗体所有方法只能在 UI 线程调用。
     /// 测试项侧不使用 <c>ConfigureAwait(false)</c>，保证调用方始终在 UI 线程。</para>
@@ -188,7 +188,7 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// 等待操作者点击某个频点按钮，返回被选中的频率（MHz）。
-        /// <para><b>窗体是非模态且常驻显示的</b>（<see cref="ShowInTaskbar"/> = false、首次
+        /// <para><b>窗体是非模态且常驻显示的</b>（<c>ShowInTaskbar</c> = false、首次
         /// <c>Show()</c> 后不再隐藏），本方法只负责"挂一个完成源 + await"，
         /// 不做 <c>ShowDialog</c>：WinForms 禁止对已可见窗体再次 <c>ShowDialog</c>
         /// （抛"已经可见的窗体不能显示为模式对话框"），且 ShowDialog 的 Hide/Close

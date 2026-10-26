@@ -4,7 +4,11 @@ using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using A205AutoTestSystem.AutoTest;
+using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
+using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.Models;
 using A205AutoTestSystem.ReceiverControl;
 
 namespace A205AutoTestSystem.InstrumentControl.TestItems

@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using A205AutoTestSystem.Common;
-using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 
-namespace A205AutoTestSystem.InstrumentControl
+namespace A205AutoTestSystem.AutoTest
 {
     /// <summary>
     /// 自动测试引擎。负责测试项注册、串行执行、进度与日志回调。

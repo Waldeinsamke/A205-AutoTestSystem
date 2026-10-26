@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using A205AutoTestSystem.Common;
 
-namespace A205AutoTestSystem.InstrumentControl
+namespace A205AutoTestSystem.AutoTest.Shared
 {
     /// <summary>
     /// 线性最大增益结果仓库（进程内）。

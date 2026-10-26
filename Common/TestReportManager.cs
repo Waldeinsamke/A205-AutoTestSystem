@@ -1,6 +1,6 @@
 using System;
 using System.Globalization;
-using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.Common
 {
@@ -8,11 +8,11 @@ namespace A205AutoTestSystem.Common
     /// 测试报告全局管理器（M7 阶段新增）。
     /// <para>采用进程内单例（<see cref="Lazy{T}"/>），聚合一段时间内产生的全部
     /// <see cref="TestResult"/>，到用户点击「导出 Excel」时一次性落盘。</para>
-    /// <para>订阅（生产者）：各 <see cref="ITestItem"/> 在 <c>ExecuteAsync</c>
+    /// <para>订阅（生产者）：各 <c>ITestItem</c> 在 <c>ExecuteAsync</c>
     /// 末尾调用 <see cref="Record"/> 把结果塞进当前批次的 <see cref="ExcelExporter"/>。</para>
     /// <para>落盘（消费者）：UI 的「导出 Excel」按钮调用 <see cref="SaveCurrentReport"/>，
     /// 把当前批次写为 <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。</para>
-    /// <para>温度区间兜底：各测试项构造时不知道当前温度档位（<see cref="TestCatalog"/>
+    /// <para>温度区间兜底：各测试项构造时不知道当前温度档位（<c>TestCatalog</c>
     /// 用完即丢），导致 <see cref="TestResult.TemperatureRange"/> 默认为空、Excel 该列为空白。
     /// UI 在「加载测试」时调用 <see cref="SetTemperatureContext"/> 写入档位，
     /// <see cref="Record"/> 发现结果缺温度时按此兜底。</para>
@@ -85,7 +85,7 @@ namespace A205AutoTestSystem.Common
         /// <summary>
         /// 由测试项在 <c>ExecuteAsync</c> 末尾调用，把结果追加到当前批次。
         /// <para>第一次调用时会惰性创建 <see cref="ExcelExporter"/>。</para>
-        /// <para>温度兜底：测试项本身不掌握温度档位（<see cref="TestCatalog"/> 构造时
+        /// <para>温度兜底：测试项本身不掌握温度档位（<c>TestCatalog</c> 构造时
         /// 用完即丢），若结果未带 <see cref="TestResult.TemperatureRange"/>，
         /// 则用 <see cref="SetTemperatureContext"/> 设定的档位名补上，
         /// 避免 Excel 温度列出现空白。</para>

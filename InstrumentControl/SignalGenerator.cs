@@ -91,7 +91,7 @@ namespace A205AutoTestSystem.InstrumentControl
 
         /// <summary>
         /// 切换回 CW（单频）模式。对应 SCPI 命令 <c>:FREQ:MODE CW</c>。
-        /// <para>扫频类测试（如带内虚假信号、<see cref="OutOfBandRejectionTest"/>）结束后必须调用本方法，
+        /// <para>扫频类测试（如带内虚假信号、<c>OutOfBandRejectionTest</c>）结束后必须调用本方法，
         /// 否则信号源仍停留在 SWE 模式；后续测试项只发 <c>:FREQ</c> 而不改 <c>:FREQ:MODE</c>，
         /// 载波会继续按扫频走，测出来的 IF 峰值是错的。</para>
         /// </summary>

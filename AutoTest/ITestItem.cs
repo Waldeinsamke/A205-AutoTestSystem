@@ -1,9 +1,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.Models;
 
-namespace A205AutoTestSystem.InstrumentControl.TestItems
+namespace A205AutoTestSystem.AutoTest
 {
     /// <summary>
     /// 自动测试项接口。所有测试用例（如 GainTest / BandwidthTest）均实现该接口，

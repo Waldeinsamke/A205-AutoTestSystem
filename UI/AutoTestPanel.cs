@@ -5,9 +5,12 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using A205AutoTestSystem.AutoTest;
+using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 using A205AutoTestSystem.ReceiverControl;
 
 namespace A205AutoTestSystem.UI
@@ -205,7 +208,7 @@ namespace A205AutoTestSystem.UI
         ///   <item>资源已就绪（三仪表已绑定）时，调 <see cref="LoadDefaultTestsToGrid"/> 重建 DGV，
         ///         并清空增益仓库（温度档变了，线性最大增益实测值不可跨档复用）。</item>
         /// </list>
-        /// <para>cmbTemp 数据源（构造期）："常温" / "高温" / "低温"——索引 0/1/2 对应 <see cref="TemperatureRange.Normal/High/Low"/>。</para>
+        /// <para>cmbTemp 数据源（构造期）："常温" / "高温" / "低温"——索引 0/1/2 对应 <c>TemperatureRange.Normal / High / Low</c>。</para>
         /// </summary>
         private void OnAutoTestCmbTempChanged(object sender, EventArgs e)
         {

@@ -1,7 +1,7 @@
 using System;
 using System.Globalization;
 using System.IO;
-using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.Models;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
