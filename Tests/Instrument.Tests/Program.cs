@@ -15,6 +15,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
     /// <item><c>VisaBaseInstrument.ExecuteWithRetry</c> 重试机制（瞬态错误重试 3 次后放弃）。</item>
     /// <item>非瞬态错误 / 非重试场景下不重试，直接抛出。</item>
     /// <item>连接 / 断开事件正确触发。</item>
+    /// <item><see cref="SignalGenerator.ExitSweep"/> 扫频退出语义（停扫描 + 切回 CW 两条命令缺一不可）。</item>
     /// </list>
     /// </summary>
     public static class Program
@@ -37,6 +38,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             if (filter.Contains("NoRetry"))  TestNoRetryOnNonTransient();
             if (filter.Contains("Events"))   TestConnectionEvents();
             if (filter.Contains("Guard"))    TestGuardChecks();
+            if (filter.Contains("Sweep"))    TestSweepExit();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");
@@ -58,6 +60,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             {
                 set.Add("Command"); set.Add("Query"); set.Add("Retry");
                 set.Add("NoRetry"); set.Add("Events"); set.Add("Guard");
+                set.Add("Sweep");
                 return set;
             }
             foreach (var arg in args)
@@ -81,6 +84,7 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             {
                 set.Add("Command"); set.Add("Query"); set.Add("Retry");
                 set.Add("NoRetry"); set.Add("Events"); set.Add("Guard");
+                set.Add("Sweep");
             }
             return set;
         }
@@ -181,6 +185,82 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 Assert.Equal(":FREQ 100 MHz\n", transport.SendHistory[0]);
                 Assert.Equal(":POW -10 dBm\n", transport.SendHistory[1]);
                 Assert.Equal(":OUTP 1\n", transport.SendHistory[2]);
+
+                sg.Dispose();
+            }
+        }
+
+        // ====================================================================
+        // Sweep exit（扫频退出）
+        // ====================================================================
+
+        /// <summary>
+        /// 验证扫频退出语义：<c>ExitSweep()</c> 必须发 <c>:INIT:CONT 0</c> + <c>:FREQ:MODE CW</c> 两条命令。
+        /// <para>背景：<c>:INIT:CONT 0</c> 只停扫描触发，频率模式仍是 SWE。若不补 <c>:FREQ:MODE CW</c>，
+        /// 后续测试项只发 <c>:FREQ</c> 而不改 <c>:FREQ:MODE</c>，载波会继续按扫频走，
+        /// 读到的 IF 峰值是错的——且不报错，属静默错误。</para>
+        /// </summary>
+        private static void TestSweepExit()
+        {
+            Console.WriteLine("[Test] SweepExit 扫频退出必须同时停扫描并切回 CW");
+
+            // --- ExitSweep() 发两条命令，且顺序为"先停扫描、后切 CW"
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::x::INSTR");
+                var sg = new SignalGenerator("TCPIP0::x::INSTR");
+                InjectAndConnect(sg, transport);
+
+                sg.ExitSweep();
+
+                Assert.CurrentTestName = "SignalGenerator.ExitSweep 发两条命令";
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal(":INIT:CONT 0\n", transport.SendHistory[0]);
+                Assert.Equal(":FREQ:MODE CW\n", transport.SendHistory[1]);
+
+                sg.Dispose();
+            }
+
+            // --- 回归：SetContinuousSweep(false) 单独调用只发一条，不含 :FREQ:MODE CW
+            //     （该方法保留给"只停触发"场景；退出扫频统一用 ExitSweep）
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::x::INSTR");
+                var sg = new SignalGenerator("TCPIP0::x::INSTR");
+                InjectAndConnect(sg, transport);
+
+                sg.SetContinuousSweep(false);
+
+                Assert.CurrentTestName = "SetContinuousSweep(false) 仍只发一条";
+                Assert.Equal(1, transport.SendHistory.Count);
+                Assert.Equal(":INIT:CONT 0\n", transport.SendHistory[0]);
+
+                sg.Dispose();
+            }
+
+            // --- 完整扫频生命周期：进扫频 → 退出 → 再进扫频，模式可反复切换
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::x::INSTR");
+                var sg = new SignalGenerator("TCPIP0::x::INSTR");
+                InjectAndConnect(sg, transport);
+
+                sg.SetFrequencyModeSweep();
+                sg.SetSweepStartFrequency(800e6);
+                sg.SetSweepStopFrequency(3500e6);
+                sg.SetContinuousSweep(true);
+                sg.ExitSweep();
+                sg.SetFrequencyModeSweep();
+                sg.ExitSweep();
+
+                Assert.CurrentTestName = "扫频生命周期 SWE→退出→SWE→退出";
+                Assert.Equal(9, transport.SendHistory.Count);
+                Assert.Equal(":FREQ:MODE SWE\n", transport.SendHistory[0]);
+                Assert.Equal(":FREQ:STAR 800000000\n", transport.SendHistory[1]);
+                Assert.Equal(":FREQ:STOP 3500000000\n", transport.SendHistory[2]);
+                Assert.Equal(":INIT:CONT 1\n", transport.SendHistory[3]);
+                Assert.Equal(":INIT:CONT 0\n", transport.SendHistory[4]);
+                Assert.Equal(":FREQ:MODE CW\n", transport.SendHistory[5]);
+                Assert.Equal(":FREQ:MODE SWE\n", transport.SendHistory[6]);
+                Assert.Equal(":INIT:CONT 0\n", transport.SendHistory[7]);
+                Assert.Equal(":FREQ:MODE CW\n", transport.SendHistory[8]);
 
                 sg.Dispose();
             }

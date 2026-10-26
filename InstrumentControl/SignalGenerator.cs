@@ -100,6 +100,25 @@ namespace A205AutoTestSystem.InstrumentControl
             SendCommand(":FREQ:MODE CW");
         }
 
+        /// <summary>
+        /// 退出扫频，恢复到可安全交付给下一个测试项的状态。
+        /// <para>发两条命令，缺一不可：</para>
+        /// <list type="number">
+        ///   <item><c>:INIT:CONT 0</c> —— 停止连续扫描触发</item>
+        ///   <item><c>:FREQ:MODE CW</c> —— 把频率模式从 SWE 切回 CW</item>
+        /// </list>
+        /// <para><b>为什么要第 2 条</b>：<c>:INIT:CONT 0</c> 只停扫描触发，
+        /// 频率模式仍是 SWE。后续测试项只发 <c>:FREQ</c> 而不改 <c>:FREQ:MODE</c>，
+        /// 载波会继续按扫频走，读到的 IF 峰值是错的——而且不报错，是静默错误。</para>
+        /// <para>本方法只发命令、不改频率/功率/扫频参数，因此放在扫频段之间也是安全的：
+        /// 下一段扫频会重新发 <c>:FREQ:MODE SWE</c> 切回扫频模式。</para>
+        /// </summary>
+        public void ExitSweep()
+        {
+            SendCommand(":INIT:CONT 0");
+            SendCommand(":FREQ:MODE CW");
+        }
+
         /// <summary>设置扫频起始频率（Hz）。</summary>
         public void SetSweepStartFrequency(double frequencyHz)
         {

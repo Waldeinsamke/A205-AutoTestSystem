@@ -439,15 +439,15 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
         /// <summary>
         /// 单频点收尾：把仪表恢复到"可测下一个频点"的干净状态。
-        /// <para><b>注意</b>：<c>SetContinuousSweep(false)</c>（:INIT:CONT 0）只停扫描触发，
-        /// 频率模式仍是 SWE，必须再显式发 <c>:FREQ:MODE CW</c>，否则下一频点只发 :FREQ
-        /// 也会继续按扫频走，读出来的 IF 峰值是错的。</para>
+        /// <para><b>注意</b>：<c>ExitSweep()</c> 内部会发 <c>:INIT:CONT 0</c>（停扫描触发）
+        /// 与 <c>:FREQ:MODE CW</c>（频率模式切回 CW）两条命令，缺一不可：
+        /// 只停扫描的话频率模式仍是 SWE，下一频点只发 :FREQ 也会继续按扫频走，
+        /// 读出来的 IF 峰值是错的。</para>
         /// </summary>
         private void CleanupOneFreq()
         {
             try { _sa.SetMaxHold(false); } catch { /* best-effort */ }
-            try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
-            try { _rf.SetFrequencyModeCW(); } catch { /* best-effort */ }
+            try { _rf.ExitSweep(); } catch { /* best-effort */ }
             try { _rf.SetOutputState(false); } catch { /* best-effort */ }
             try { _lo.SetOutputState(false); } catch { /* best-effort */ }
             try { _sa.SetAllMarkOFF(); } catch { /* best-effort */ }

@@ -275,8 +275,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             }
             finally
             {
-                // 兜底：退出 RF 扫频模式 + 关 RF/LO 输出
-                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
+                // 兜底：退出 RF 扫频模式（含切回 CW）+ 关 RF/LO 输出
+                try { _rf.ExitSweep(); } catch { /* best-effort */ }
                 try { _rf.SetOutputState(false); } catch { /* best-effort */ }
                 try { _lo.SetOutputState(false); } catch { /* best-effort */ }
                 Logger.Log("[OutOfBandRejectionTest] RF/LO 输出已关闭（finally）。");
@@ -371,7 +371,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
 
                 // 离开段1：关闭 RF 扫频 + 关 MAXH（避免段 1 的历史最大峰污染段 2 读值）
-                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
+                // ExitSweep 内部除停扫描外还把频率模式切回 CW；段2 开头会重新发
+                // :FREQ:MODE SWE 切回扫频模式，故此处切回 CW 不影响段2 测量结果。
+                try { _rf.ExitSweep(); } catch { /* best-effort */ }
                 _sa.SetMaxHold(false);
 
                 // 第 2 段：RF 2340~2650 MHz、SA 100~410 MHz
@@ -395,7 +397,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
 
                 // 离开段2：关闭 RF 扫频 + 关 MAXH（不论是否异常，MAXH 都得关掉）
-                try { _rf.SetContinuousSweep(false); } catch { /* best-effort */ }
+                try { _rf.ExitSweep(); } catch { /* best-effort */ }
                 try { _sa.SetMaxHold(false); } catch { /* best-effort */ }
 
                 maxSegmentDb = Math.Max(v1, v2);

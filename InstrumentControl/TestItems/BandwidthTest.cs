@@ -35,7 +35,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>ReadPeakToPeak() 读一次 PTP dB 差</item>
     ///   <item>清当前模式轨迹（SetMaxHold(false)，切回 WRITe 模式，下一模式会重新 SetMaxHold(true)）</item>
     ///   <item>写一条 TestResult，Value=PTP dB，Unit="dB"，Judgment=Pass/Fail</item>
-    ///   <item>全部模式完成后（finally）：RF 停止扫频（SetContinuousSweep(false)）+ RF/LO 关闭输出（SetOutputState(false)）</item>
+    ///   <item>全部模式完成后（finally）：RF 退出扫频（ExitSweep()，含切回 CW）+ RF/LO 关闭输出（SetOutputState(false)）</item>
     /// </list>
     /// </summary>
     public class BandwidthTest : ITestItem
@@ -182,10 +182,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 避免下次测试或下次上电时信号源还残留输出。
                 try
                 {
-                    _rf.SetContinuousSweep(false);
+                    _rf.ExitSweep();
                     _rf.SetOutputState(false);
                     _lo.SetOutputState(false);
-                    Logger.Log("[BandwidthTest] 收尾：RF 扫频已停止，RF/LO 输出已关闭。");
+                    Logger.Log("[BandwidthTest] 收尾：RF 扫频已停止并切回 CW，RF/LO 输出已关闭。");
                 }
                 catch (Exception ex)
                 {
