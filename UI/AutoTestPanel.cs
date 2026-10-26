@@ -309,7 +309,7 @@ namespace A205AutoTestSystem.UI
             if (!_receiverPanel.AreInstrumentsReady)
             {
                 MessageBox.Show(this,
-                    "请先在『接收机控制』页一键连好三台仪表（RF/LO/SA 在信号链路图上均显示就绪）。",
+                    "请先在『接收机控制』页连接仪表（RF/LO/SA 在信号链路图上均显示就绪）。",
                     "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -341,7 +341,7 @@ namespace A205AutoTestSystem.UI
                 //    （「通道间增益不一致性」依赖仓库里的增益实测值）
                 GainResultRepository.Clear();
 
-                UpdateStep("已加载真机测试资源（60+3 模式测试项已就绪，可点 ▶ 运行 或 一键运行）");
+                UpdateStep("已加载真机测试资源（测试项已就绪，可点 ▶ 运行 或 一键运行）");
                 Logger.Log("[AutoTestPanel] 加载测试成功。");
             }
             catch (Exception ex)
