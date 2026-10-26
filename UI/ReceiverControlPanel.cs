@@ -55,6 +55,11 @@ namespace A205AutoTestSystem.UI
         private const int SupplyCheckRetryDelayMs = 500;   // 未达阈值时的重试间隔
         private const int SupplyCheckMaxAttempts = 3;      // 最多尝试次数
 
+        // 退出收口时临时使用的 VISA 超时（ms）。
+        // 退出时仪表若已掉线/线缆松动，默认 5s 超时会让窗口假死（4 台仪表最差约 20s），
+        // 收口阶段不追求完整交互，只需在有限时间内尽力而为。
+        private const int ShutdownTimeoutMs = 1000;
+
         // RF / LO 信号源射频输出的软件侧状态（:OUTP 1/0）。
         // 仅由 SetSignalOutputs 统一翻转（供电开机/关机联动），供信号链路拓扑面板判断链路通断。
         private bool _rfOutputOn = false;
@@ -1106,6 +1111,58 @@ namespace A205AutoTestSystem.UI
 
             _powerOutputOn = on;
             btnOpenPower.Text = on ? "关闭供电" : "开启供电";
+        }
+
+        /// <summary>
+        /// 关闭程序前的硬件收口：把仪表的"内部状态"与"硬件资源"一并归位。
+        /// <para><b>为什么必须有这个方法</b>：关闭 VISA session 只释放了句柄，
+        /// 但仪表侧的<b>远程模式锁定</b>（<c>SYSTem:REMote</c>）和<b>输出开关</b>
+        /// （<c>:OUTP:STAT 1</c>）是记在仪表里的状态，不会随 session 关闭而复位。
+        /// 不显式收口就会残留两种危险状态：</para>
+        /// <list type="bullet">
+        /// <item>电源面板被锁在远程模式，操作者无法在仪表本机操作；</item>
+        /// <item>产品仍在带电、信号源仍在输出载波。</item>
+        /// </list>
+        /// <para><b>执行顺序</b>（每步独立容错，失败只记日志不抛异常）：
+        /// ① 降低 VISA 超时（避免退出时仪表掉线导致窗口假死）→ ② 关 RF/LO 载波 →
+        /// ③ 关电源输出 → ④ 交还电源本地面板控制并断开（复用 <see cref="DisconnectPower"/>）。</para>
+        /// <para>由 <c>MainForm.OnFormClosing</c> 调用，此时 VISA session 仍存活，命令能真正发出。</para>
+        /// </summary>
+        public void ShutdownInstruments()
+        {
+            Logger.Log("[UI] ===== 程序退出：开始硬件收口 =====");
+
+            // ① 临时降低超时：退出时仪表若掉线，每条命令最多等 1s，避免窗口长时间假死
+            try { if (_rfGenerator != null) _rfGenerator.TimeoutMs = ShutdownTimeoutMs; } catch { }
+            try { if (_loGenerator != null) _loGenerator.TimeoutMs = ShutdownTimeoutMs; } catch { }
+            try { if (_spectrumAnalyzer != null) _spectrumAnalyzer.TimeoutMs = ShutdownTimeoutMs; } catch { }
+            try { if (_powerSupply != null) _powerSupply.TimeoutMs = ShutdownTimeoutMs; } catch { }
+
+            // ② 关闭 RF / LO 射频输出（:OUTP 0），避免退出后仍在发射载波
+            try { SetSignalOutputs(false); }
+            catch (Exception ex) { Logger.Log("[Error] 退出收口：关闭 RF/LO 输出失败: " + ex.Message); }
+
+            // ③ 关闭电源输出（:OUTP:STAT 0），避免产品持续带电
+            if (_powerSupply != null && _powerSupply.IsConnected)
+            {
+                try
+                {
+                    _powerSupply.SetSupplyOutput(false);
+                    Logger.Log("[UI] 退出收口：电源输出已关闭（:OUTP:STAT 0）。");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Error] 退出收口：关闭电源输出失败: " + ex.Message);
+                }
+            }
+
+            // ④ 交还电源本地面板控制并断开 session。
+            //    DisconnectPower 内部顺序为"先 SYSTem:LOCal 解除面板锁定，再 Disconnect"，
+            //    这里是唯一发送 LOCal 的收口路径，不要在此处再单独发一次。
+            try { DisconnectPower(); }
+            catch (Exception ex) { Logger.Log("[Error] 退出收口：断开电源失败: " + ex.Message); }
+
+            Logger.Log("[UI] ===== 程序退出：硬件收口完成 =====");
         }
 
         private void DisconnectPower()

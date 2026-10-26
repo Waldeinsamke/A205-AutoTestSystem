@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using System.Windows.Forms;
+using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.UI
 {
@@ -45,6 +46,30 @@ namespace A205AutoTestSystem.UI
             {
                 autoTestPanel.AttachToReceiver(receiverControlPanel);
             }
+        }
+
+        /// <summary>
+        /// 窗体关闭前的硬件收口。
+        /// <para><b>为什么必须有</b>：关闭 VISA session 只释放句柄，仪表侧的
+        /// <b>远程模式锁定</b>（<c>SYSTem:REMote</c>）与<b>输出开关</b>（<c>:OUTP:STAT 1</c>）
+        /// 是记在仪表里的状态，不显式收口就会残留——电源面板被锁住无法手动操作、
+        /// 产品持续带电、信号源持续发射载波。</para>
+        /// <para><b>时机</b>：<c>OnFormClosing</c> 在 <c>Dispose</c> 之前触发，
+        /// 此时 VISA session 仍存活，SCPI 命令能真正发到仪表上。
+        /// 若放到 <c>FormClosed</c> 则进程可能已退出，收口会落空。</para>
+        /// <para><b>行为</b>：全程静默——异常只写日志，不弹窗、不阻塞关闭。</para>
+        /// </summary>
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            try
+            {
+                receiverControlPanel?.ShutdownInstruments();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Error] 程序退出收口异常: " + ex.Message);
+            }
+            base.OnFormClosing(e);
         }
 
         private void OnSelectedTabChanged(object sender, EventArgs e)
