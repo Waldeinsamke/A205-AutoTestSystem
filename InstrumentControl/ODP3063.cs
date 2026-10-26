@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.InstrumentControl
 {
@@ -89,6 +90,63 @@ namespace A205AutoTestSystem.InstrumentControl
         {
             SelectChannel(SupplyChannel);
             return QueryDouble("MEAS:CURR?");
+        }
+
+        /// <summary>
+        /// 读取指定通道的实际输出电流（A）。对应 SCPI 命令 <c>MEAS:CURR?</c>。
+        /// <para>本方法会先选中 <paramref name="channel"/> 再回读。
+        /// 用于"实际是否带载"的检测——需要同时观察多路时使用。</para>
+        /// </summary>
+        /// <param name="channel">通道号（1~3）。</param>
+        public double MeasureChannelCurrent(int channel)
+        {
+            SelectChannel(channel);
+            return QueryDouble("MEAS:CURR?");
+        }
+
+        // ============================================================
+        // 实际供电检测
+        // ============================================================
+
+        /// <summary>
+        /// 判断被测模块是否**真正**得到供电。
+        /// <para><b>背景</b>：本仪表只能整体开关输出（<see cref="SetSupplyOutput"/>），
+        /// 供电线缆未插入时输出开关照样是 ON，仪表状态查询也返回"已开启"，
+        /// 仅凭输出状态无法判断产品是否真的吃到了电。</para>
+        /// <para><b>判据</b>：读取指定通道的实际输出电流，<b>任一路</b>电流大于
+        /// <paramref name="thresholdA"/> 即判定供电正常（模块带载才会有电流）。
+        /// 通信异常（读不到电流）视为**未供电**——读不到不能当作有电。</para>
+        /// </summary>
+        /// <param name="channels">要检测的通道号数组。</param>
+        /// <param name="thresholdA">电流阈值（A）。</param>
+        /// <returns>true = 至少一路电流超过阈值，判定供电正常。</returns>
+        public bool VerifyActualSupply(int[] channels, double thresholdA)
+        {
+            if (channels == null || channels.Length == 0)
+            {
+                throw new ArgumentException("待检测的电源通道数组不能为空。", nameof(channels));
+            }
+
+            foreach (int channel in channels)
+            {
+                double current;
+                try
+                {
+                    current = MeasureChannelCurrent(channel);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log($"[ODP3063] CH{channel} 电流读取失败，按未供电处理: {ex.Message}");
+                    return false;
+                }
+
+                Logger.Log($"[ODP3063] CH{channel} 实际电流 = {current:F3} A（阈值 {thresholdA:F3} A）");
+                if (current > thresholdA)
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         // ============================================================

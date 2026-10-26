@@ -27,6 +27,14 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
         private bool _disposed;
         private int _callIndex;
 
+        /// <summary>
+        /// 动态响应处理器：入参为最近一次 Write 的原始命令文本，返回响应字符串。
+        /// <para>用于按命令内容区分响应的场景（如 ODP3063 的 <c>MEAS:CURR?</c> 需要按
+        /// 前一条 <c>INSTrument:NSELect n</c> 返回不同通道的电流）。</para>
+        /// <para>非空时优先于 <see cref="SetResponse"/> 的静态映射。</para>
+        /// </summary>
+        public Func<string, string> ResponseHandler { get; set; }
+
         public FakeVisaInstrument(string address)
         {
             if (string.IsNullOrWhiteSpace(address))
@@ -90,6 +98,13 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
             string lastWrite = _sendHistory.Count > 0 ? _sendHistory[_sendHistory.Count - 1] : null;
             if (lastWrite != null)
             {
+                // 动态处理器优先：可按命令内容（含前序命令上下文）给出不同响应
+                var handler = ResponseHandler;
+                if (handler != null)
+                {
+                    return handler(lastWrite) ?? string.Empty;
+                }
+
                 string key = NormalizeKey(lastWrite);
                 if (_responses.TryGetValue(key, out string resp))
                 {

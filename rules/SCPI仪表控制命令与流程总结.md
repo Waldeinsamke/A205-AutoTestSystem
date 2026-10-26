@@ -215,6 +215,12 @@
 >
 > **供电通道**：本系统用 CH2 给 A205 接收模块供电（`ODP3063.SupplyChannel = 2`）。
 > 该常量**只决定电压/电流参数设到哪一路**；供电**开关**（`SetSupplyOutput`）作用于全部三路，与之无关。
+>
+> **实际供电检测**（2026-10-26 新增）：本仪表只能整体开关输出，**供电线缆未插入时
+> 输出开关照样是 ON**，`:OUTP:STAT?` 也返回"已开启"——输出状态无法区分"仪表已开"与
+> "产品已吃电"。唯一可靠判据是**实际输出电流**：`VerifyActualSupply` 读指定通道的
+> `MEAS:CURR?`，任一路电流 > 阈值（0.95A = 950mA）即判定供电正常；
+> 读不到电流（通信异常）一律按**未供电**处理。
 
 | SCPI 命令 | C# 方法 | 用途 |
 |-----------|---------|------|
@@ -223,6 +229,8 @@
 | `CURR {current}` | `SetSupplyCurrent(double current)` | 设置供电通道限流值（A）；内部先发 `NSELect 2` |
 | `MEAS:VOLT?` | `MeasureSupplyVoltage()` | 读取供电通道实际输出电压（V）；内部先发 `NSELect 2` |
 | `MEAS:CURR?` | `MeasureSupplyCurrent()` | 读取供电通道实际输出电流（A）；内部先发 `NSELect 2` |
+| `MEAS:CURR?` | `MeasureChannelCurrent(int channel)` | 读取**指定通道**实际输出电流（A）；内部先发 `NSELect {n}` |
+| `MEAS:CURR?`（多通道） | `VerifyActualSupply(int[] channels, double thresholdA)` | 实际供电检测：逐通道读电流，**任一路** > 阈值即判定供电正常；读数失败按未供电处理 |
 | `:OUTP:STAT {0\|1}` | `SetSupplyOutput(bool enable)` | 三通道一起启用/禁用供电（不带通道号） |
 | `:OUTP:STAT?` | `QuerySupplyOutputStatus()` | 查询供电输出状态（不带通道号，三通道统一） |
 | `SYSTem:REMote` | `SetRemoteMode()` | 切换到远程控制（锁定前面板按键） |

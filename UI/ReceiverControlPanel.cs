@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO.Ports;
+using System.Threading;
 using System.Windows.Forms;
 using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
@@ -42,6 +43,17 @@ namespace A205AutoTestSystem.UI
         // btnOpenPower 点击时联动：开机=电源ON→自动连接收机串口→RF/LO :OUTP 1；
         // 关机=RF/LO :OUTP 0→断开接收机串口→电源OFF。
         private bool _powerOutputOn = false;
+
+        // ---- 实际供电检测参数 ----
+        // 背景：ODP3063 只能整体开关输出，供电线缆未插入时输出开关照样是 ON、
+        // 仪表状态查询也返回"已开启"，仅凭输出状态无法判断产品是否真的吃到了电。
+        // 判据：读 CH1/CH2 实际输出电流，任一路超过阈值即判定供电正常。
+        // 阈值 0.95A = 950mA（模块带载才有电流）。
+        private const double SupplyCurrentThresholdA = 0.9;
+        private static readonly int[] SupplyCheckChannels = { 1, 2 };
+        private const int SupplyCheckInitialDelayMs = 300;  // 开启输出后首次读电流前的等待
+        private const int SupplyCheckRetryDelayMs = 500;   // 未达阈值时的重试间隔
+        private const int SupplyCheckMaxAttempts = 3;      // 最多尝试次数
 
         // RF / LO 信号源射频输出的软件侧状态（:OUTP 1/0）。
         // 仅由 SetSignalOutputs 统一翻转（供电开机/关机联动），供信号链路拓扑面板判断链路通断。
@@ -1546,8 +1558,58 @@ namespace A205AutoTestSystem.UI
             }
         }
 
+        /// <summary>
+        /// 检测被测模块是否真的得到供电。
+        /// <para><b>为什么必须检测</b>：ODP3063 只能整体开关输出，供电线缆未插入时
+        /// 输出开关照样是 ON，<c>:OUTP:STAT?</c> 也返回"已开启"——软件无法从输出状态
+        /// 区分"仪表已开"和"产品已吃电"。只有实际输出电流能反映带载情况。</para>
+        /// <para><b>判据</b>：CH1/CH2 中任一路电流超过 <see cref="SupplyCurrentThresholdA"/>
+        /// （0.95A = 950mA）即判定供电正常。</para>
+        /// <para><b>时序</b>：开启输出后等 <see cref="SupplyCheckInitialDelayMs"/> 读第一次；
+        /// 未达阈值则最多重试 <see cref="SupplyCheckMaxAttempts"/> 次（间隔
+        /// <see cref="SupplyCheckRetryDelayMs"/>），给模块上电稳定时间。
+        /// 通信异常读不到电流同样按"未供电"处理——读不到不能当作有电。</para>
+        /// </summary>
+        /// <returns>true = 判定供电正常；false = 未供电或读取失败。</returns>
+        private bool VerifyProductActuallyPowered()
+        {
+            for (int attempt = 1; attempt <= SupplyCheckMaxAttempts; attempt++)
+            {
+                if (attempt == 1)
+                {
+                    Thread.Sleep(SupplyCheckInitialDelayMs);
+                }
+                else
+                {
+                    Thread.Sleep(SupplyCheckRetryDelayMs);
+                }
+
+                bool powered;
+                try
+                {
+                    powered = _powerSupply.VerifyActualSupply(SupplyCheckChannels, SupplyCurrentThresholdA);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("[Error] 实际供电检测失败，按未供电处理: " + ex.Message);
+                    return false;
+                }
+
+                if (powered)
+                {
+                    Logger.Log($"[UI] 实际供电检测通过（第 {attempt}/{SupplyCheckMaxAttempts} 次尝试），确认产品已上电。");
+                    return true;
+                }
+
+                Logger.Log($"[UI] 实际供电检测：第 {attempt}/{SupplyCheckMaxAttempts} 次未读到足够电流。");
+            }
+
+            Logger.Log($"[Error] 连续 {SupplyCheckMaxAttempts} 次检测均未读到供电电流，判定未实际供电。");
+            return false;
+        }
+
         // -------- 电源输出开关（联动接收机串口与 RF/LO 射频输出）
-        // 开机：电源 ON → 自动连接收机串口（失败中止，电源保持上电）→ RF/LO :OUTP 1
+        // 开机：电源 ON → 实际供电检测（不通过则回滚并中止）→ 自动连接收机串口（失败中止，电源保持上电）→ RF/LO :OUTP 1
         // 关机：RF/LO :OUTP 0 → 断开接收机串口 → 电源 OFF（各步尽力执行）
         private void OnOpenPowerClicked(object sender, EventArgs e)
         {
@@ -1573,18 +1635,40 @@ namespace A205AutoTestSystem.UI
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+
+                // 2) 实际供电检测：输出开关打开 ≠ 产品真的吃到了电。
+                //    供电线缆未插入时电流为 0，必须在此拦下，否则后续会基于"假供电"继续跑。
+                if (!VerifyProductActuallyPowered())
+                {
+                    // 回滚：关掉输出、状态复位、中止后续流程（不连收机、不开 RF/LO）
+                    try { _powerSupply.SetSupplyOutput(false); } catch { /* best-effort */ }
+                    _powerOutputOn = false;
+                    if (btnOpenPower != null && !btnOpenPower.IsDisposed)
+                    {
+                        btnOpenPower.Text = "开启供电";
+                    }
+                    SyncSignalFlowState();
+                    Logger.Log("[Error] 未检测到实际供电电流，已回滚电源输出并中止开机序列。");
+                    MessageBox.Show(this,
+                        "未检测到供电电流（CH1/CH2 均未超过 " +
+                        (SupplyCurrentThresholdA * 1000).ToString("F0") + " mA）。\r\n" +
+                        "请检查供电线缆是否插好、模块是否上电，再重新点击“开启供电”。",
+                        "未检测到供电", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
                 _powerOutputOn = true;
                 btnOpenPower.Text = "关闭供电";
                 Logger.Log("[UI] Power output enabled.");
                 SyncSignalFlowState();
 
-                // 2) 自动连接收机串口；失败中止，电源保持上电、信号输出不开启
+                // 3) 自动连接收机串口；失败中止，电源保持上电、信号输出不开启
                 if (!TryAutoConnectReceiver())
                 {
                     return;
                 }
 
-                // 3) 开启 RF/LO 射频输出（未连接逐台跳过）
+                // 4) 开启 RF/LO 射频输出（未连接逐台跳过）
                 SetSignalOutputs(true);
             }
             else

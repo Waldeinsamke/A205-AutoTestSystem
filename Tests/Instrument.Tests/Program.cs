@@ -598,6 +598,128 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
                 psu.Dispose();
             }
 
+            // --- 实际供电检测：CH1 有电流 → 判定供电正常，且只读到 CH1 就返回
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                // 按最近一次 NSELect 选中的通道返回对应电流
+                // 注意：NSELect 走 SendCommand（只 Write 不 Read），不会触发 ResponseHandler，
+                // 因此这里从 SendHistory 里回查最后一条 NSELect 命令。
+                transport.ResponseHandler = cmd =>
+                {
+                    string c = cmd.Trim();
+                    if (c.StartsWith("MEAS:CURR?", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int selected = 0;
+                        for (int i = transport.SendHistory.Count - 1; i >= 0; i--)
+                        {
+                            string h = transport.SendHistory[i].Trim();
+                            if (h.StartsWith("INSTrument:NSELect", StringComparison.OrdinalIgnoreCase))
+                            {
+                                int.TryParse(h.Split(' ').Last(), out selected);
+                                break;
+                            }
+                        }
+                        return selected == 1 ? "1.020" : "0.010";
+                    }
+                    return string.Empty;
+                };
+
+                bool powered = psu.VerifyActualSupply(new[] { 1, 2 }, 0.95);
+
+                Assert.CurrentTestName = "ODP3063.VerifyActualSupply CH1 有电流即判定供电正常";
+                Assert.Equal(true, powered);
+                // CH1 达标即短路返回，不应再读 CH2
+                Assert.Equal(2, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 1\n", transport.SendHistory[0]);
+                Assert.Equal("MEAS:CURR?\n", transport.SendHistory[1]);
+
+                psu.Dispose();
+            }
+
+            // --- 实际供电检测：两路电流都低于阈值 → 判定未供电
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse("MEAS:CURR?", "0.005");
+
+                bool powered = psu.VerifyActualSupply(new[] { 1, 2 }, 0.95);
+
+                Assert.CurrentTestName = "ODP3063.VerifyActualSupply 电流均低于阈值判定未供电";
+                Assert.Equal(false, powered);
+                // 两路都要读：NSELect1+MEAS + NSELect2+MEAS
+                Assert.Equal(4, transport.SendHistory.Count);
+                Assert.Equal("INSTrument:NSELect 1\n", transport.SendHistory[0]);
+                Assert.Equal("INSTrument:NSELect 2\n", transport.SendHistory[2]);
+
+                psu.Dispose();
+            }
+
+            // --- 实际供电检测：CH1 无电流但 CH2 达标 → 仍判定供电正常
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                transport.ResponseHandler = cmd =>
+                {
+                    string c = cmd.Trim();
+                    if (c.StartsWith("MEAS:CURR?", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int selected = 0;
+                        for (int i = transport.SendHistory.Count - 1; i >= 0; i--)
+                        {
+                            string h = transport.SendHistory[i].Trim();
+                            if (h.StartsWith("INSTrument:NSELect", StringComparison.OrdinalIgnoreCase))
+                            {
+                                int.TryParse(h.Split(' ').Last(), out selected);
+                                break;
+                            }
+                        }
+                        return selected == 2 ? "1.500" : "0.002";
+                    }
+                    return string.Empty;
+                };
+
+                bool powered = psu.VerifyActualSupply(new[] { 1, 2 }, 0.95);
+
+                Assert.CurrentTestName = "ODP3063.VerifyActualSupply CH2 达标即判定供电正常";
+                Assert.Equal(true, powered);
+                Assert.Equal(4, transport.SendHistory.Count);
+
+                psu.Dispose();
+            }
+
+            // --- 实际供电检测：电流读取失败 → 按未供电处理（读不到不能当作有电）
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+                transport.SetResponse("MEAS:CURR?", "ERR");
+
+                bool powered = psu.VerifyActualSupply(new[] { 1, 2 }, 0.95);
+
+                Assert.CurrentTestName = "ODP3063.VerifyActualSupply 读数失败按未供电处理";
+                Assert.Equal(false, powered);
+
+                psu.Dispose();
+            }
+
+            // --- 实际供电检测：通道数组为空 → 抛 ArgumentException
+            {
+                var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
+                var psu = new ODP3063("TCPIP0::psu::INSTR");
+                InjectAndConnect(psu, transport);
+
+                Assert.CurrentTestName = "ODP3063.VerifyActualSupply 空通道数组抛异常";
+                Assert.Throws<ArgumentException>(() => psu.VerifyActualSupply(new int[0], 0.95));
+
+                psu.Dispose();
+            }
+
             // --- 远/本地控制权切换
             {
                 var transport = new FakeVisaInstrument("TCPIP0::psu::INSTR");
