@@ -202,7 +202,8 @@ namespace A205AutoTestSystem.UI
         /// <para>行为（与切通道一致，差别在"切温度会发硬件命令"）：</para>
         /// <list type="number">
         ///   <item>如果接收机已连接且串口已 Open，向接收机发送 <see cref="ReceiverSerialPort.SendTemperatureCommand"/>。</item>
-        ///   <item>资源已就绪（三仪表已绑定）时，调 <see cref="LoadDefaultTestsToGrid"/> 重建 DGV。</item>
+        ///   <item>资源已就绪（三仪表已绑定）时，调 <see cref="LoadDefaultTestsToGrid"/> 重建 DGV，
+        ///         并清空增益仓库（温度档变了，线性最大增益实测值不可跨档复用）。</item>
         /// </list>
         /// <para>cmbTemp 数据源（构造期）："常温" / "高温" / "低温"——索引 0/1/2 对应 <see cref="TemperatureRange.Normal/High/Low"/>。</para>
         /// </summary>
@@ -256,16 +257,15 @@ namespace A205AutoTestSystem.UI
                 if (_receiverPanel.RbTempLow.Checked    != wantLow)    _receiverPanel.RbTempLow.Checked    = wantLow;
             }
 
-            // 3) 资源已就绪时重建 DGV（与切通道一致）
+            // 3) 资源已就绪时重建 DGV（与切通道一致），
+            //    并清空增益仓库——温度档变了，线性最大增益的实测值不可跨温度档复用，
+            //    否则「通道间增益不一致性」会引用到上一档的旧数据。
+            //    注：切通道不清空——仓库按通道分键，切回通道1 无需重跑线性最大增益。
             if (_instrumentsReady)
             {
                 LoadDefaultTestsToGrid();
+                GainResultRepository.Clear();
             }
-
-            // 4) 温度档变了 → 线性最大增益的实测值不可跨温度档复用，
-            //    清空增益仓库（避免「通道间增益不一致性」引用到上一档的旧数据）。
-            //    注：切通道不清空——仓库按通道分键，切回通道1 无需重跑线性最大增益。
-            GainResultRepository.Clear();
         }
 
 

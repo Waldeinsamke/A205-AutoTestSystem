@@ -41,6 +41,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             if (filter.Contains("H6"))        TestH6ResourceSnapshot();
             if (filter.Contains("Inconsistency")) TestChannelGainInconsistency();
             if (filter.Contains("InconsistencyExcel")) TestInconsistencyExcelReport();
+            if (filter.Contains("Calculator")) TestGainConsistencyCalculator();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");
@@ -61,7 +62,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             if (args == null || args.Length == 0)
             {
                 set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
-                set.Add("Inconsistency"); set.Add("InconsistencyExcel");
+                set.Add("Inconsistency"); set.Add("InconsistencyExcel"); set.Add("Calculator");
                 return set;
             }
             foreach (var arg in args)
@@ -84,7 +85,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             if (set.Count == 0)
             {
                 set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
-                set.Add("Inconsistency"); set.Add("InconsistencyExcel");
+                set.Add("Inconsistency"); set.Add("InconsistencyExcel"); set.Add("Calculator");
             }
             return set;
         }
@@ -593,6 +594,123 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
 
             GainResultRepository.Clear();
             try { File.Delete(saved); } catch { /* ignored */ }
+        }
+
+        // ====================================================================
+        // GainConsistencyCalculator 共用比对算法
+        // ====================================================================
+
+        /// <summary>
+        /// 覆盖 AGC 不起控 / AGC 起控共用的比对算法：
+        /// 最差值（距规格边界最近者）+ 极差（≤1dB 判 Pass）。
+        /// </summary>
+        private static void TestGainConsistencyCalculator()
+        {
+            Console.WriteLine("[Test] GainConsistencyCalculator 共用比对算法");
+
+            var bands = new[] { "频段108", "频段220", "频段400" };
+
+            // (1) 18.5 / 18.6 / 18.9 → 最差 18.5（距下界 0.5），极差 0.4 → Pass
+            {
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 18.5, 18.6, 18.9 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (1) 最差值 = 18.5";
+                Assert.True(Math.Abs(c.WorstValue - 18.5) < 1e-9, $"应当是 18.5，实际 {c.WorstValue}");
+                Assert.CurrentTestName = "Calc: (1) 最差频段 = 频段108";
+                Assert.Equal("频段108", c.WorstBand);
+                Assert.CurrentTestName = "Calc: (1) 极差 = 0.4";
+                Assert.True(Math.Abs(c.Range - 0.4) < 1e-9, $"应当是 0.4，实际 {c.Range}");
+                Assert.CurrentTestName = "Calc: (1) 极差 ≤ 1dB → Pass";
+                Assert.True(c.RangePass, "应当 Pass");
+                Assert.CurrentTestName = "Calc: (1) 距边界 = 0.5";
+                Assert.True(Math.Abs(c.WorstDistance - 0.5) < 1e-9, $"应当是 0.5，实际 {c.WorstDistance}");
+            }
+
+            // (2) 20.5 / 19.5 / 21.5 → 最差 21.5（距上界 0.5），极差 2.0 → Fail
+            {
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 20.5, 19.5, 21.5 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (2) 最差值 = 21.5";
+                Assert.True(Math.Abs(c.WorstValue - 21.5) < 1e-9, $"应当是 21.5，实际 {c.WorstValue}");
+                Assert.CurrentTestName = "Calc: (2) 最差频段 = 频段400";
+                Assert.Equal("频段400", c.WorstBand);
+                Assert.CurrentTestName = "Calc: (2) 极差 = 2.0 → Fail";
+                Assert.True(Math.Abs(c.Range - 2.0) < 1e-9, $"应当是 2.0，实际 {c.Range}");
+                Assert.True(!c.RangePass, "应当 Fail");
+            }
+
+            // (3) 最差 ≠ 数值最小：17.5(距下界0.5) / 22.4(距上界0.4) / 20.0 → 22.4 更差
+            {
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 17.5, 22.4, 20.0 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (3) 最差值 = 22.4（离边界最近，不是数值最小）";
+                Assert.True(Math.Abs(c.WorstValue - 22.4) < 1e-9, $"应当是 22.4，实际 {c.WorstValue}");
+                Assert.CurrentTestName = "Calc: (3) 最差频段 = 频段220";
+                Assert.Equal("频段220", c.WorstBand);
+            }
+
+            // (4) 极差恰好 1.0 → Pass（边界含等号）
+            {
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 19.0, 20.0, 20.0 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (4) 极差恰好 1.0 → Pass";
+                Assert.True(Math.Abs(c.Range - 1.0) < 1e-9, $"应当是 1.0，实际 {c.Range}");
+                Assert.True(c.RangePass, "极差 ≤ 1dB 应当 Pass");
+            }
+
+            // (5) 极差 1.01 → Fail
+            {
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 19.0, 20.01, 20.0 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (5) 极差 1.01 → Fail";
+                Assert.True(!c.RangePass, "极差 > 1dB 应当 Fail");
+            }
+
+            // (6) 区间内判定
+            Assert.CurrentTestName = "Calc: (6) IsInRange(20, 18, 22) == true";
+            Assert.True(GainConsistencyCalculator.IsInRange(20.0, 18.0, 22.0), "20 应当在区间内");
+            Assert.CurrentTestName = "Calc: (6) IsInRange(17.9, 18, 22) == false";
+            Assert.True(!GainConsistencyCalculator.IsInRange(17.9, 18.0, 22.0), "17.9 不应当在区间内");
+            Assert.CurrentTestName = "Calc: (6) IsInRange(22, 18, 22) == true（边界含）";
+            Assert.True(GainConsistencyCalculator.IsInRange(22.0, 18.0, 22.0), "22 应当在区间内");
+
+            // (7) AGC 起控场景：原始带衰减值 +32 = 等效增益
+            {
+                // 原始 −12 / −12.8 / −11.7 → 等效 20 / 19.2 / 20.3
+                // 距边界：20→2.0、19.2→1.2、20.3→1.7 → 最差是 19.2
+                var c = GainConsistencyCalculator.Compare(
+                    bands, new[] { 20.0, 19.2, 20.3 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (7) 等效增益最差 = 19.2";
+                Assert.True(Math.Abs(c.WorstValue - 19.2) < 1e-9, $"应当是 19.2，实际 {c.WorstValue}");
+                Assert.CurrentTestName = "Calc: (7) 极差 = 1.1 → Fail";
+                Assert.True(Math.Abs(c.Range - 1.1) < 1e-9, $"应当是 1.1，实际 {c.Range}");
+                Assert.True(!c.RangePass, "应当 Fail");
+            }
+
+            // (7b) 距边界相同（平局）→ 取先出现的那个
+            {
+                // 19.6 距下界 1.6；20.4 距上界 1.6 → 平局，取先出现的 19.6
+                var c = GainConsistencyCalculator.Compare(
+                    new[] { "频段108", "频段220" }, new[] { 19.6, 20.4 }, 18.0, 22.0);
+                Assert.CurrentTestName = "Calc: (7b) 距边界平局 → 取先出现的 19.6";
+                Assert.True(Math.Abs(c.WorstValue - 19.6) < 1e-9, $"应当是 19.6，实际 {c.WorstValue}");
+            }
+
+            // (8) 参数校验
+            Assert.CurrentTestName = "Calc: (8) 频段与增益数量不一致 → 抛 ArgumentException";
+            Assert.Throws<ArgumentException>(
+                () => GainConsistencyCalculator.Compare(new[] { "a" }, new[] { 1.0, 2.0 }, 18.0, 22.0));
+            Assert.CurrentTestName = "Calc: (8) 空增益列表 → 抛 ArgumentException";
+            Assert.Throws<ArgumentException>(
+                () => GainConsistencyCalculator.Compare(new string[0], new double[0], 18.0, 22.0));
+
+            // (9) 明细文本格式
+            {
+                string text = GainConsistencyCalculator.FormatGainDetails(
+                    new[] { "频段108", "频段220" }, new[] { 20.0, 19.5 });
+                Assert.CurrentTestName = "Calc: (9) 明细文本 = '频段108=20.00、频段220=19.50'";
+                Assert.Equal("频段108=20.00、频段220=19.50", text);
+            }
         }
 
         // ====================================================================

@@ -112,6 +112,12 @@
     <Compile Include="..\..\InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs">
       <Link>InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs</Link>
     </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\ChannelGainInconsistencyAgcOnTest.cs">
+      <Link>InstrumentControl\TestItems\ChannelGainInconsistencyAgcOnTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\GainConsistencyCalculator.cs">
+      <Link>InstrumentControl\TestItems\GainConsistencyCalculator.cs</Link>
+    </Compile>
     <Compile Include="..\..\InstrumentControl\TestItems\BandwidthTest.cs">
       <Link>InstrumentControl\TestItems\BandwidthTest.cs</Link>
     </Compile>

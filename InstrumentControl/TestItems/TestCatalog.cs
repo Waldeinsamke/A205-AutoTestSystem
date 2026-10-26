@@ -86,8 +86,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
         // ============================================================
         // 常温：19 项（通道间相位差稳定度 / 通道间增益差稳定度已下线，不再保留占位）
-        //   1) 信号带宽
-        //   2) 线性最大增益
+        //   1) 线性最大增益
+        //   2) 信号带宽
         //   3) 噪声系数
         //   4) 输入P-1
         //   5) 饱和输出电平
@@ -102,8 +102,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         //  14) 谐波抑制
         //  15) 带内虚假信号
         //  16) 通道间隔离度
-        //  17) 通道间增益不一致性（AGC不起控）
-        //  18) 通道间增益不一致性（AGC同时起控）
+        //  17) 通道间增益不一致性（AGC不起控）—— 纯计算项
+        //  18) 通道间增益不一致性（AGC起控）—— 复合项（自测 9 频点 + 比对）
         //  19) 驻波
         // ============================================================
         private static IReadOnlyList<ITestItem> BuildNormalTempItems(
@@ -205,7 +205,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 通道间增益不一致性（AGC不起控）：纯计算项，
                 // 数据来自 GainTest 写入的 GainResultRepository，不碰硬件。
                 new ChannelGainInconsistencyTest(channel: channel, modes: allModes),
-                new NotImplementedTestItem("通道间增益不一致性（AGC同时起控）"),
+                // 通道间增益不一致性（AGC起控）：复合项——
+                // 自己实测 Mode3 的 9 个频点（加 32dB 衰减读线性最大增益），再比对。
+                new ChannelGainInconsistencyAgcOnTest(
+                    receiver: receiver,
+                    rfGenerator: rf,
+                    loGenerator: lo,
+                    spectrumAnalyzer: sa,
+                    channel: channel),
                 new NotImplementedTestItem("驻波"),
             };
         }

@@ -16,7 +16,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     /// <para><b>前置条件</b>：当前选中通道的线性最大增益必须已测完
     /// （本指标清单内的频点都要有数据）。缺数据时该模式记 Fail 并在备注里
     /// 说明缺哪个频点，不影响其它模式。</para>
-    /// <para><b>算法</b>（每个模式独立算，共 3 条结果）：</para>
+    /// <para><b>算法</b>（每个模式独立算，共 3 条结果，与
+    /// <see cref="GainConsistencyCalculator"/> 共用同一套判定逻辑）：</para>
     /// <list type="number">
     ///   <item>取本模式清单内各频点的线性最大增益实测值。</item>
     ///   <item><b>输出值 = 最差值</b>：距该模式增益规格边界最近的那个值。
@@ -34,7 +35,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         public const string ItemName = "通道间增益不一致性（AGC不起控）";
 
         /// <summary>极差判据上限（dB）。max−min ≤ 1 dB 判 Pass。</summary>
-        private const double RangeLimitDb = 1.0;
+        private const double RangeLimitDb = GainConsistencyCalculator.RangeLimitDb;
 
         /// <summary>
         /// 本指标参与计算的频点清单（MHz）。
@@ -223,31 +224,16 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 };
             }
 
-            // 3) 输出值 = 最差值（距规格边界最近者）
+            // 3) 输出值 = 最差值（距规格边界最近者），判定 = 极差 ≤ 1 dB
             var limits = GainTest.GetGainLimits(mode);
-            double worstGain = gains[0];
-            string worstBand = bands[0];
-            double worstDistance = DistanceToRange(gains[0], limits.Lower, limits.Upper);
-            for (int i = 1; i < gains.Count; i++)
-            {
-                double d = DistanceToRange(gains[i], limits.Lower, limits.Upper);
-                if (d < worstDistance)
-                {
-                    worstDistance = d;
-                    worstGain = gains[i];
-                    worstBand = bands[i];
-                }
-            }
-
-            // 4) 判定 = 极差 ≤ 1 dB
-            double range = gains.Max() - gains.Min();
-            bool pass = range <= RangeLimitDb;
+            var comparison = GainConsistencyCalculator.Compare(bands, gains, limits.Lower, limits.Upper);
 
             string remarks = string.Format(
                 CultureInfo.InvariantCulture,
                 "最差值={0:F2}dB@{1}(距边界{2:F2}dB), 极差={3:F2}dB(判据≤{4:F1}dB), 各频点增益: {5}",
-                worstGain, worstBand, worstDistance, range, RangeLimitDb,
-                string.Join("、", gains.Select((g, i) => bands[i] + "=" + g.ToString("F2", CultureInfo.InvariantCulture)).ToArray()));
+                comparison.WorstValue, comparison.WorstBand, comparison.WorstDistance,
+                comparison.Range, GainConsistencyCalculator.RangeLimitDb,
+                GainConsistencyCalculator.FormatGainDetails(bands, gains));
 
             Logger.Log("[GainInconsistency] " + modeName + " " + remarks);
 
@@ -256,12 +242,12 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestTime = DateTime.Now,
                 Channel = _channel,
                 Mode = modeName,
-                BandIndex = FindBandIndex(mode, worstBand),
-                BandDisplayName = worstBand,
+                BandIndex = FindBandIndex(mode, comparison.WorstBand),
+                BandDisplayName = comparison.WorstBand,
                 TestItem = TestName,
-                Value = worstGain,
+                Value = comparison.WorstValue,
                 Unit = Unit,
-                Judgment = pass ? "Pass" : "Fail",
+                Judgment = comparison.RangePass ? "Pass" : "Fail",
                 Remarks = remarks
             };
         }
@@ -277,21 +263,6 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     return band.BandIndex;
             }
             return null;
-        }
-
-        /// <summary>
-        /// 增益值到规格区间的最近边界距离（dB）。
-        /// <para>区间内的值：到上下界中较近者的距离（0 表示正好在边界上）；
-        /// 区间外的值：到最近边界的距离（正数）。</para>
-        /// <para>统一用 <c>min(|v−lower|, |v−upper|)</c> 计算，
-        /// 这样"最靠近边界的值 = 最差值"在区间内外都成立：
-        /// 例（Mode1 [18,22]）：18.5→0.5、21.3→0.7 → 18.5 更差。</para>
-        /// </summary>
-        private static double DistanceToRange(double value, double lower, double upper)
-        {
-            double d1 = Math.Abs(value - lower);
-            double d2 = Math.Abs(value - upper);
-            return d1 < d2 ? d1 : d2;
         }
     }
 }

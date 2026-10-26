@@ -95,6 +95,9 @@
     <Compile Include="InstrumentControl\TestItems\ITestItem.cs" />
     <Compile Include="InstrumentControl\TestItems\GainTest.cs" />
     <Compile Include="InstrumentControl\TestItems\ChannelGainInconsistencyTest.cs" />
+    <Compile Include="InstrumentControl\TestItems\ChannelGainInconsistencyAgcOnTest.cs" />
+    <!-- 通道间增益不一致性（AGC不起控 / AGC起控）共用的比对算法 -->
+    <Compile Include="InstrumentControl\TestItems\GainConsistencyCalculator.cs" />
     <Compile Include="InstrumentControl\TestItems\BandwidthTest.cs" />
     <Compile Include="InstrumentControl\TestItems\InputP1Test.cs" />
     <Compile Include="InstrumentControl\TestItems\SaturatedOutputTest.cs" />
