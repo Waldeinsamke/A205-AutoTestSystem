@@ -20,7 +20,7 @@ namespace A205AutoTestSystem.Common
     /// }
     /// </code>
     /// <para>默认文件命名 <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>，
-    /// 保存到 <c>bin\reports\</c> 目录下（见 <see cref="GenerateDefaultFilePath"/>）。</para>
+    /// 保存到桌面 <c>data</c> 目录下（见 <see cref="GenerateDefaultFilePath"/>）。</para>
     /// <para>表头字段对齐规划书 §6.1（共 9 列）。</para>
     /// </summary>
     public class ExcelExporter : IDisposable
@@ -244,22 +244,24 @@ namespace A205AutoTestSystem.Common
         }
 
         /// <summary>
-        /// 按规划书 §6.2 规则生成默认文件路径：
-        /// <c>bin\reports\A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。
+        /// 生成默认文件路径：桌面 <c>data</c> 目录下的
+        /// <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。
+        /// <para>桌面路径通过 <see cref="Environment.SpecialFolder.Desktop"/> 解析，
+        /// 可自动适配 OneDrive 重定向的桌面；<c>data</c> 目录不存在时自动创建。</para>
         /// </summary>
         public string GenerateDefaultFilePath()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string reportsDir = Path.Combine(baseDir, "reports");
-            if (!Directory.Exists(reportsDir))
+            string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string dataDir = Path.Combine(desktopDir, "data");
+            if (!Directory.Exists(dataDir))
             {
-                Directory.CreateDirectory(reportsDir);
+                Directory.CreateDirectory(dataDir);
             }
             string fileName = string.Format(
                 CultureInfo.InvariantCulture,
                 "A205_测试报告_{0:yyyyMMdd_HHmmss}.xlsx",
                 DateTime.Now);
-            return Path.Combine(reportsDir, fileName);
+            return Path.Combine(dataDir, fileName);
         }
 
         /// <summary>

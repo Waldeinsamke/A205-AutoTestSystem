@@ -256,7 +256,8 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
         {
             Console.WriteLine("[Test] 默认文件名遵守 A205_测试报告_yyyyMMdd_HHmmss.xlsx");
 
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string desktopDir = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string expectedDir = Path.Combine(desktopDir, "data");
             using (ExcelExporter exp = new ExcelExporter())
             {
                 string defaultPath = exp.GenerateDefaultFilePath();
@@ -267,12 +268,11 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                     "应当是 'A205_测试报告_*.xlsx'，实际：" + Path.GetFileName(defaultPath));
                 Assert.CurrentTestName = "DefaultPath: 扩展名 == .xlsx";
                 Assert.Equal(".xlsx", Path.GetExtension(defaultPath).ToLowerInvariant());
-                Assert.CurrentTestName = "DefaultPath: 位于 bin/reports";
-                Assert.True(defaultPath.Contains("reports"),
-                    "应当包含 'reports' 子目录，实际：" + defaultPath);
-                Assert.CurrentTestName = "DefaultPath: 在 bin/ 下";
-                Assert.True(defaultPath.StartsWith(baseDir.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase),
-                    "应当以 BaseDirectory 开头，实际：" + defaultPath);
+                Assert.CurrentTestName = "DefaultPath: 位于桌面 data 目录";
+                Assert.Equal(expectedDir, Path.GetDirectoryName(defaultPath));
+                Assert.CurrentTestName = "DefaultPath: data 目录已自动创建";
+                Assert.True(Directory.Exists(expectedDir),
+                    "data 目录应当已自动创建，实际未找到：" + expectedDir);
             }
         }
 

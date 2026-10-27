@@ -1151,8 +1151,8 @@ namespace A205AutoTestSystem.UI
 
         /// <summary>
         /// "导出 Excel" 按钮（m7 阶段新增）。
-        /// <para>把当前批次的全部测试结果一次性落盘为
-        /// <c>bin\reports\A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。</para>
+        /// <para>把当前批次的全部测试结果一次性落盘为桌面 <c>data</c> 目录下的
+        /// <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>。</para>
         /// <para>若当前没有任何结果，给出空提示。</para>
         /// </summary>
         private void OnExportExcelClicked(object sender, EventArgs e)
