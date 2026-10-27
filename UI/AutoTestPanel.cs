@@ -1040,6 +1040,35 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
+        /// 请求停止当前正在运行的测试（单条运行或一键运行均适用）。
+        /// <para><b>供窗体关闭流程调用</b>（见 <c>MainForm.OnFormClosing</c>）：
+        /// 关闭程序时必须先取消运行中的测试，再让上层做硬件收口。否则收口关闭了
+        /// RF/LO 输出之后，仍在运行的测试项会继续走到下一个频点并再次执行
+        /// <c>SetOutputState(true)</c>，导致信号源在进程退出后仍残留载波输出。</para>
+        /// <para><b>协作式取消</b>：本方法只发出取消信号，不等待测试项真正结束。
+        /// 测试项会在下一个检查点（<c>ct.ThrowIfCancellationRequested()</c>）响应，
+        /// 而检查点间隔不可控（一次频谱仪查询最长可达默认 5 s 超时）。因此本方法
+        /// <b>不能</b>作为"输出一定已关闭"的保证——那由收口后的二次兜底负责。</para>
+        /// <para>未在运行时不做任何事（幂等），可安全重复调用。</para>
+        /// </summary>
+        public void RequestStopAll()
+        {
+            try
+            {
+                if (_runCts != null && !_runCts.IsCancellationRequested)
+                {
+                    _runCts.Cancel();
+                    Logger.Log("[AutoTestPanel] 已请求停止运行中的测试（关窗流程）。");
+                }
+            }
+            catch (Exception ex)
+            {
+                // 取消失败不应阻断关窗流程
+                Logger.Log("[Error] 请求停止测试失败: " + ex.Message);
+            }
+        }
+
+        /// <summary>
         /// "一键运行"按钮：依次执行所有测试项，进度条按总项数推进。
         /// </summary>
         private async void OnRunAllClicked(object sender, EventArgs e)

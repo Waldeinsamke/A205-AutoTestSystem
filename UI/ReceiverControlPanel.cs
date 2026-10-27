@@ -1125,6 +1125,23 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
+        /// 确保 RF / LO 射频输出处于关闭状态（幂等，可重复调用）。
+        /// <para><b>供程序退出流程二次兜底</b>：退出收口（<see cref="ShutdownInstruments"/>）
+        /// 与运行中的测试项之间存在竞态——收口把 RF/LO 输出关掉之后，仍在运行的
+        /// 测试项可能正好走到下一个频点并再次执行 <c>SetOutputState(true)</c>，
+        /// 使信号源在进程退出后仍残留载波输出。</para>
+        /// <para>本方法在收口完成后再确认一次输出状态，把最终状态钉死为"关闭"。
+        /// 内部 <see cref="SetSignalOutputs"/> 逐台独立容错（未连接则跳过并记日志），
+        /// 因此可安全重复调用。</para>
+        /// </summary>
+        public void EnsureSignalOutputsOff()
+        {
+            SetSignalOutputs(false);
+            ResetSignalOutputButtonState();
+            Logger.Log("[UI] 退出收口：已二次确认 RF/LO 射频输出为关闭状态。");
+        }
+
+        /// <summary>
         /// 关闭程序前的硬件收口：把仪表的"内部状态"与"硬件资源"一并归位。
         /// <para><b>为什么必须有这个方法</b>：关闭 VISA session 只释放了句柄，
         /// 但仪表侧的<b>远程模式锁定</b>（<c>SYSTem:REMote</c>）和<b>输出开关</b>

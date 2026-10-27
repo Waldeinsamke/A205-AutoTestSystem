@@ -49,7 +49,7 @@ namespace A205AutoTestSystem.UI
         }
 
         /// <summary>
-        /// 窗体关闭前的硬件收口。
+        /// 窗体关闭前的收口编排：停止测试 → 硬件收口 → 二次兜底关输出。
         /// <para><b>为什么必须有</b>：关闭 VISA session 只释放句柄，仪表侧的
         /// <b>远程模式锁定</b>（<c>SYSTem:REMote</c>）与<b>输出开关</b>（<c>:OUTP:STAT 1</c>）
         /// 是记在仪表里的状态，不显式收口就会残留——电源面板被锁住无法手动操作、
@@ -57,10 +57,33 @@ namespace A205AutoTestSystem.UI
         /// <para><b>时机</b>：<c>OnFormClosing</c> 在 <c>Dispose</c> 之前触发，
         /// 此时 VISA session 仍存活，SCPI 命令能真正发到仪表上。
         /// 若放到 <c>FormClosed</c> 则进程可能已退出，收口会落空。</para>
+        /// <para><b>三步顺序不可调换</b>：</para>
+        /// <list type="number">
+        ///   <item><b>先取消运行中的测试</b>（<c>RequestStopAll</c>）。否则收口把 RF/LO
+        ///     输出关掉之后，仍在运行的测试项会继续走到下一个频点并再次执行
+        ///     <c>SetOutputState(true)</c>，使信号源在进程退出后仍残留载波输出。</item>
+        ///   <item><b>再做硬件收口</b>（<c>ShutdownInstruments</c>）：关 RF/LO 输出、
+        ///     关电源输出、交还电源本地面板控制。</item>
+        ///   <item><b>最后二次兜底</b>（<c>EnsureSignalOutputsOff</c>）。取消是协作式的，
+        ///     测试项要等到下一个检查点才真正停下，这个间隔不可控（一次频谱仪查询
+        ///     最长可达默认 5 s 超时），因此收口之后测试项仍有可能再开一次输出。
+        ///     收口完成后再确认一次，把最终状态钉死为"关闭"。</item>
+        /// </list>
         /// <para><b>行为</b>：全程静默——异常只写日志，不弹窗、不阻塞关闭。</para>
         /// </summary>
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
+            // ① 先请求停止运行中的测试（不发信号源命令，不影响收口）
+            try
+            {
+                autoTestPanel?.RequestStopAll();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Error] 退出前停止测试异常: " + ex.Message);
+            }
+
+            // ② 硬件收口：关 RF/LO 输出、关电源输出、交还电源本地面板控制
             try
             {
                 receiverControlPanel?.ShutdownInstruments();
@@ -69,6 +92,17 @@ namespace A205AutoTestSystem.UI
             {
                 Logger.Log("[Error] 程序退出收口异常: " + ex.Message);
             }
+
+            // ③ 二次兜底：收口与测试项存在竞态，这里再确认一次输出为关闭
+            try
+            {
+                receiverControlPanel?.EnsureSignalOutputsOff();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("[Error] 退出前二次关输出异常: " + ex.Message);
+            }
+
             base.OnFormClosing(e);
         }
 
