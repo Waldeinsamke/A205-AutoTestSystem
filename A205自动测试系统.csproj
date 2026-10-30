@@ -110,6 +110,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\SerialPortBase.cs" />
+    <!-- 串口热插拔实时检测：纯逻辑扫描器（端口来源可注入，不依赖 WinForms） -->
+    <Compile Include="Common\SerialPortWatcher.cs" />
     <Compile Include="Common\Logger.cs" />
     <Compile Include="Common\ExcelExporter.cs" />
     <Compile Include="Common\TestReportManager.cs" />

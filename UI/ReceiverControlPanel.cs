@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO.Ports;
 using System.Threading;
 using System.Windows.Forms;
 using A205AutoTestSystem.AutoTest.Shared;
@@ -113,6 +112,38 @@ namespace A205AutoTestSystem.UI
         // 抑制初始化阶段事件回调（避免在构建控件时立刻触发副作用）
         private bool _initialized;
 
+        // ============================================================
+        // 串口热插拔实时检测
+        // ============================================================
+        // 背景：串口列表原先只在面板构造时枚举一次，USB 转串口设备（矩阵驱动板
+        // 用 CH340/CP2102）中途插入后必须重启软件才能看到新 COM 口。
+        // 这里改为 1s 周期轮询系统串口列表，变化时刷新下拉框。
+        private readonly SerialPortWatcher _portWatcher = new SerialPortWatcher();
+
+        // 轮询计时器（WinForms 计时器，Tick 落在 UI 线程，可直接操作控件）
+        private readonly System.Windows.Forms.Timer _portScanTimer;
+
+        // 串口列表轮询周期（毫秒）
+        private const int PortScanIntervalMs = 1000;
+
+        // 判定"设备被拔出"的确认次数：连续 N 次扫描都看不到该端口才认定拔出。
+        // 取 2 而非 1 是为了容忍驱动瞬时重枚举时的列表抖动——
+        // 若单次缺失就断开，会把正在跑测试的串口误断掉。
+        private const int PortRemovalConfirmCount = 2;
+
+        // 接收机串口连续未在系统列表中出现的扫描次数
+        private int _receiverPortMissingCount;
+
+        // 矩阵串口连续未在系统列表中出现的扫描次数
+        private int _matrixPortMissingCount;
+
+        // 串口列表待刷新标记：用户正展开下拉框导致本次刷新被跳过时置位，
+        // 下一轮轮询重试，保证变化不会丢失。
+        private bool _portListDirty;
+
+        // 串口列表为空时下拉框显示的占位项
+        private const string NoPortPlaceholder = "(无)";
+
         // 波特率下拉默认值
         private static readonly int[] BaudRateOptions = { 9600, 19200, 38400, 57600, 115200 };
 
@@ -142,6 +173,11 @@ namespace A205AutoTestSystem.UI
 
             // 订阅全局 Logger，实时显示通信日志
             Logger.MessageLogged += OnLogMessage;
+
+            // 启动串口热插拔轮询（1s 一次，仅在列表变化时刷新下拉框）
+            _portScanTimer = new System.Windows.Forms.Timer { Interval = PortScanIntervalMs };
+            _portScanTimer.Tick += OnPortScanTimerTick;
+            _portScanTimer.Start();
         }
 
         /// <summary>
@@ -153,6 +189,15 @@ namespace A205AutoTestSystem.UI
             {
                 try { Logger.MessageLogged -= OnLogMessage; }
                 catch { /* 静默 */ }
+
+                // 停掉串口轮询计时器：否则面板销毁后 Tick 仍会触发，
+                // 访问已释放的下拉框导致 ObjectDisposedException。
+                if (_portScanTimer != null)
+                {
+                    _portScanTimer.Tick -= OnPortScanTimerTick;
+                    _portScanTimer.Stop();
+                    _portScanTimer.Dispose();
+                }
 
                 // 先退订仪表 ConnectionChanged 事件,避免 Dispose 阶段触发回调访问已释放控件。
                 // (基类 VisaBaseInstrument.Dispose → Disconnect 不会触发 ConnectionChanged(false),
@@ -186,30 +231,25 @@ namespace A205AutoTestSystem.UI
 
         private void InitializeDefaults()
         {
-            // 串口列表
+            // 串口列表：先做一次扫描建立基线，随后由 _portScanTimer 周期刷新。
+            // （首次 Scan 会把全部端口算作"新增"，这里只取列表不记日志，
+            //   避免启动时刷一条无意义的"新增 COM1、COM2..."。）
+            IReadOnlyList<string> initialPorts;
+            IReadOnlyList<string> ignoredAdded;
+            IReadOnlyList<string> ignoredRemoved;
             try
             {
-                string[] ports = SerialPort.GetPortNames();
-                if (ports != null && ports.Length > 0)
-                {
-                    Array.Sort(ports);
-                    cmbReceiverPort.Items.AddRange(ports);
-                    cmbMatrixPort.Items.AddRange(ports);
-                    cmbReceiverPort.SelectedIndex = 0;
-                    cmbMatrixPort.SelectedIndex = 0;
-                }
-                else
-                {
-                    cmbReceiverPort.Items.Add("(无)");
-                    cmbMatrixPort.Items.Add("(无)");
-                    cmbReceiverPort.SelectedIndex = 0;
-                    cmbMatrixPort.SelectedIndex = 0;
-                }
+                _portWatcher.Scan(out ignoredAdded, out ignoredRemoved);
+                initialPorts = _portWatcher.CurrentPorts;
             }
             catch (Exception ex)
             {
                 Logger.Log($"[UI] 获取串口列表失败：{ex.Message}");
+                initialPorts = new string[0];
             }
+
+            ApplyPortList(cmbReceiverPort, initialPorts, null);
+            ApplyPortList(cmbMatrixPort, initialPorts, null);
 
             // 波特率默认 115200（在 Designer 中已添加 Items）
             int idx115200 = cmbReceiverBaud.Items.IndexOf("115200");
@@ -232,6 +272,224 @@ namespace A205AutoTestSystem.UI
 
             // 仪表连接状态由信号链路拓扑图（pnlSignalFlow）三态节点呈现；
             // 初始状态各 LinkState 字段已默认为 Idle，无需额外初始化。
+        }
+
+        // ============================================================
+        // 串口热插拔实时检测
+        // ============================================================
+
+        /// <summary>
+        /// 串口轮询计时器 Tick（UI 线程，1s 一次）。
+        /// <para>只有列表真的发生变化时才刷新下拉框；无变化时完全不动 UI，
+        /// 不重绘、不影响操作者正在进行的操作。</para>
+        /// </summary>
+        private void OnPortScanTimerTick(object sender, EventArgs e)
+        {
+            try
+            {
+                IReadOnlyList<string> added;
+                IReadOnlyList<string> removed;
+                bool changed = _portWatcher.Scan(out added, out removed);
+
+                if (changed)
+                {
+                    Logger.Log($"[UI] 串口列表变化：新增 [{string.Join(", ", added)}]，移除 [{string.Join(", ", removed)}]");
+                    _portListDirty = true;
+                }
+
+                // 刷新未完成时（例如用户正展开下拉框）保留脏标记，下一轮重试，
+                // 否则该次变化会被永久丢弃——watcher 快照已推进，不会再报第二次。
+                if (_portListDirty)
+                {
+                    bool receiverApplied = ApplyPortList(cmbReceiverPort, _portWatcher.CurrentPorts, cmbReceiverPort.SelectedItem as string);
+                    bool matrixApplied = ApplyPortList(cmbMatrixPort, _portWatcher.CurrentPorts, cmbMatrixPort.SelectedItem as string);
+                    if (receiverApplied && matrixApplied)
+                    {
+                        _portListDirty = false;
+                    }
+                }
+
+                // 无论列表是否变化都要检查"正在使用的口是否已消失"——
+                // 拔出检测不依赖列表变化事件。
+                CheckUsedPortRemoved();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Error] 串口实时检测异常：{ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 把新的端口列表写入下拉框。
+        /// </summary>
+        /// <param name="combo">目标下拉框。</param>
+        /// <param name="ports">新的端口列表（已按自然序排序）。</param>
+        /// <param name="previousSelection">
+        /// 刷新前的选中项。用于在列表变动后仍把选中项保持在原端口上——
+        /// <b>必须保留</b>：开机序列（TryAutoConnectReceiver）与测试流程都按
+        /// 下拉框当前选中项取串口，若刷新把选择打回第一个口，会连错设备。
+        /// </param>
+        /// <returns>
+        /// true 表示本次已完成同步（已刷新或本就无需刷新）；
+        /// false 表示因用户正展开下拉框而跳过，调用方应保留脏标记并在下一轮重试。
+        /// </returns>
+        private static bool ApplyPortList(ComboBox combo, IReadOnlyList<string> ports, string previousSelection)
+        {
+            if (combo == null || combo.IsDisposed)
+            {
+                return true;
+            }
+
+            // 用户正展开下拉框时不要改动其内容，避免列表在光标下跳动
+            if (combo.DroppedDown)
+            {
+                return false;
+            }
+
+            // 端口为空时保留占位项，避免出现空白下拉框让用户误以为没枚举到
+            List<string> items = new List<string>();
+            if (ports != null && ports.Count > 0)
+            {
+                items.AddRange(ports);
+            }
+            else
+            {
+                items.Add(NoPortPlaceholder);
+            }
+
+            // 先记下要恢复的选中项：清空 Items 会把 SelectedIndex 重置为 -1
+            string restore = previousSelection;
+            if (string.IsNullOrEmpty(restore) || restore == NoPortPlaceholder)
+            {
+                restore = null;
+            }
+
+            bool changed = combo.Items.Count != items.Count;
+            if (!changed)
+            {
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (!string.Equals(combo.Items[i] as string, items[i], StringComparison.Ordinal))
+                    {
+                        changed = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!changed)
+            {
+                return true;
+            }
+
+            combo.BeginUpdate();
+            try
+            {
+                combo.Items.Clear();
+                object[] itemObjects = new object[items.Count];
+                for (int i = 0; i < items.Count; i++)
+                {
+                    itemObjects[i] = items[i];
+                }
+                combo.Items.AddRange(itemObjects);
+
+                int index = -1;
+                if (restore != null)
+                {
+                    index = combo.Items.IndexOf(restore);
+                }
+
+                if (index >= 0)
+                {
+                    combo.SelectedIndex = index;
+                }
+                else if (restore != null)
+                {
+                    // 原选中口已从系统消失（设备被拔出）：清空选中项而不是落到第一项。
+                    // 开机序列(TryAutoConnectReceiver)与测试流程都按下拉框当前选中项取串口，
+                    // 若自动落到第一项，操作者没留意就会连到另一台设备上——测试系统连错设备
+                    // 比多点一次选择严重得多。清空后相关入口会提示"请先选择有效的串口"。
+                    combo.SelectedIndex = -1;
+                }
+                else if (combo.Items.Count > 0)
+                {
+                    // 原本就没有有效选中（首次填充或列表为空后的占位项）：选第一项
+                    combo.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                combo.EndUpdate();
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// 检测"正在使用的串口设备是否已被拔出"，若确认拔出则主动断开并置故障态。
+        /// <para><b>为什么要连续确认 2 次</b>：系统串口列表来自注册表
+        /// <c>HARDWARE\DEVICEMAP\SERIALCOMM</c>，USB 设备驱动重枚举时该列表可能短暂抖动。
+        /// 若单次扫描未见就断开，会把正在跑测试的串口误断掉。</para>
+        /// <para><b>不弹 MessageBox</b>：本方法由后台计时器触发，弹窗会在测试进行中
+        /// 突然打断操作者；与项目"仪表故障只写日志、状态走拓扑图"的既有约定一致。</para>
+        /// </summary>
+        private void CheckUsedPortRemoved()
+        {
+            // ---- 接收机串口 ----
+            if (_receiver != null && _receiver.IsOpen)
+            {
+                string usedPort = _receiver.PortName;
+                if (!_portWatcher.ContainsPort(usedPort))
+                {
+                    _receiverPortMissingCount++;
+                    if (_receiverPortMissingCount >= PortRemovalConfirmCount)
+                    {
+                        _receiverPortMissingCount = 0;
+                        HandleReceiverPortRemoved(usedPort);
+                    }
+                }
+                else
+                {
+                    _receiverPortMissingCount = 0;
+                }
+            }
+            else
+            {
+                _receiverPortMissingCount = 0;
+            }
+
+            // ---- 矩阵串口 ----
+            // MatrixSerialPort 目前是协议未到位的桩实现（IsConnected 恒为 false，
+            // 不会真正打开串口），故这里只做端口消失的记账，不做断开动作。
+            string matrixPort = _matrix.PortName;
+            if (!string.IsNullOrEmpty(matrixPort) && !_portWatcher.ContainsPort(matrixPort))
+            {
+                _matrixPortMissingCount++;
+            }
+            else
+            {
+                _matrixPortMissingCount = 0;
+            }
+        }
+
+        /// <summary>
+        /// 接收机串口设备被拔出：主动关闭串口并置故障态。
+        /// </summary>
+        private void HandleReceiverPortRemoved(string portName)
+        {
+            Logger.Log($"[Error] 接收机串口 {portName} 设备已拔出，主动断开并置为故障态。");
+
+            try { _receiver?.Close(); }
+            catch (Exception ex) { Logger.Log("[Error] 拔出后关闭接收机串口异常: " + ex.Message); }
+
+            _receiver = null;
+
+            // 置为 Fault 而非 Idle：设备被拔掉是需要人工介入的异常，
+            // 与"用户主动点断开"（属预期内，落 Idle）区分开。
+            _receiverLinkState = InstrumentLinkState.Fault;
+            _receiverFaultReason = "串口设备已拔出: " + portName;
+
+            SyncSignalFlowState();
         }
 
         // ============================================================
@@ -359,7 +617,7 @@ namespace A205AutoTestSystem.UI
             {
                 string portName = cmbReceiverPort.SelectedItem == null ? null : cmbReceiverPort.SelectedItem.ToString();
                 int baudRate = int.Parse(cmbReceiverBaud.Text);
-                if (string.IsNullOrEmpty(portName) || portName == "(无)")
+                if (string.IsNullOrEmpty(portName) || portName == NoPortPlaceholder)
                 {
                     MessageBox.Show(this, "请先选择有效的串口。", "提示",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -416,7 +674,7 @@ namespace A205AutoTestSystem.UI
             {
                 string portName = cmbMatrixPort.SelectedItem == null ? null : cmbMatrixPort.SelectedItem.ToString();
                 int baudRate = int.Parse(cmbMatrixBaud.Text);
-                if (string.IsNullOrEmpty(portName) || portName == "(无)")
+                if (string.IsNullOrEmpty(portName) || portName == NoPortPlaceholder)
                 {
                     MessageBox.Show(this, "请先选择有效的串口。", "提示",
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1623,7 +1881,7 @@ namespace A205AutoTestSystem.UI
                 return false;
             }
 
-            if (string.IsNullOrEmpty(portName) || portName == "(无)")
+            if (string.IsNullOrEmpty(portName) || portName == NoPortPlaceholder)
             {
                 MessageBox.Show(this, "请先选择有效的接收机串口。（电源已上电，信号输出未开启）", "提示",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
