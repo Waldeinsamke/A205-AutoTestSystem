@@ -243,6 +243,11 @@ namespace A205AutoTestSystem.UI
                 }
             }
 
+            // 1b) 同步共享上下文：测试项在 ExecuteAsync 开头读它来下发温度切换命令。
+            //     此处同步一次，保证"上下文与下拉框"始终一致——
+            //     不依赖 LoadDefaultTestsToGrid 是否被调用（三仪表未就绪时不会重建 DGV）。
+            TemperatureContext.Set(temperature);
+
             // 2) 同步 ReceiverControlPanel 的温度 RadioButton 状态（pnlTempGroup 内的 rbTempNormal/High/Low）。
             //    这些 RadioButton 没有 CheckedChanged 事件订阅（温度命令只在『设置』按钮里发），
             //    所以仅赋值不会重复发命令，也不会触发联动逻辑。
@@ -467,6 +472,10 @@ namespace A205AutoTestSystem.UI
             // （TestCatalog 构造时用完即丢），若不在此处登记，结果的
             // TemperatureRange 会留空、导出 Excel 时温度列整列为空。
             TestReportManager.Instance.SetTemperatureContext(TemperatureToDisplayName(temperature));
+
+            // 把温度档位登记到共享上下文：测试项在 ExecuteAsync 开头读它，
+            // 下发温度切换命令（测试流程发往串口的第一条命令）。
+            TemperatureContext.Set(temperature);
 
             // H-6 修复：先一次性快照全部资源状态（receiver + 三仪表），
             // 后续分支判断统一使用这份快照，避免分支间状态分散读取导致

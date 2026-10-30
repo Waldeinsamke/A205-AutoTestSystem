@@ -197,6 +197,8 @@
     </Content>
     <!-- M-2026-10：H-6 资源快照判定的纯逻辑（不依赖 WinForms，方便测试链接源文件） -->
     <Compile Include="AutoTest\Shared\ResourceSnapshotLogic.cs" />
+    <!-- 测试温度档位共享上下文（测试项在 ExecuteAsync 开头据此下发温度切换命令）-->
+    <Compile Include="AutoTest\Shared\TemperatureContext.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

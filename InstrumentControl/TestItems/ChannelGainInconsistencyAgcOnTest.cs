@@ -141,6 +141,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             if (!_rf.IsConnected || !_lo.IsConnected || !_sa.IsConnected)
                 throw new InvalidOperationException("通道间增益不一致性（AGC起控）需要三台仪表（RF/LO/SA）已连接。");
 
+            // 温度切换命令：测试流程发往串口的第一条命令。
+            // 必须在任何通道 / 模式 / 频段命令之前——温度档位先落到硬件上，后续命令才有意义。
+            TemperatureContext.SendTo(_receiver, TestName, progress);
+
             // 频谱仪入口：清残留状态 + 切连续扫描
             try { _sa.Reset(); } catch { /* best-effort */ }
             _sa.SetContinuousScan(true);
