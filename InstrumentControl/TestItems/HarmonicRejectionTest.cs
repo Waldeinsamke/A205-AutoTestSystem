@@ -348,6 +348,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = TestName,
                 Value = double.IsNaN(absValue) ? double.NaN : absValue,   // 报表写入绝对值（用户决策）
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的 marker2（dBc，带符号），与判定用的 |抑制|（dB）区分
+                MeasuredValue = mark2YDbm,
+                MeasuredUnit = "dBc",
                 Judgment = double.IsNaN(absValue) ? "Fail" : (pass ? "Pass" : "Fail"),
                 Remarks = remarks,
             };

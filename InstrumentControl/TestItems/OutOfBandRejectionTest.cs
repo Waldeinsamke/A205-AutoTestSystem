@@ -467,6 +467,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = TestName,
                 Value = suppressDb,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的杂散峰（dBm，带符号），与判定用的 |抑制|（dB）区分
+                MeasuredValue = maxSegmentDb,
+                MeasuredUnit = "dBm",
                 Judgment = double.IsNaN(suppressDb) ? "Fail" : (pass ? "Pass" : "Fail"),
                 Remarks = remarks,
             };

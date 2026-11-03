@@ -408,6 +408,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = TestName,
                 Value = spuriousDbm,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的次高峰（dBm，带符号）
+                MeasuredValue = spuriousDbm,
+                MeasuredUnit = "dBm",
                 Judgment = double.IsNaN(spuriousDbm) ? "Fail" : (pass ? "Pass" : "Fail"),
                 Remarks = remarks,
             };

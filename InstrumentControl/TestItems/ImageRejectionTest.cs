@@ -458,6 +458,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = $"{TestName}·{tag}",
                 Value = double.IsNaN(absDb) ? double.NaN : absDb,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的镜像 delta（dB，带符号），与判定用的 |抑制| 区分
+                MeasuredValue = deltaDb,
+                MeasuredUnit = "dB",
                 Judgment = double.IsNaN(absDb) ? "Fail" : (pass ? "Pass" : "Fail"),
                 Remarks = remarks,
             };

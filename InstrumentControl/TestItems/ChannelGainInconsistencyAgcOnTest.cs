@@ -164,6 +164,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             var bands = new List<string>(_testFreqsMHz.Length);
             var rawGains = new List<double>(_testFreqsMHz.Length);   // 原始带衰减值
             var equivalentGains = new List<double>(_testFreqsMHz.Length); // 等效增益（+32）
+            var rawPeaks = new List<double>(_testFreqsMHz.Length);   // 频谱仪直读的 peak（dBm）
 
             try
             {
@@ -195,7 +196,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                         continue;
                     }
 
-                    double rawGain = await MeasureOneFreqAsync(band, progress, ct).ConfigureAwait(false);
+                    var (rawGain, rawPeakDbm) = await MeasureOneFreqAsync(band, progress, ct).ConfigureAwait(false);
                     done++;
                     if (double.IsNaN(rawGain))
                     {
@@ -212,6 +213,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     bands.Add(band.DisplayName);
                     rawGains.Add(rawGain);
                     equivalentGains.Add(equivalentGain);
+                    rawPeaks.Add(rawPeakDbm);
 
                     string remarks = string.Format(
                         CultureInfo.InvariantCulture,
@@ -231,6 +233,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                         TestItem = TestName,
                         Value = rawGain,
                         Unit = Unit,
+                        // 实测值 = 频谱仪直读的 peak（dBm），与判定用的带衰减增益（dB）区分
+                        MeasuredValue = rawPeakDbm,
+                        MeasuredUnit = "dBm",
                         Judgment = pointPass ? "Pass" : "Fail",
                         Remarks = remarks
                     };
@@ -261,7 +266,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             }
 
             // ---- 汇总：与不起控同一套比对算法 ----
-            return Summarize(bands, rawGains, equivalentGains);
+            return Summarize(bands, rawGains, equivalentGains, rawPeaks);
         }
 
         /// <summary>
@@ -270,7 +275,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private TestResult Summarize(
             List<string> bands,
             List<double> rawGains,
-            List<double> equivalentGains)
+            List<double> equivalentGains,
+            List<double> rawPeaks)
         {
             if (equivalentGains.Count == 0)
             {
@@ -319,6 +325,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 与 9 条频点行同口径。等效增益写在备注里。
                 Value = rawGains[worstIndex],
                 Unit = Unit,
+                // 实测值 = 最差频点频谱仪直读的 peak（dBm）
+                MeasuredValue = rawPeaks.Count > worstIndex ? rawPeaks[worstIndex] : (double?)null,
+                MeasuredUnit = "dBm",
                 Judgment = comparison.RangePass ? "Pass" : "Fail",
                 Remarks = remark
             };
@@ -330,8 +339,8 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         /// 实测单个频点：设频 → 频段命令 → 加 32dB 衰减 → 读 peak。
         /// <para><b>衰减命令在频段命令之后发</b>（按需求约定）。</para>
         /// </summary>
-        /// <returns>原始带衰减增益（dB）；读数失败返回 NaN。</returns>
-        private async Task<double> MeasureOneFreqAsync(
+        /// <returns>（原始带衰减增益 dB，频谱仪直读的 peak dBm）；读数失败两者均为 NaN。</returns>
+        private async Task<(double Gain, double PeakDbm)> MeasureOneFreqAsync(
             ModeBandTable.BandInfo band,
             IProgress<string> progress,
             CancellationToken ct)
@@ -342,7 +351,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 string err = $"无法从频段名 '{band.DisplayName}' 解析 RF 频率。";
                 progress.Report("[" + ItemName + "] " + err);
                 Logger.Log("[GainInconsistencyAgcOn] " + err);
-                return double.NaN;
+                return (double.NaN, double.NaN);
             }
             double rfFreqHz = rfFreqMHz * 1_000_000.0;
             double loFreqHz = LoFrequencyRule.Calculate(rfFreqHz, (int)ReceiverMode.Mode3);
@@ -393,7 +402,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     band.DisplayName, peakDbm, RfPowerMode3Dbm, gain));
 
                 await Task.Delay(PostReadDelayMs, ct).ConfigureAwait(false);
-                return gain;
+                return (gain, peakDbm);
             }
             catch (OperationCanceledException)
             {
@@ -407,7 +416,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 // 读数失败时也要把参考电平切回去、关闭 marker，避免污染下一频点
                 try { _sa.SetReferenceLevel(SaReferenceLevelDbm); } catch { /* best-effort */ }
                 try { _sa.SetAllMarkOFF(); } catch { /* best-effort */ }
-                return double.NaN;
+                return (double.NaN, double.NaN);
             }
         }
 

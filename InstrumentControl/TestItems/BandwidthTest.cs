@@ -314,6 +314,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = TestName,
                 Value = absPtpDb,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的原始 PTP（带符号），与判定用的 |PTP| 区分
+                MeasuredValue = ptpDb,
+                MeasuredUnit = "dB",
                 Judgment = pass ? "Pass" : "Fail",
                 Remarks = string.Format(
                     CultureInfo.InvariantCulture,

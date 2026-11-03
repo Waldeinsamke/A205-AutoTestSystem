@@ -369,6 +369,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             // 步进循环
             double currentPowerDbm = rfStartPowerDbm;
             double lastDeltaDb = 0.0;        // 上一次累积 delta
+            double lastRawDeltaDb = double.NaN;   // 频谱仪最近一次读到的累积 delta（报表「实测值」）
             double p1ResultValue = double.NaN;   // 报表 Value = 触发判停时的 RF 功率
             int stepCount = 0;
             string finalDeltaStr = "0.00";
@@ -422,6 +423,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     break;
                 }
                 finalDeltaStr = currentDeltaDb.ToString("F2", CultureInfo.InvariantCulture);
+                lastRawDeltaDb = currentDeltaDb;
 
                 double stepIncrement = currentDeltaDb - lastDeltaDb;
 
@@ -471,6 +473,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = TestName,
                 Value = p1ResultValue,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的累积 delta（dB，带符号），与判定用的 P-1 功率（dBm）区分
+                MeasuredValue = lastRawDeltaDb,
+                MeasuredUnit = "dB",
                 Judgment = pass ? "Pass" : "Fail",
                 Remarks = remarks,
             };

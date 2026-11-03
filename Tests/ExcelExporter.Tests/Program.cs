@@ -68,7 +68,8 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
 
             // 准备 3 条结果：Pass / Fail / Pass
             // M6.x：ExcelExporter 在「工作模式」后新增「频段」列（列 4），所以 BuildResult 多了 band 参数。
-            TestResult r1 = BuildResult("R1-Pass", "常温", 1, "Mode1", "频段108",   "线性最大增益", 12.34, "dB", "Pass", "gain=12.34");
+            // 新增「实测值」列（列 6）：r1 带频谱仪原始读数，r3 不带（纯计算项 → 该列留空）。
+            TestResult r1 = BuildResult("R1-Pass", "常温", 1, "Mode1", "频段108",   "线性最大增益", 12.34, "dB", "Pass", "gain=12.34", -45.32, "dBm");
             TestResult r2 = BuildResult("R2-Fail", "高温", 2, "Mode2", "频段1090",  "信号带宽",     99.99, "MHz", "Fail", "bw too large");
             TestResult r3 = BuildResult("R3-Pass", "低温", 3, "Mode3", "频段900",   "线性最大增益", 18.50, "dB", "Pass", "cold test");
 
@@ -110,7 +111,7 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 Assert.CurrentTestName = "Round-trip: 总行数 == 4（1 表头 + 3 数据）";
                 Assert.Equal(4, sheet.PhysicalNumberOfRows);
 
-                // 表头（M6.x：列 4 新增「频段」，所有后续列索引 +1）
+                // 表头（M6.x：列 4 新增「频段」；本次：列 6 新增「实测值」，所有后续列索引再 +1）
                 IRow header = sheet.GetRow(0);
                 Assert.CurrentTestName = "Round-trip: 表头首列 == '测试时间'";
                 Assert.Equal("测试时间", header.GetCell(0).StringCellValue);
@@ -124,14 +125,16 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 Assert.Equal("频段", header.GetCell(4).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: 表头第六列 == '测试项目'";
                 Assert.Equal("测试项目", header.GetCell(5).StringCellValue);
-                Assert.CurrentTestName = "Round-trip: 表头第七列 == '测试值'";
-                Assert.Equal("测试值", header.GetCell(6).StringCellValue);
-                Assert.CurrentTestName = "Round-trip: 表头第八列 == '单位'";
-                Assert.Equal("单位", header.GetCell(7).StringCellValue);
-                Assert.CurrentTestName = "Round-trip: 表头第九列 == '判定结果'";
-                Assert.Equal("判定结果", header.GetCell(8).StringCellValue);
-                Assert.CurrentTestName = "Round-trip: 表头第十列 == '备注'";
-                Assert.Equal("备注", header.GetCell(9).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 表头第七列 == '实测值'";
+                Assert.Equal("实测值", header.GetCell(6).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 表头第八列 == '测试值'";
+                Assert.Equal("测试值", header.GetCell(7).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 表头第九列 == '单位'";
+                Assert.Equal("单位", header.GetCell(8).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 表头第十列 == '判定结果'";
+                Assert.Equal("判定结果", header.GetCell(9).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 表头第十一列 == '备注'";
+                Assert.Equal("备注", header.GetCell(10).StringCellValue);
 
                 // 第 1 行数据
                 IRow row1 = sheet.GetRow(1);
@@ -145,22 +148,24 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 Assert.Equal("频段108", row1.GetCell(4).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r1.TestItem == '线性最大增益'";
                 Assert.Equal("线性最大增益", row1.GetCell(5).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: r1.实测值 == '-45.3 dBm'";
+                Assert.Equal("-45.3 dBm", row1.GetCell(6).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r1.Value == 12.34";
-                Assert.True(Math.Abs(row1.GetCell(6).NumericCellValue - 12.34) < 1e-9,
-                    "Value 应当是 12.34, got " + row1.GetCell(6).NumericCellValue);
+                Assert.True(Math.Abs(row1.GetCell(7).NumericCellValue - 12.34) < 1e-9,
+                    "Value 应当是 12.34, got " + row1.GetCell(7).NumericCellValue);
                 Assert.CurrentTestName = "Round-trip: r1.Unit == 'dB'";
-                Assert.Equal("dB", row1.GetCell(7).StringCellValue);
+                Assert.Equal("dB", row1.GetCell(8).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r1.Judgment == 'Pass'";
-                Assert.Equal("Pass", row1.GetCell(8).StringCellValue);
+                Assert.Equal("Pass", row1.GetCell(9).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r1.Remarks == 'gain=12.34'";
-                Assert.Equal("gain=12.34", row1.GetCell(9).StringCellValue);
+                Assert.Equal("gain=12.34", row1.GetCell(10).StringCellValue);
 
                 // 第 2 行（Fail）
                 IRow row2 = sheet.GetRow(2);
                 Assert.CurrentTestName = "Round-trip: r2.Judgment == 'Fail'";
-                Assert.Equal("Fail", row2.GetCell(8).StringCellValue);
+                Assert.Equal("Fail", row2.GetCell(9).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r2.Value == 99.99";
-                Assert.True(Math.Abs(row2.GetCell(6).NumericCellValue - 99.99) < 1e-9,
+                Assert.True(Math.Abs(row2.GetCell(7).NumericCellValue - 99.99) < 1e-9,
                     "Value 应当是 99.99");
                 Assert.CurrentTestName = "Round-trip: r2.TestItem == '信号带宽'";
                 Assert.Equal("信号带宽", row2.GetCell(5).StringCellValue);
@@ -168,9 +173,11 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 // 第 3 行
                 IRow row3 = sheet.GetRow(3);
                 Assert.CurrentTestName = "Round-trip: r3.Judgment == 'Pass'";
-                Assert.Equal("Pass", row3.GetCell(8).StringCellValue);
+                Assert.Equal("Pass", row3.GetCell(9).StringCellValue);
                 Assert.CurrentTestName = "Round-trip: r3.TemperatureRange == '低温'";
                 Assert.Equal("低温", row3.GetCell(1).StringCellValue);
+                Assert.CurrentTestName = "Round-trip: 无实测值时实测值列为空串";
+                Assert.Equal("", row3.GetCell(6).StringCellValue);
 
                 wb.Close();
             }
@@ -229,8 +236,8 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 // M6.x：列 4 是频段，列 5 才是测试项目。
                 Assert.Equal("线性最大增益", sheet.GetRow(1).GetCell(5).StringCellValue);
                 Assert.CurrentTestName = "TRM round-trip: Mgr2.Unit='MHz'";
-                // M6.x：列 7 是单位（列 6 是测试值）。
-                Assert.Equal("MHz", sheet.GetRow(2).GetCell(7).StringCellValue);
+                // 列 8 是单位（列 7 是测试值，列 6 是实测值）。
+                Assert.Equal("MHz", sheet.GetRow(2).GetCell(8).StringCellValue);
                 wb.Close();
             }
 
@@ -290,7 +297,9 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
             double value,
             string unit,
             string judgment,
-            string remarks)
+            string remarks,
+            double? measuredValue = null,
+            string measuredUnit = "")
         {
             // 给每个 TestResult 一个略不同的时间戳，便于 round-trip 校验日期回读
             // name 参数仅作占位方便阅读，TestResult 没有 Name 字段。
@@ -305,6 +314,8 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
                 TestItem = testItem ?? string.Empty,
                 Value = value,
                 Unit = unit ?? string.Empty,
+                MeasuredValue = measuredValue,
+                MeasuredUnit = measuredUnit ?? string.Empty,
                 Judgment = judgment ?? string.Empty,
                 Remarks = remarks ?? string.Empty
             };

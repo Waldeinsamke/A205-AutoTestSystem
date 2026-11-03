@@ -380,6 +380,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     TestItem = "一中频抑制",
                     Value = double.IsNaN(firstIfAbsDb) ? double.NaN : firstIfAbsDb,
                     Unit = Unit,
+                    // 实测值 = 频谱仪直读的一中频 delta（dB，带符号），与判定用的 |抑制| 区分
+                    MeasuredValue = firstIfDeltaDb,
+                    MeasuredUnit = "dB",
                     Judgment = double.IsNaN(firstIfAbsDb) ? "Fail" : (firstIfPass ? "Pass" : "Fail"),
                     Remarks = firstIfRemarks,
                 };
@@ -474,6 +477,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 TestItem = "二中频抑制",
                 Value = double.IsNaN(secondIfAbsDb) ? double.NaN : secondIfAbsDb,
                 Unit = Unit,
+                // 实测值 = 频谱仪直读的二中频 delta（dB，带符号），与判定用的 |抑制| 区分
+                MeasuredValue = secondIfDeltaDb,
+                MeasuredUnit = "dB",
                 Judgment = double.IsNaN(secondIfAbsDb) ? "Fail" : (secondIfPass ? "Pass" : "Fail"),
                 Remarks = secondIfRemarks,
             };

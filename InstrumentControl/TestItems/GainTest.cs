@@ -309,6 +309,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                             TestItem = TestName,
                             Value = ToReportValue(mode, gain),
                             Unit = Unit,
+                            // 实测值 = 频谱仪直读的 IF 峰值（dBm），与判定用的 gain（dB）区分
+                            MeasuredValue = peakDbm,
+                            MeasuredUnit = "dBm",
                             Judgment = pass ? "Pass" : "Fail",
                             Remarks = string.Format(
                                 CultureInfo.InvariantCulture,

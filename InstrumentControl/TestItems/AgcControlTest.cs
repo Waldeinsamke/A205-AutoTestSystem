@@ -340,7 +340,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
 
             // 5 档扫描
             // 收集：每档 abs(delta)、单步进误差；最后算累计误差
-            var stepResults = new List<(int AttenDb, double AbsDeltaDb, double StepErrorDb)>(AgcTestAttenDbSteps.Length);
+            var stepResults = new List<(int AttenDb, double DeltaDb, double AbsDeltaDb, double StepErrorDb)>(AgcTestAttenDbSteps.Length);
             bool anyStepFailed = false;
             string stepFailReason = null;
 
@@ -399,7 +399,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 double absDelta = Math.Abs(currentDeltaDb);
                 double stepError = Math.Abs(absDelta - targetAtten);
 
-                stepResults.Add((targetAtten, absDelta, stepError));
+                stepResults.Add((targetAtten, currentDeltaDb, absDelta, stepError));
 
                 progress.Report(string.Format(
                     CultureInfo.InvariantCulture,
@@ -438,7 +438,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             TestResult lastWritten = null;
             for (int i = 0; i < stepResults.Count; i++)
             {
-                var (atten, absDelta, stepErr) = stepResults[i];
+                var (atten, deltaDb, absDelta, stepErr) = stepResults[i];
                 bool stepPass = stepErr <= SingleStepToleranceDb;
 
                 string remarks;
@@ -475,6 +475,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     TestItem = TestName,
                     Value = absDelta,
                     Unit = Unit,
+                    // 实测值 = 频谱仪直读的累积 delta（dB，带符号），与判定用的 abs(delta) 区分
+                    MeasuredValue = deltaDb,
+                    MeasuredUnit = "dB",
                     Judgment = judgment,   // 5 条共用同一 judgment（P3 = 单步进全过 AND 累计 ≤ 3 dB）
                     Remarks = remarks,
                 };

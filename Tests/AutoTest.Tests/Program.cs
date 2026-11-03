@@ -570,19 +570,21 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
                 Assert.Equal("频段108", row1.GetCell(4).StringCellValue);
                 Assert.CurrentTestName = "Excel: Mode1 行 测试项目列正确";
                 Assert.Equal("通道间增益不一致性（AGC不起控）", row1.GetCell(5).StringCellValue);
+                Assert.CurrentTestName = "Excel: Mode1 行 实测值列留空（纯计算项）";
+                Assert.Equal("", row1.GetCell(6).StringCellValue);
                 Assert.CurrentTestName = "Excel: Mode1 行 测试值 = 18.5";
-                Assert.True(Math.Abs(row1.GetCell(6).NumericCellValue - 18.5) < 1e-9,
-                    "测试值应当是 18.5，实际 " + row1.GetCell(6).NumericCellValue);
+                Assert.True(Math.Abs(row1.GetCell(7).NumericCellValue - 18.5) < 1e-9,
+                    "测试值应当是 18.5，实际 " + row1.GetCell(7).NumericCellValue);
                 Assert.CurrentTestName = "Excel: Mode1 行 判定 = Pass";
-                Assert.Equal("Pass", row1.GetCell(8).StringCellValue);
+                Assert.Equal("Pass", row1.GetCell(9).StringCellValue);
 
                 // 第 2 行：Mode2，最差 10.2 @ 频段1600，Pass
                 var row2 = sheet.GetRow(2);
                 Assert.CurrentTestName = "Excel: Mode2 行 频段列 = 频段1600";
                 Assert.Equal("频段1600", row2.GetCell(4).StringCellValue);
                 Assert.CurrentTestName = "Excel: Mode2 行 测试值 = 10.2";
-                Assert.True(Math.Abs(row2.GetCell(6).NumericCellValue - 10.2) < 1e-9,
-                    "测试值应当是 10.2，实际 " + row2.GetCell(6).NumericCellValue);
+                Assert.True(Math.Abs(row2.GetCell(7).NumericCellValue - 10.2) < 1e-9,
+                    "测试值应当是 10.2，实际 " + row2.GetCell(7).NumericCellValue);
 
                 // 第 3 行：Mode3，最差 19.0 @ 频段900，Pass
                 var row3 = sheet.GetRow(3);

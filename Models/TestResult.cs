@@ -35,11 +35,27 @@ namespace A205AutoTestSystem.Models
         /// </summary>
         public string BandDisplayName { get; set; }
 
-        /// <summary>实际测量值。</summary>
+        /// <summary>实际测量值（判定用的派生值，如 gain / |PTP| / |抑制|）。</summary>
         public double Value { get; set; }
 
         /// <summary>测量单位（dB / MHz 等）。</summary>
         public string Unit { get; set; } = string.Empty;
+
+        /// <summary>
+        /// 频谱仪原始读数（可空）。
+        /// <para>与 <see cref="Value"/> 区分：<see cref="Value"/> 是参与 Pass/Fail 判定的
+        /// 派生值（取绝对值 / 换算后的结果），本字段保存仪表直接读到的原始带符号数值，
+        /// 例如 GainTest 的 IF peak（dBm）、谐波抑制的 marker2（dBc）、带外抑制的杂散峰（dBm）。</para>
+        /// <para>纯计算型测试项（通道间增益不一致性等不直接读仪表的项）留 null。</para>
+        /// </summary>
+        public double? MeasuredValue { get; set; }
+
+        /// <summary>
+        /// 原始读数的单位（dBm / dBc / dB 等）。
+        /// <para>可与 <see cref="Unit"/> 不同——例如谐波抑制的原始读数是 dBc，
+        /// 而判定用的抑制量是 dB。</para>
+        /// </summary>
+        public string MeasuredUnit { get; set; } = string.Empty;
 
         /// <summary>判定结果（Pass / Fail）。</summary>
         public string Judgment { get; set; } = string.Empty;

@@ -21,7 +21,7 @@ namespace A205AutoTestSystem.Common
     /// </code>
     /// <para>默认文件命名 <c>A205_测试报告_yyyyMMdd_HHmmss.xlsx</c>，
     /// 保存到桌面 <c>data</c> 目录下（见 <see cref="GenerateDefaultFilePath"/>）。</para>
-    /// <para>表头字段对齐规划书 §6.1（共 9 列）。</para>
+    /// <para>表头字段对齐规划书 §6.1（共 11 列）。</para>
     /// </summary>
     public class ExcelExporter : IDisposable
     {
@@ -36,10 +36,11 @@ namespace A205AutoTestSystem.Common
             "工作模式",     // 3
             "频段",         // 4  ← 新增（M6.x 阶段）
             "测试项目",     // 5
-            "测试值",       // 6
-            "单位",         // 7
-            "判定结果",     // 8
-            "备注"          // 9
+            "实测值",       // 6  ← 新增：频谱仪原始读数（带单位文本）
+            "测试值",       // 7
+            "单位",         // 8
+            "判定结果",     // 9
+            "备注"          // 10
         };
 
         private XSSFWorkbook _workbook;
@@ -114,8 +115,10 @@ namespace A205AutoTestSystem.Common
             _sheet.SetColumnWidth(0, 21 * 256);
             // 频段列稍窄
             _sheet.SetColumnWidth(4, 14 * 256);
+            // 实测值列带单位文本（如 "-45.3 dBm"），给 16 字符
+            _sheet.SetColumnWidth(6, 16 * 256);
             // 备注列宽一点
-            _sheet.SetColumnWidth(9, 36 * 256);
+            _sheet.SetColumnWidth(10, 36 * 256);
 
             // 冻结首行
             _sheet.CreateFreezePane(0, 1);
@@ -157,8 +160,13 @@ namespace A205AutoTestSystem.Common
             ICell c5 = row.CreateCell(5);
             c5.SetCellValue(SafeStr(result.TestItem));
             c5.CellStyle = _bodyCenterStyle;
-            // 6: 测试值（double）—— 全局按"保留 1 位小数"显示；NaN 单元格留空（不下发 SetCellValue 防止 #NUM!）。
-            ICell valueCell = row.CreateCell(6);
+            // 6: 实测值 —— 频谱仪原始读数，带单位文本（如 "-45.3 dBm"）。
+            //    无原始读数（纯计算型测试项 / 读取失败）时留空。
+            ICell measuredCell = row.CreateCell(6);
+            measuredCell.SetCellValue(FormatMeasured(result.MeasuredValue, result.MeasuredUnit));
+            measuredCell.CellStyle = _bodyCenterStyle;
+            // 7: 测试值（double）—— 全局按"保留 1 位小数"显示；NaN 单元格留空（不下发 SetCellValue 防止 #NUM!）。
+            ICell valueCell = row.CreateCell(7);
             if (!double.IsNaN(result.Value))
             {
                 valueCell.SetCellValue(result.Value);
@@ -169,13 +177,13 @@ namespace A205AutoTestSystem.Common
                 // NaN 占位也设为居中样式，避免后续沿用默认时左对齐与其它行不一致
                 valueCell.CellStyle = _bodyCenterStyle;
             }
-            // 7: 单位
-            ICell c7 = row.CreateCell(7);
+            // 8: 单位
+            ICell c7 = row.CreateCell(8);
             c7.SetCellValue(SafeStr(result.Unit));
             c7.CellStyle = _bodyCenterStyle;
 
-            // 8: 判定结果 — Pass 绿色，Fail 红色（保留字体色 + 加居中）
-            ICell judgmentCell = row.CreateCell(8);
+            // 9: 判定结果 — Pass 绿色，Fail 红色（保留字体色 + 加居中）
+            ICell judgmentCell = row.CreateCell(9);
             string judgment = SafeStr(result.Judgment);
             judgmentCell.SetCellValue(judgment);
             if (judgment == "Pass")
@@ -204,8 +212,8 @@ namespace A205AutoTestSystem.Common
                 judgmentCell.CellStyle = _bodyCenterStyle;
             }
 
-            // 9: 备注 —— 按用户决策不居中，保留 NPOI 默认样式（左对齐），避免列宽吃不下导致显示截断
-            ICell c9 = row.CreateCell(9);
+            // 10: 备注 —— 按用户决策不居中，保留 NPOI 默认样式（左对齐），避免列宽吃不下导致显示截断
+            ICell c9 = row.CreateCell(10);
             c9.SetCellValue(SafeStr(result.Remarks));
             // 不绑 CellStyle：使用 NPOI 工作簿的默认 CellStyle（水平一般对齐）
 
@@ -213,6 +221,23 @@ namespace A205AutoTestSystem.Common
                 CultureInfo.InvariantCulture,
                 "[Excel] 追加一行：{0} = {1:F4} {2} → {3}",
                 SafeStr(result.TestItem), result.Value, SafeStr(result.Unit), SafeStr(result.Judgment)));
+        }
+
+        /// <summary>
+        /// 把实测值格式化成带单位的文本（如 <c>"-45.3 dBm"</c>）。
+        /// <para>无实测值（null / NaN / 无穷）或单位为空时，只输出数值部分；
+        /// 两者都无时返回空串。</para>
+        /// </summary>
+        private static string FormatMeasured(double? measuredValue, string measuredUnit)
+        {
+            if (!measuredValue.HasValue) return string.Empty;
+            double v = measuredValue.Value;
+            if (double.IsNaN(v) || double.IsInfinity(v)) return string.Empty;
+
+            string number = v.ToString("0.0", CultureInfo.InvariantCulture);
+            string unit = measuredUnit ?? string.Empty;
+            if (unit.Length == 0) return number;
+            return number + " " + unit;
         }
 
         /// <summary>
