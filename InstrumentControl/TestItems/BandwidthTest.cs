@@ -30,7 +30,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
     ///   <item>LO 单频：按 RF 中心算 LoFrequencyRule，再 SetFrequency + SetPower + SetOutputState(true)</item>
     ///   <item>RF 扫频：FREQ:MODE SWE / FREQ:STAR / FREQ:STOP / SWE:POIN 1000 / POW / INIT:CONT 1；
     ///         扫频参数设完立即 OUTP 1（SetOutputState(true)）</item>
-    ///   <item>频谱仪 Reset + 开启连续扫描 + 中心（Mode1/2=70 MHz，Mode3=750 MHz）+ Span（Mode1/2=8 MHz，Mode3=300 MHz）+ 参考电平 10 dBm + 轨迹最大保持</item>
+    ///   <item>频谱仪 Reset + 开启连续扫描 + 中心（Mode1/2=70 MHz，Mode3=750 MHz）+ Span（Mode1/2=8 MHz，Mode3=300 MHz）+ 参考电平 20 dBm + 轨迹最大保持</item>
     ///   <item>等 settleDelayMs（真机 15s）</item>
     ///   <item>ReadPeakToPeak() 读一次 PTP dB 差</item>
     ///   <item>清当前模式轨迹（SetMaxHold(false)，切回 WRITe 模式，下一模式会重新 SetMaxHold(true)）</item>
@@ -72,8 +72,12 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private const double RfPowerMode2Dbm = -10.0;
         private const double LoPowerModeDbm = 3.0;
 
-        /// <summary>频谱仪参考电平（dBm）。与 GainTest 保持一致；如修改需同步两处。</summary>
-        private const double SaReferenceLevelDbm = 10.0;
+        /// <summary>
+        /// 频谱仪参考电平（dBm）。三个模式统一 20 dBm。
+        /// <para>Mode2 的 RF=-10 dBm 比 Mode1/3 高 10 dB，IF 峰值更接近屏幕顶端，
+        /// 抬到 20 dBm 留出余量，避免轨迹截顶导致 PTP 读数失真。</para>
+        /// </summary>
+        private const double SaReferenceLevelDbm = 20.0;
 
         /// <summary>
         /// 三个模式的扫频计划：中心 / 扫频范围 / 频段号（ModeBandTable 中的 BandIndex）。
@@ -253,7 +257,7 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             _rf.SetContinuousSweep(true);    // 启动扫频
             _rf.SetOutputState(true);        // 扫频参数设完，立即打开 RF 输出
 
-            // 4) 频谱仪：Reset + 开启连续扫描 + 中心（按 mode 联动）+ Span（按 mode 联动）+ 参考电平 10 dBm + 轨迹最大保持
+            // 4) 频谱仪：Reset + 开启连续扫描 + 中心（按 mode 联动）+ Span（按 mode 联动）+ 参考电平 20 dBm + 轨迹最大保持
             _sa.Reset();
             _sa.SetContinuousScan(true);
             _sa.SetCenterFrequency(saCenterHz);
@@ -320,10 +324,10 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                 Judgment = pass ? "Pass" : "Fail",
                 Remarks = string.Format(
                     CultureInfo.InvariantCulture,
-                    "Center={0}MHz, Sweep={1}~{2}MHz, Points={3}, RF={4}dBm, LO={5:F3}MHz@{6}dBm, IF={7}MHz, SA(center={8}MHz, span={9}MHz), PTP={10:F2}dB, |PTP|={11:F2}dB",
+                    "Center={0}MHz, Sweep={1}~{2}MHz, Points={3}, RF={4}dBm, LO={5:F3}MHz@{6}dBm, IF={7}MHz, SA(center={8}MHz, span={9}MHz, ref={10}dBm), PTP={11:F2}dB, |PTP|={12:F2}dB",
                     plan.CenterMHz, plan.StartMHz, plan.StopMHz, DefaultSweepPoints,
                     rfPowerDbm, loFreqHz / 1e6, loPowerDbm, ifFreqHz / 1e6,
-                    saCenterHz / 1e6, saSpanHz / 1e6, ptpDb, absPtpDb)
+                    saCenterHz / 1e6, saSpanHz / 1e6, SaReferenceLevelDbm, ptpDb, absPtpDb)
             };
             TestReportManager.Instance.Record(result);
 
