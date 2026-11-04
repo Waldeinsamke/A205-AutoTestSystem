@@ -19,6 +19,18 @@ namespace A205AutoTestSystem.Common
         public event Action<byte[]> DataReceived;
 
         /// <summary>
+        /// 串口掉线时触发，参数为掉线原因描述。
+        /// <para>与只写日志的旧行为不同，这里把掉线<b>通知给上层</b>：
+        /// .NET Framework 的 <see cref="SerialPort.ErrorReceived"/> 只上报缓冲类错误
+        /// （<c>RXOver / Overrun / RXParity / Frame / TXFull</c>），
+        /// 设备被拔出时<b>不会</b>经该事件上报，上层只能靠"长时间收不到数据"来推断。</para>
+        /// <para>本基类在收发失败且串口已不可用时触发本事件，
+        /// 上层据此把对应节点置为故障态（提示人工介入）；
+        /// 本基类不负责恢复连接，恢复策略由上层决定。</para>
+        /// </summary>
+        public event Action<string> PortError;
+
+        /// <summary>
         /// 当前串口是否处于打开状态。
         /// </summary>
         public bool IsOpen => !_disposed && _serialPort != null && _serialPort.IsOpen;
@@ -97,7 +109,17 @@ namespace A205AutoTestSystem.Common
                 throw new InvalidOperationException("Serial port is not open.");
             }
 
-            _serialPort.Write(data, 0, data.Length);
+            try
+            {
+                _serialPort.Write(data, 0, data.Length);
+            }
+            catch (Exception ex)
+            {
+                // 写失败且串口已不可用 → 判定为掉线并通知上层；
+                // 异常仍向上抛出，保持"发送失败必须让调用方知道"的原有语义。
+                RaisePortErrorIfClosed("发送", ex);
+                throw;
+            }
             Logger.LogSend(data);
         }
 
@@ -151,13 +173,37 @@ namespace A205AutoTestSystem.Common
             }
             catch (Exception ex)
             {
-                Logger.Log($"[Serial] Receive error: {ex.Message}");
+                RaisePortErrorIfClosed("接收", ex);
             }
         }
 
         private void OnSerialPortErrorReceived(object sender, SerialErrorReceivedEventArgs e)
         {
             Logger.Log($"[Serial] Error: {e.EventType}");
+            // 注意：此处不据此判定掉线。.NET Framework 的 SerialError 只有缓冲类错误
+            // （RXOver / Overrun / RXParity / Frame / TXFull），与设备是否还在线无关；
+            // 设备被拔出时反而不经此事件上报。掉线判定统一放在收发失败处（见 RaisePortErrorIfClosed）。
+        }
+
+        /// <summary>
+        /// 收发失败且串口已不可用时判定为掉线并通知上层。
+        /// <para>判据是"操作失败 <b>且</b> 串口已不是打开状态"：单纯的读超时或单次写异常
+        /// 并不能说明设备掉线（线缆接触抖动也会导致），只有串口本身已失效才作掉线处理，
+        /// 避免把偶发通信错误误报成需要人工介入的故障。</para>
+        /// </summary>
+        /// <param name="operation">失败的操作描述（用于日志与上层提示）。</param>
+        /// <param name="ex">捕获到的异常。</param>
+        private void RaisePortErrorIfClosed(string operation, Exception ex)
+        {
+            Logger.Log($"[Serial] {operation} failed: {ex.Message}");
+
+            if (IsOpen)
+            {
+                // 串口仍处于打开状态 → 只是本次通信失败（超时 / 抖动），不判定掉线
+                return;
+            }
+
+            PortError?.Invoke($"{operation}失败，串口已不可用: {ex.Message}");
         }
 
         public void Dispose()

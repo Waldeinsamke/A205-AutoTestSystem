@@ -239,6 +239,40 @@ namespace A205AutoTestSystem.UI
             set { _powerOn = value; Invalidate(); SyncAnimationState(); }
         }
 
+        /// <summary>
+        /// 一次性推送全部链路状态，并只做一次动画判据同步。
+        /// <para><b>为什么需要这个方法</b>：逐个属性赋值时，每个 setter 都会各自调一次
+        /// <see cref="SyncAnimationState"/>，而 <see cref="ComputeLinkStates"/> 依赖
+        /// <c>_rfOutputOn</c> / <c>_loOutputOn</c> 这类字段——它们排在赋值序列的末尾。
+        /// 于是前几次同步读到的是"半成品状态"（例如信号源输出开关还是旧值），
+        /// 算出的流动判据是错的；只有最后一个属性赋值完成时才得到正确结果。</para>
+        /// <para>本方法先写完全部字段，再统一 <see cref="Invalidate"/> 与
+        /// <see cref="SyncAnimationState"/> 一次，保证判据永远基于完整状态，
+        /// 也不会出现"中间态把计时器启停数次"的抖动。</para>
+        /// </summary>
+        public void SetLinkStates(
+            InstrumentLinkState rfState,
+            InstrumentLinkState loState,
+            InstrumentLinkState spectrumState,
+            InstrumentLinkState receiverState,
+            InstrumentLinkState powerState,
+            bool powerOn,
+            bool rfOutputOn,
+            bool loOutputOn)
+        {
+            _rfState = rfState;
+            _loState = loState;
+            _spectrumState = spectrumState;
+            _receiverState = receiverState;
+            _powerState = powerState;
+            _powerOn = powerOn;
+            _rfOutputOn = rfOutputOn;
+            _loOutputOn = loOutputOn;
+
+            Invalidate();
+            SyncAnimationState();
+        }
+
         // ============================================================
         // 绘制
         // ============================================================
@@ -272,9 +306,11 @@ namespace A205AutoTestSystem.UI
         /// <para><b>flowing</b>：
         /// <list type="bullet">
         /// <item>RF / LO 线：供电中 + 本机输出开 + 两端就绪；</item>
-        /// <item>供电线：供电中 + 两端就绪（画的是"电"）；</item>
+        /// <item>供电线：供电中 + 电源就绪（画的是"电"）；
+        /// <b>不依赖接收机就绪</b>——串口断开只是数据通信中断，
+        /// 直流供电本身并未中断，供电线应保持点亮（见 <c>PowerConnected</c> 注释）；</item>
         /// <item>频谱仪线：接收机→频谱仪测的是 IF 输出，软件无法直接观测 IF 上有无信号，
-        /// 故以"供电中 **且** 至少一台信号源在输出"作代理——全关输出时 IF 上确实没有信号。</item>
+        /// 故以"供电中 <b>且</b> 至少一台信号源在输出"作代理——全关输出时 IF 上确实没有信号。</item>
         /// </list>
         /// </summary>
         private LinkStates ComputeLinkStates()
@@ -296,8 +332,11 @@ namespace A205AutoTestSystem.UI
                 SaFlowing = receiverReady && _spectrumState == InstrumentLinkState.Ready
                     && _powerOn && anySourceOutput,
 
-                PowerConnected = _powerState == InstrumentLinkState.Ready && receiverReady,
-                PowerFlowing = _powerState == InstrumentLinkState.Ready && receiverReady
+                // 供电连线只取决于电源自身是否就绪与是否供电中：
+                // 接收机串口掉线不代表直流供电被切断，把 receiverReady 计入会让
+                // "串口故障"被误读成"整条供电链路已断"。
+                PowerConnected = _powerState == InstrumentLinkState.Ready,
+                PowerFlowing = _powerState == InstrumentLinkState.Ready
                     && _powerOn
             };
         }
@@ -690,6 +729,18 @@ namespace A205AutoTestSystem.UI
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
+
+            // 不可见（切到其它 Tab 页）时停掉计时器：
+            // 控件不可见时 Invalidate() 不会触发重绘，_dashOffset 却在持续累加，
+            // 回到前台时虚线起始相位是随机的。此处一并归零，让回前台后从标准相位开始。
+            // 回到前台时再按当前状态重新判定是否需要动画。
+            if (!Visible)
+            {
+                _animationTimer.Stop();
+                _dashOffset = 0f;
+                return;
+            }
+
             SyncAnimationState();
         }
 

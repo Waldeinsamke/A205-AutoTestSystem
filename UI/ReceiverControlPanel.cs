@@ -210,6 +210,9 @@ namespace A205AutoTestSystem.UI
                 // 关闭业务资源
                 try { _receiver?.Close(); } catch { }
                 try { _receiver?.Dispose(); } catch { }
+                // 退订接收机串口掉线监听：Dispose 之后串口实例虽已释放，
+                // 但事件委托仍指向本控件，串口读线程若再触发会访问已释放控件。
+                try { ReleaseReceiverPort(); } catch { }
                 try { _matrix?.Disconnect(); } catch { }
                 try { _rfGenerator?.Dispose(); } catch { }
                 try { _loGenerator?.Dispose(); } catch { }
@@ -482,7 +485,7 @@ namespace A205AutoTestSystem.UI
             try { _receiver?.Close(); }
             catch (Exception ex) { Logger.Log("[Error] 拔出后关闭接收机串口异常: " + ex.Message); }
 
-            _receiver = null;
+            ReleaseReceiverPort();
 
             // 置为 Fault 而非 Idle：设备被拔掉是需要人工介入的异常，
             // 与"用户主动点断开"（属预期内，落 Idle）区分开。
@@ -605,6 +608,82 @@ namespace A205AutoTestSystem.UI
         // ============================================================
 
         // -------- 串口
+
+        /// <summary>
+        /// 释放接收机串口引用：解除掉线监听订阅并置空。
+        /// <para>解除订阅是必需的——串口实例被丢弃后仍持有 <see cref="OnReceiverPortError"/> 回调，
+        /// 会在旧实例上再次触发时误改当前状态。</para>
+        /// </summary>
+        private void ReleaseReceiverPort()
+        {
+            if (_receiver != null)
+            {
+                try { _receiver.PortError -= OnReceiverPortError; }
+                catch { /* 释放阶段忽略 */ }
+            }
+            _receiver = null;
+        }
+
+        /// <summary>
+        /// 创建并打开接收机串口，同时挂接掉线监听。
+        /// <para>掉线监听把"设备被拔出"这一硬件事件上报到 UI：此前串口错误只写日志，
+        /// UI 侧 <c>_receiverLinkState</c> 会一直停留在 Ready，拓扑图显示虚线仍在流动，
+        /// 而接收机实际已经断开——操作工据此误判为"面板特效失效"。</para>
+        /// <para>按既定策略，掉线后<b>只置故障态提示人工介入，不自动重连</b>。</para>
+        /// </summary>
+        /// <param name="portName">串口号。</param>
+        /// <param name="baudRate">波特率。</param>
+        /// <returns>已打开的串口实例。</returns>
+        private ReceiverSerialPort CreateReceiverSerialPort(string portName, int baudRate)
+        {
+            ReceiverSerialPort port = new ReceiverSerialPort();
+            port.PortError += OnReceiverPortError;
+            try
+            {
+                port.Open(portName, baudRate);
+            }
+            catch
+            {
+                // 打开失败时解除订阅，避免事件泄漏到已废弃的实例上
+                port.PortError -= OnReceiverPortError;
+                port.Dispose();
+                throw;
+            }
+            return port;
+        }
+
+        /// <summary>
+        /// 接收机串口掉线回调：置故障态并刷新拓扑图。
+        /// <para>在串口自身的读/写线程上触发，需切回 UI 线程再改 UI 状态。</para>
+        /// </summary>
+        private void OnReceiverPortError(string reason)
+        {
+            Logger.Log("[Error] 接收机串口掉线：" + reason);
+
+            if (IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            if (InvokeRequired)
+            {
+                try { BeginInvoke(new Action<string>(OnReceiverPortError), reason); }
+                catch { /* 控件已销毁 */ }
+                return;
+            }
+
+            // 已被用户主动断开或已置故障态时不重复改写，避免覆盖更准确的状态
+            if (_receiverLinkState == InstrumentLinkState.Fault
+                || _receiverLinkState == InstrumentLinkState.Idle)
+            {
+                return;
+            }
+
+            _receiverLinkState = InstrumentLinkState.Fault;
+            _receiverFaultReason = "串口掉线: " + reason;
+            SyncSignalFlowState();
+        }
+
         private void OnReceiverConnectClicked(object sender, EventArgs e)
         {
             if (_receiver != null && _receiver.IsOpen)
@@ -624,8 +703,7 @@ namespace A205AutoTestSystem.UI
                     return;
                 }
 
-                _receiver = new ReceiverSerialPort();
-                _receiver.Open(portName, baudRate);
+                _receiver = CreateReceiverSerialPort(portName, baudRate);
 
                 _receiverLinkState = InstrumentLinkState.Ready;
                 _receiverFaultReason = string.Empty;
@@ -634,7 +712,7 @@ namespace A205AutoTestSystem.UI
             }
             catch (Exception ex)
             {
-                _receiver = null;
+                ReleaseReceiverPort();
                 _receiverLinkState = InstrumentLinkState.Fault;
                 _receiverFaultReason = "串口打开失败: " + ex.Message;
                 Logger.Log("[Error] 接收机串口连接故障：" + _receiverFaultReason);
@@ -657,7 +735,7 @@ namespace A205AutoTestSystem.UI
             }
             finally
             {
-                _receiver = null;
+                ReleaseReceiverPort();
                 // 主动断开属预期内；若之前已是故障态则保留红色，避免掩盖真实问题
                 if (_receiverLinkState == InstrumentLinkState.Ready)
                 {
@@ -1638,14 +1716,18 @@ namespace A205AutoTestSystem.UI
                 return;
             }
 
-            pnlSignalFlow.RfState = _rfLinkState;
-            pnlSignalFlow.LoState = _loLinkState;
-            pnlSignalFlow.SpectrumState = _spectrumLinkState;
-            pnlSignalFlow.ReceiverState = _receiverLinkState;
-            pnlSignalFlow.PowerState = _powerLinkState;
-            pnlSignalFlow.PowerOn = _powerOutputOn;
-            pnlSignalFlow.RfOutputOn = _rfOutputOn;
-            pnlSignalFlow.LoOutputOn = _loOutputOn;
+            // 一次性推送全部状态：逐个属性赋值会让拓扑图在中间态反复重算流动判据
+            // （输出开关是最后几个字段，前几次同步读到的是旧值），
+            // 表现为"虚线有时候不流动"。详见 SignalFlowPanel.SetLinkStates 的说明。
+            pnlSignalFlow.SetLinkStates(
+                _rfLinkState,
+                _loLinkState,
+                _spectrumLinkState,
+                _receiverLinkState,
+                _powerLinkState,
+                _powerOutputOn,
+                _rfOutputOn,
+                _loOutputOn);
         }
 
         /// <summary>
@@ -1890,8 +1972,7 @@ namespace A205AutoTestSystem.UI
 
             try
             {
-                _receiver = new ReceiverSerialPort();
-                _receiver.Open(portName, baudRate);
+                _receiver = CreateReceiverSerialPort(portName, baudRate);
                 _receiverLinkState = InstrumentLinkState.Ready;
                 _receiverFaultReason = string.Empty;
                 Logger.Log($"[UI] 开机序列自动连接接收机串口 {portName} @ {baudRate}。");
@@ -1900,7 +1981,7 @@ namespace A205AutoTestSystem.UI
             }
             catch (Exception ex)
             {
-                _receiver = null;
+                ReleaseReceiverPort();
                 _receiverLinkState = InstrumentLinkState.Fault;
                 _receiverFaultReason = "开机序列自动连接串口失败: " + ex.Message;
                 Logger.Log("[Error] 开机序列自动连接接收机串口失败: " + ex.Message);
@@ -1933,7 +2014,7 @@ namespace A205AutoTestSystem.UI
             }
             finally
             {
-                _receiver = null;
+                ReleaseReceiverPort();
                 // 关机序列断开串口属预期内操作，落回 Idle；
                 // 若此前已是故障态则保留红色，避免掩盖真实问题。
                 if (_receiverLinkState == InstrumentLinkState.Ready)
