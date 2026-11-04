@@ -173,6 +173,23 @@
     <Compile Include="Program.cs" />
     <Compile Include="Assert.cs" />
     <Compile Include="FakeVisaInstrument.cs" />
+    <!-- 防回归：docs/11.3审查代码报告.md #2 —— FailResult 生成的失败行必须记入报表。
+         这 4 个测试项的 FailResult 此前只 return 不 Record，导致读数失败的频点
+         在导出 Excel 中整行消失（漏判即通过）。此处链接其源文件以便直接验证
+         "FailResult 是否调用 Record"这一行为契约。 -->
+    <Compile Include="..\..\InstrumentControl\TestItems\InputP1Test.cs">
+      <Link>InstrumentControl\TestItems\InputP1Test.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\SaturatedOutputTest.cs">
+      <Link>InstrumentControl\TestItems\SaturatedOutputTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\HarmonicRejectionTest.cs">
+      <Link>InstrumentControl\TestItems\HarmonicRejectionTest.cs</Link>
+    </Compile>
+    <Compile Include="..\..\InstrumentControl\TestItems\InBandSpuriousTest.cs">
+      <Link>InstrumentControl\TestItems\InBandSpuriousTest.cs</Link>
+    </Compile>
+    <Compile Include="FailResultRecordingTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8">

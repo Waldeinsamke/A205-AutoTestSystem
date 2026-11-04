@@ -44,6 +44,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             if (filter.Contains("Inconsistency")) TestChannelGainInconsistency();
             if (filter.Contains("InconsistencyExcel")) TestInconsistencyExcelReport();
             if (filter.Contains("Calculator")) TestGainConsistencyCalculator();
+            if (filter.Contains("FailResult")) FailResultRecordingTests.Run();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");
@@ -65,6 +66,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             {
                 set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
                 set.Add("Inconsistency"); set.Add("InconsistencyExcel"); set.Add("Calculator");
+                set.Add("FailResult");
                 return set;
             }
             foreach (var arg in args)
@@ -88,6 +90,7 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             {
                 set.Add("Gain"); set.Add("Bandwidth"); set.Add("Engine"); set.Add("H6");
                 set.Add("Inconsistency"); set.Add("InconsistencyExcel"); set.Add("Calculator");
+                set.Add("FailResult");
             }
             return set;
         }

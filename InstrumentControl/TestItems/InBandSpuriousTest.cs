@@ -507,9 +507,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
             return double.NaN;
         }
 
+        /// <summary>
+        /// 构造一个"读数失败"的频点结果并<b>记入报表</b>。
+        /// <para>失败行必须入报表：否则该频点在 Excel 中整行消失，报表行数少于
+        /// 实际执行的频点数，审核无法发现"这个频点根本没测出来"，形成漏判即通过的风险。</para>
+        /// </summary>
         private TestResult FailResult(double freqMHz, string reason)
         {
-            return new TestResult
+            TestResult result = new TestResult
             {
                 TestTime = DateTime.Now,
                 Channel = _channel,
@@ -526,6 +531,9 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
                     freqMHz, SaCenterFreqMode3Hz / 1e6,
                     SaStartFreqHz / 1e6, SaStopFreqHz / 1e6, reason),
             };
+
+            TestReportManager.Instance.Record(result);
+            return result;
         }
     }
 }
