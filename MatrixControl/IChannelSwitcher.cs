@@ -16,7 +16,7 @@ namespace A205AutoTestSystem.MatrixControl
         string PortName { get; }
 
         /// <summary>建立串口连接。</summary>
-        void Connect(string portName, int baudRate = 9600);
+        void Connect(string portName, int baudRate = 115200);
 
         /// <summary>断开串口连接。</summary>
         void Disconnect();
