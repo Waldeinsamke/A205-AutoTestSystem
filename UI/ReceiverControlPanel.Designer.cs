@@ -46,7 +46,7 @@ namespace A205AutoTestSystem.UI
         private System.Windows.Forms.ComboBox cmbBand;
         private System.Windows.Forms.Button btnBandSet;
         private System.Windows.Forms.Label lblBandSelect;
-        private System.Windows.Forms.NumericUpDown numAgcAtten;
+        private System.Windows.Forms.ComboBox cmbAgcAtten;
         private System.Windows.Forms.Button btnAgcSet;
         private System.Windows.Forms.Label lblAgcAtten;
         private System.Windows.Forms.Button btnConnectAll;
@@ -94,7 +94,7 @@ namespace A205AutoTestSystem.UI
             this.cmbBand = new System.Windows.Forms.ComboBox();
             this.btnBandSet = new System.Windows.Forms.Button();
             this.lblAgcAtten = new System.Windows.Forms.Label();
-            this.numAgcAtten = new System.Windows.Forms.NumericUpDown();
+            this.cmbAgcAtten = new System.Windows.Forms.ComboBox();
             this.btnAgcSet = new System.Windows.Forms.Button();
             this.btnConnectAll = new System.Windows.Forms.Button();
             this.btnDisconnectAll = new System.Windows.Forms.Button();
@@ -122,7 +122,6 @@ namespace A205AutoTestSystem.UI
             this.grpParameterConfig.SuspendLayout();
             this.pnlTempGroup.SuspendLayout();
             this.pnlModeGroup.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).BeginInit();
             this.grpCommunicationLog.SuspendLayout();
             this.grpInstrumentControl.SuspendLayout();
             this.SuspendLayout();
@@ -263,7 +262,7 @@ namespace A205AutoTestSystem.UI
             this.grpParameterConfig.Controls.Add(this.cmbBand);
             this.grpParameterConfig.Controls.Add(this.btnBandSet);
             this.grpParameterConfig.Controls.Add(this.lblAgcAtten);
-            this.grpParameterConfig.Controls.Add(this.numAgcAtten);
+            this.grpParameterConfig.Controls.Add(this.cmbAgcAtten);
             this.grpParameterConfig.Controls.Add(this.btnAgcSet);
             this.grpParameterConfig.Location = new System.Drawing.Point(0, 100);
             this.grpParameterConfig.Name = "grpParameterConfig";
@@ -448,22 +447,13 @@ namespace A205AutoTestSystem.UI
             this.lblAgcAtten.Text = "AGC 衰减";
             this.lblAgcAtten.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
             // 
-            // numAgcAtten
-            // 
-            this.numAgcAtten.Increment = new decimal(new int[] {
-            4,
-            0,
-            0,
-            0});
-            this.numAgcAtten.Location = new System.Drawing.Point(104, 155);
-            this.numAgcAtten.Maximum = new decimal(new int[] {
-            60,
-            0,
-            0,
-            0});
-            this.numAgcAtten.Name = "numAgcAtten";
-            this.numAgcAtten.Size = new System.Drawing.Size(250, 25);
-            this.numAgcAtten.TabIndex = 18;
+            // cmbAgcAtten
+            //
+            this.cmbAgcAtten.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbAgcAtten.Location = new System.Drawing.Point(104, 154);
+            this.cmbAgcAtten.Name = "cmbAgcAtten";
+            this.cmbAgcAtten.Size = new System.Drawing.Size(250, 23);
+            this.cmbAgcAtten.TabIndex = 18;
             // 
             // btnAgcSet
             // 
@@ -740,7 +730,6 @@ namespace A205AutoTestSystem.UI
             this.pnlTempGroup.PerformLayout();
             this.pnlModeGroup.ResumeLayout(false);
             this.pnlModeGroup.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numAgcAtten)).EndInit();
             this.grpCommunicationLog.ResumeLayout(false);
             this.grpInstrumentControl.ResumeLayout(false);
             this.ResumeLayout(false);

@@ -300,6 +300,29 @@ namespace A205AutoTestSystem.ReceiverControl
             };
 
         /// <summary>
+        /// 协议允许的全部 AGC 衰减档位（dB），升序。
+        /// <para>由 <see cref="_attenuationFirstByteMap"/> 的键导出后<b>显式排序</b>——
+        /// <see cref="Dictionary{TKey,TValue}.Keys"/> 不保证枚举顺序，
+        /// 直接用会让下拉框的排列依赖哈希布局，不可预期。</para>
+        /// <para>与协议映射表<b>单一数据源</b>：档位增删只需改映射表一处，
+        /// UI 可选项自动跟随。</para>
+        /// <para>UI 用它填充下拉框，使操作者无法选出协议不支持的档位
+        /// （此前 NumericUpDown 允许手动输入 1/7 等非 4 倍数，发送时才抛异常）。</para>
+        /// </summary>
+        public static IReadOnlyList<int> AttenuationOptions { get; } =
+            BuildAttenuationOptions();
+
+        /// <summary>
+        /// 从衰减映射表导出升序档位列表（静态初始化用）。
+        /// </summary>
+        private static IReadOnlyList<int> BuildAttenuationOptions()
+        {
+            List<int> options = new List<int>(_attenuationFirstByteMap.Keys);
+            options.Sort();
+            return options.AsReadOnly();
+        }
+
+        /// <summary>
         /// 拼接 7 字节命令帧。body 必须是 5 字节（不含帧头/帧尾）。
         /// </summary>
         private static byte[] BuildFrame(params byte[] body)

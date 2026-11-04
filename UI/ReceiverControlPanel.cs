@@ -271,7 +271,7 @@ namespace A205AutoTestSystem.UI
             rbMode1.Checked = true;
             // 触发频段下拉刷新
             RefreshBandCombo(ReceiverMode.Mode1);
-            numAgcAtten.Value = 0;
+            RefreshAttenuationCombo();
 
             // 仪表连接状态由信号链路拓扑图（pnlSignalFlow）三态节点呈现；
             // 初始状态各 LinkState 字段已默认为 Idle，无需额外初始化。
@@ -600,6 +600,40 @@ namespace A205AutoTestSystem.UI
             finally
             {
                 cmbBand.EndUpdate();
+            }
+        }
+
+        // ============================================================
+        // AGC 衰减 ComboBox 动态填充
+        // ============================================================
+
+        /// <summary>
+        /// 填充 AGC 衰减下拉框。
+        /// <para>选项直接取自协议层的 <see cref="ReceiverCommandBuilder.AttenuationOptions"/>
+        /// （由衰减映射表的键导出），因此 UI 可选项与协议<b>永远一致</b>：
+        /// 协议增删档位时无需同步改 UI，UI 也不可能选出发送时才报错的非法值。</para>
+        /// <para>此处不用 NumericUpDown，是因为它允许手动键入 1/7 等非 4 倍数，
+        /// 而协议只接受 {0,4,...,60} 这些档位。</para>
+        /// </summary>
+        private void RefreshAttenuationCombo()
+        {
+            cmbAgcAtten.BeginUpdate();
+            try
+            {
+                cmbAgcAtten.Items.Clear();
+                foreach (int attenDb in ReceiverCommandBuilder.AttenuationOptions)
+                {
+                    cmbAgcAtten.Items.Add(attenDb.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                }
+                if (cmbAgcAtten.Items.Count > 0)
+                {
+                    // 默认选中 0 dB（无衰减），与原 NumericUpDown 初值一致
+                    cmbAgcAtten.SelectedIndex = 0;
+                }
+            }
+            finally
+            {
+                cmbAgcAtten.EndUpdate();
             }
         }
 
@@ -986,7 +1020,16 @@ namespace A205AutoTestSystem.UI
                 return;
             }
             int ch = cmbChannel.SelectedIndex + 1;
-            int atten = (int)numAgcAtten.Value;
+
+            // 档位取自下拉框选中项：选项即协议合法档位，不可能取到非法值
+            int atten = GetSelectedAttenuationDb();
+            if (atten < 0)
+            {
+                MessageBox.Show(this, "请先选择 AGC 衰减值。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             try
             {
                 _receiver.SendAttenuationCommand(ch, atten);
@@ -996,6 +1039,23 @@ namespace A205AutoTestSystem.UI
                 Logger.Log("[Error] 衰减命令发送失败: " + ex.Message);
                 MessageBox.Show(this, ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// 读取下拉框当前选中的 AGC 衰减值（dB）。
+        /// <para>按选项文本反查协议档位表，确保取值与协议定义一致
+        /// （选项本身就是从 <see cref="ReceiverCommandBuilder.AttenuationOptions"/> 生成的，
+        /// 正常路径必然命中；未选中时返回 -1）。</para>
+        /// </summary>
+        /// <returns>衰减值（dB）；未选中有效项时返回 -1。</returns>
+        private int GetSelectedAttenuationDb()
+        {
+            int index = cmbAgcAtten.SelectedIndex;
+            if (index < 0 || index >= ReceiverCommandBuilder.AttenuationOptions.Count)
+            {
+                return -1;
+            }
+            return ReceiverCommandBuilder.AttenuationOptions[index];
         }
 
         // -------- 仪表连接（一键连接/一键断开编排）

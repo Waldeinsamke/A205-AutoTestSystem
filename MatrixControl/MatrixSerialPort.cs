@@ -21,7 +21,7 @@ namespace A205AutoTestSystem.MatrixControl
         public event Action<bool> ConnectionChanged;
 
         /// <inheritdoc />
-        public void Connect(string portName, int baudRate = 9600)
+        public void Connect(string portName, int baudRate = 115200)
         {
             _portName = portName;
             Logger.Log($"[Matrix] protocol not ready, called Connect({portName}, {baudRate})");
