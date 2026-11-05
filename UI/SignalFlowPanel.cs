@@ -1,8 +1,8 @@
+using A205AutoTestSystem.Common;
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.UI
 {

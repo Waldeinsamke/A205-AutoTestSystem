@@ -1,6 +1,6 @@
+using A205AutoTestSystem.ReceiverControl;
 using System;
 using System.Collections.Generic;
-using A205AutoTestSystem.ReceiverControl;
 
 namespace A205AutoTestSystem.Tests.BuilderTests
 {
@@ -36,12 +36,12 @@ namespace A205AutoTestSystem.Tests.BuilderTests
 
             ReceiverCommandBuilder builder = new ReceiverCommandBuilder();
 
-            if (filter.Contains("Channel"))      TestChannels(builder);
-            if (filter.Contains("Mode"))         TestModes(builder);
-            if (filter.Contains("Temperature"))  TestTemperatures(builder);
-            if (filter.Contains("Band"))         TestBands(builder);
-            if (filter.Contains("Attenuation"))  TestAttenuations(builder);
-            if (filter.Contains("Error"))        TestBoundaryErrors(builder);
+            if (filter.Contains("Channel")) TestChannels(builder);
+            if (filter.Contains("Mode")) TestModes(builder);
+            if (filter.Contains("Temperature")) TestTemperatures(builder);
+            if (filter.Contains("Band")) TestBands(builder);
+            if (filter.Contains("Attenuation")) TestAttenuations(builder);
+            if (filter.Contains("Error")) TestBoundaryErrors(builder);
 
             Console.WriteLine();
             Console.WriteLine($"--- 汇总 ---");

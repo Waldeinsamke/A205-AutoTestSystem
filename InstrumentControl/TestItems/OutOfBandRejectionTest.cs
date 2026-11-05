@@ -1,14 +1,13 @@
+using A205AutoTestSystem.AutoTest;
+using A205AutoTestSystem.AutoTest.Shared;
+using A205AutoTestSystem.Common;
+using A205AutoTestSystem.Models;
+using A205AutoTestSystem.ReceiverControl;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
-using A205AutoTestSystem.AutoTest;
-using A205AutoTestSystem.AutoTest.Shared;
-using A205AutoTestSystem.Common;
-using A205AutoTestSystem.InstrumentControl;
-using A205AutoTestSystem.Models;
-using A205AutoTestSystem.ReceiverControl;
 
 namespace A205AutoTestSystem.InstrumentControl.TestItems
 {
@@ -94,14 +93,14 @@ namespace A205AutoTestSystem.InstrumentControl.TestItems
         private const double Mode3RfSweep2StopHz = 2_650_000_000.0;
 
         /// <summary>Mode3 RF 扫频段 1（10~1660 MHz）的扫频点数。
-    /// <para>改用点数（<c>:SWE:POIN</c>）而非步进（<c>:SOUR:SWE:FREQ:STEP:LIN</c>）：
-    /// 实测步进方式会引起未知异常，改点数规避。</para>
-    /// <para>166 点对应步进 (1660−10)/(166−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
-    private const int Mode3RfSweep1Points = 166;
+        /// <para>改用点数（<c>:SWE:POIN</c>）而非步进（<c>:SOUR:SWE:FREQ:STEP:LIN</c>）：
+        /// 实测步进方式会引起未知异常，改点数规避。</para>
+        /// <para>166 点对应步进 (1660−10)/(166−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
+        private const int Mode3RfSweep1Points = 166;
 
-    /// <summary>Mode3 RF 扫频段 2（2340~2650 MHz）的扫频点数。
-    /// <para>32 点对应步进 (2650−2340)/(32−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
-    private const int Mode3RfSweep2Points = 32;
+        /// <summary>Mode3 RF 扫频段 2（2340~2650 MHz）的扫频点数。
+        /// <para>32 点对应步进 (2650−2340)/(32−1) = 10.0 MHz，与原 10 MHz 步进完全一致。</para></summary>
+        private const int Mode3RfSweep2Points = 32;
 
         // ============================================================
         // Mode1/2 频谱仪扫频段（避开 70 MHz IF 中心 ±4 MHz 的"中频带"）

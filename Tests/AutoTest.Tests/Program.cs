@@ -1,14 +1,14 @@
+using A205AutoTestSystem.AutoTest;
+using A205AutoTestSystem.AutoTest.Shared;
+using A205AutoTestSystem.InstrumentControl;
+using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using A205AutoTestSystem.AutoTest;
-using A205AutoTestSystem.AutoTest.Shared;
-using A205AutoTestSystem.InstrumentControl;
-using A205AutoTestSystem.InstrumentControl.TestItems;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.Tests.AutoTestTests
 {
@@ -37,10 +37,10 @@ namespace A205AutoTestSystem.Tests.AutoTestTests
             // 全局注册 FakeVisaInstrument 工厂，使生产类（SignalGenerator / SpectrumAnalyzer）走伪传输
             VisaBaseInstrument.DefaultTransportFactory = addr => new FakeVisaInstrument(addr);
 
-            if (filter.Contains("Gain"))     TestGainTest();
+            if (filter.Contains("Gain")) TestGainTest();
             if (filter.Contains("Bandwidth")) TestBandwidthTest();
-            if (filter.Contains("Engine"))    TestAutoTestEngine();
-            if (filter.Contains("H6"))        TestH6ResourceSnapshot();
+            if (filter.Contains("Engine")) TestAutoTestEngine();
+            if (filter.Contains("H6")) TestH6ResourceSnapshot();
             if (filter.Contains("Inconsistency")) TestChannelGainInconsistency();
             if (filter.Contains("InconsistencyExcel")) TestInconsistencyExcelReport();
             if (filter.Contains("Calculator")) TestGainConsistencyCalculator();

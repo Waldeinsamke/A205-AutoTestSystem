@@ -1,6 +1,6 @@
-using System;
 using Ivi.Visa;
 using NationalInstruments.Visa;
+using System;
 
 namespace A205AutoTestSystem.InstrumentControl
 {

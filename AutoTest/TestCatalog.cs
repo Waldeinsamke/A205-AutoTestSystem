@@ -1,12 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
 using A205AutoTestSystem.Models;
 using A205AutoTestSystem.ReceiverControl;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace A205AutoTestSystem.AutoTest
 {

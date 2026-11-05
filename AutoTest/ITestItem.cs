@@ -1,7 +1,7 @@
+using A205AutoTestSystem.Models;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.AutoTest
 {

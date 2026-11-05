@@ -1,7 +1,7 @@
+using A205AutoTestSystem.Common;
 using System;
 using System.Globalization;
 using System.Threading;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.InstrumentControl
 {

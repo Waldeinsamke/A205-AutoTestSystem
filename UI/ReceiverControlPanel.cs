@@ -1,13 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Threading;
-using System.Windows.Forms;
 using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.MatrixControl;
 using A205AutoTestSystem.ReceiverControl;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace A205AutoTestSystem.UI
 {

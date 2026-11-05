@@ -1,7 +1,7 @@
+using A205AutoTestSystem.InstrumentControl.TestItems;
 using System;
 using System.Reflection;
 using System.Runtime.Serialization;
-using A205AutoTestSystem.InstrumentControl.TestItems;
 
 namespace A205AutoTestSystem.Tests.AutoTestTests
 {

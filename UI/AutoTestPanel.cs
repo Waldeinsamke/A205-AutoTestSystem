@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using A205AutoTestSystem.AutoTest;
 using A205AutoTestSystem.AutoTest.Shared;
 using A205AutoTestSystem.Common;
@@ -12,6 +5,13 @@ using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.InstrumentControl.TestItems;
 using A205AutoTestSystem.Models;
 using A205AutoTestSystem.ReceiverControl;
+using System;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Globalization;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace A205AutoTestSystem.UI
 {
@@ -256,13 +256,13 @@ namespace A205AutoTestSystem.UI
                 && _receiverPanel.RbTempLow != null)
             {
                 bool wantNormal = (temperature == TemperatureRange.Normal);
-                bool wantHigh   = (temperature == TemperatureRange.High);
-                bool wantLow    = (temperature == TemperatureRange.Low);
+                bool wantHigh = (temperature == TemperatureRange.High);
+                bool wantLow = (temperature == TemperatureRange.Low);
 
                 // 防自触发：状态完全相同就不赋值（参考 OnAutoTestCmbChannelChanged 的写法）
                 if (_receiverPanel.RbTempNormal.Checked != wantNormal) _receiverPanel.RbTempNormal.Checked = wantNormal;
-                if (_receiverPanel.RbTempHigh.Checked   != wantHigh)   _receiverPanel.RbTempHigh.Checked   = wantHigh;
-                if (_receiverPanel.RbTempLow.Checked    != wantLow)    _receiverPanel.RbTempLow.Checked    = wantLow;
+                if (_receiverPanel.RbTempHigh.Checked != wantHigh) _receiverPanel.RbTempHigh.Checked = wantHigh;
+                if (_receiverPanel.RbTempLow.Checked != wantLow) _receiverPanel.RbTempLow.Checked = wantLow;
             }
 
             // 3) 资源已就绪时重建 DGV（与切通道一致），

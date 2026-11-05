@@ -1,5 +1,5 @@
-using System;
 using A205AutoTestSystem.Common;
+using System;
 
 namespace A205AutoTestSystem.MatrixControl
 {

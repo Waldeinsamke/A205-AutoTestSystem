@@ -1,7 +1,7 @@
+using A205AutoTestSystem.Common;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.AutoTest.Shared
 {

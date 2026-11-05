@@ -471,7 +471,7 @@ namespace A205AutoTestSystem.UI
             }
 
             // 数字块高度固定为设计值：内部标签+数值共需 45px，压缩会导致字形被裁。
-// 内容区装不下两行时直接不画（宁可留白也不裁字）。
+            // 内容区装不下两行时直接不画（宁可留白也不裁字）。
             float contentHeight = Height - BlockTop - FooterZone;
             if (contentHeight < BlockHeight * 2f + BlockGap)
             {

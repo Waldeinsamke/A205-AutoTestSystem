@@ -1,7 +1,7 @@
+using A205AutoTestSystem.InstrumentControl;
+using Ivi.Visa;
 using System;
 using System.Collections.Generic;
-using Ivi.Visa;
-using A205AutoTestSystem.InstrumentControl;
 
 namespace A205AutoTestSystem.Tests.InstrumentTests
 {

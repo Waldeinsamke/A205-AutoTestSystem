@@ -1,6 +1,6 @@
+using A205AutoTestSystem.Models;
 using System;
 using System.Globalization;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.Common
 {

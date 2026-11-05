@@ -1,6 +1,5 @@
-using System;
-using System.Globalization;
 using A205AutoTestSystem.Common;
+using System.Globalization;
 
 namespace A205AutoTestSystem.InstrumentControl
 {

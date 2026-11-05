@@ -1,10 +1,10 @@
+using A205AutoTestSystem.Common;
+using A205AutoTestSystem.Models;
+using NPOI.SS.UserModel;
+using NPOI.XSSF.UserModel;
 using System;
 using System.Globalization;
 using System.IO;
-using NPOI.SS.UserModel;
-using NPOI.XSSF.UserModel;
-using A205AutoTestSystem.Common;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.Tests.ExcelExporterTests
 {
@@ -69,9 +69,9 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
             // 准备 3 条结果：Pass / Fail / Pass
             // M6.x：ExcelExporter 在「工作模式」后新增「频段」列（列 4），所以 BuildResult 多了 band 参数。
             // 新增「实测值」列（列 6）：r1 带频谱仪原始读数，r3 不带（纯计算项 → 该列留空）。
-            TestResult r1 = BuildResult("R1-Pass", "常温", 1, "Mode1", "频段108",   "线性最大增益", 12.34, "dB", "Pass", "gain=12.34", -45.32, "dBm");
-            TestResult r2 = BuildResult("R2-Fail", "高温", 2, "Mode2", "频段1090",  "信号带宽",     99.99, "MHz", "Fail", "bw too large");
-            TestResult r3 = BuildResult("R3-Pass", "低温", 3, "Mode3", "频段900",   "线性最大增益", 18.50, "dB", "Pass", "cold test");
+            TestResult r1 = BuildResult("R1-Pass", "常温", 1, "Mode1", "频段108", "线性最大增益", 12.34, "dB", "Pass", "gain=12.34", -45.32, "dBm");
+            TestResult r2 = BuildResult("R2-Fail", "高温", 2, "Mode2", "频段1090", "信号带宽", 99.99, "MHz", "Fail", "bw too large");
+            TestResult r3 = BuildResult("R3-Pass", "低温", 3, "Mode3", "频段900", "线性最大增益", 18.50, "dB", "Pass", "cold test");
 
             string savedPath;
             using (ExcelExporter exp = new ExcelExporter())
@@ -209,7 +209,7 @@ namespace A205AutoTestSystem.Tests.ExcelExporterTests
             Assert.Equal(0, TestReportManager.Instance.PendingRowCount);
 
             TestReportManager.Instance.Record(BuildResult("Mgr1", "常温", 5, "Mode1", "频段108", "线性最大增益", 14.5, "dB", "Pass", "mgr1"));
-            TestReportManager.Instance.Record(BuildResult("Mgr2", "常温", 5, "Mode1", "频段108", "信号带宽",     0.20, "MHz", "Pass", "mgr2"));
+            TestReportManager.Instance.Record(BuildResult("Mgr2", "常温", 5, "Mode1", "频段108", "信号带宽", 0.20, "MHz", "Pass", "mgr2"));
 
             Assert.CurrentTestName = "TRM: Record 后 HasPendingResults == true";
             Assert.True(TestReportManager.Instance.HasPendingResults, "应当存在待导出结果");

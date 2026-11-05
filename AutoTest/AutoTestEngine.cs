@@ -1,9 +1,9 @@
+using A205AutoTestSystem.Common;
+using A205AutoTestSystem.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using A205AutoTestSystem.Common;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.AutoTest
 {

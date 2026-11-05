@@ -1,12 +1,12 @@
+using A205AutoTestSystem.Common;
+using A205AutoTestSystem.InstrumentControl.TestItems;
+using A205AutoTestSystem.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using A205AutoTestSystem.Common;
-using A205AutoTestSystem.InstrumentControl.TestItems;
-using A205AutoTestSystem.Models;
 
 namespace A205AutoTestSystem.UI
 {

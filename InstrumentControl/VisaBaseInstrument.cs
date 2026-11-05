@@ -1,7 +1,7 @@
+using A205AutoTestSystem.Common;
+using Ivi.Visa;
 using System;
 using System.Threading;
-using Ivi.Visa;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.InstrumentControl
 {

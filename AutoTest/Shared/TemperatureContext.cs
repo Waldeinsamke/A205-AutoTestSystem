@@ -1,6 +1,6 @@
-using System;
 using A205AutoTestSystem.Common;
 using A205AutoTestSystem.ReceiverControl;
+using System;
 
 namespace A205AutoTestSystem.AutoTest.Shared
 {

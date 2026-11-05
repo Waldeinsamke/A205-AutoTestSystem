@@ -1,5 +1,3 @@
-using System;
-
 namespace A205AutoTestSystem.AutoTest.Shared
 {
     /// <summary>

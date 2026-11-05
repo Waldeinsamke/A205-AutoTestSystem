@@ -1,7 +1,7 @@
+using A205AutoTestSystem.Common;
 using System;
 using System.Reflection;
 using System.Windows.Forms;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.UI
 {

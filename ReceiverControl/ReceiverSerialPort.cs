@@ -1,7 +1,6 @@
-using System;
+using A205AutoTestSystem.Common;
 using System.Collections.Generic;
 using System.Threading;
-using A205AutoTestSystem.Common;
 
 namespace A205AutoTestSystem.ReceiverControl
 {

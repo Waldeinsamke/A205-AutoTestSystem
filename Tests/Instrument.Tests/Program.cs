@@ -1,8 +1,8 @@
+using A205AutoTestSystem.InstrumentControl;
+using Ivi.Visa;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using A205AutoTestSystem.InstrumentControl;
-using Ivi.Visa;
 
 namespace A205AutoTestSystem.Tests.InstrumentTests
 {
@@ -33,14 +33,14 @@ namespace A205AutoTestSystem.Tests.InstrumentTests
 
             HashSet<string> filter = ParseFilter(args);
 
-            if (filter.Contains("Command"))  TestCommandFormatting();
-            if (filter.Contains("Query"))    TestQueryPath();
-            if (filter.Contains("Retry"))    TestRetryTransient();
-            if (filter.Contains("NoRetry"))  TestNoRetryOnNonTransient();
-            if (filter.Contains("Events"))   TestConnectionEvents();
-            if (filter.Contains("Guard"))    TestGuardChecks();
-            if (filter.Contains("Sweep"))    TestSweepExit();
-            if (filter.Contains("Power"))    TestOdp3063();
+            if (filter.Contains("Command")) TestCommandFormatting();
+            if (filter.Contains("Query")) TestQueryPath();
+            if (filter.Contains("Retry")) TestRetryTransient();
+            if (filter.Contains("NoRetry")) TestNoRetryOnNonTransient();
+            if (filter.Contains("Events")) TestConnectionEvents();
+            if (filter.Contains("Guard")) TestGuardChecks();
+            if (filter.Contains("Sweep")) TestSweepExit();
+            if (filter.Contains("Power")) TestOdp3063();
 
             Console.WriteLine();
             Console.WriteLine("--- 汇总 ---");

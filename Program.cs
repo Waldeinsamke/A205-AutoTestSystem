@@ -1,10 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Windows.Forms;
 using A205AutoTestSystem.InstrumentControl;
 using A205AutoTestSystem.UI;
+using System;
+using System.Windows.Forms;
 
 namespace A205自动测试系统
 {
