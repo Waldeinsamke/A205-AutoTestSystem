@@ -899,55 +899,60 @@ namespace A205AutoTestSystem.UI
             var statusCell = row.Cells[ColStatus];
             var actionCell = row.Cells[ColAction];
 
-            // 进入运行态：构造 cts、置位、按钮文字改"停止"、disable 其他入口
-            _runInProgress = true;
-            _runningRowIndex = rowIndex;
-            _runCts = new CancellationTokenSource();
-            // 仅手动单条运行时 disable 一键运行 / 加载 / 切温/通道；
-            // 一键运行期间（isFromRunAll=true）跳过 disable 一键运行按钮——
-            // 该按钮此时已被 OnRunAllClicked 改成"■ 停止测试"，必须保持可点，
-            // 否则单条测试项进出 finally 会反复 disable/enable，造成按钮灰抖动。
-            if (!isFromRunAll)
-            {
-                SetRunButtonsEnabledState(false);
-            }
-            else
-            {
-                // 一键运行期间只 disable 加载 / 切温/通道（不禁掉"■ 停止测试"按钮）
-                if (btnLoadTest != null) btnLoadTest.Enabled = false;
-                if (cmbTemp != null) cmbTemp.Enabled = false;
-                if (cmbChannel != null) cmbChannel.Enabled = false;
-            }
-
-            // 仅当前行按钮变"■ 停止"；其它所有行按钮 ReadOnly=true + 灰化，
-            // 视觉上模拟"真 disabled"（DataGridViewButtonColumn 没有 Enabled 属性）
-            actionCell.Value = "■ 停止";
-            for (int i = 0; i < dgvTests.Rows.Count; i++)
-            {
-                if (i == rowIndex) continue;
-                var cell = dgvTests.Rows[i].Cells[ColAction];
-                cell.ReadOnly = true;
-                cell.Style.ForeColor = ActionDisabledFore;
-                cell.Style.BackColor = ActionDisabledBack;
-                cell.Style.SelectionBackColor = ActionDisabledBack;
-                cell.Style.SelectionForeColor = ActionDisabledFore;
-            }
-
-            statusCell.Value = "运行中…";
-            statusCell.Style.ForeColor = StatusColorRunning;
-
-            // M7：测试项「开始执行」时即更新当前项文案（而非等跑完）。
-            // 此前只在判重处赋值，导致第 N 项运行期间显示的是第 N-1 项的结果。
-            if (isFromRunAll)
-            {
-                _currentTestName = test.TestName;
-                _progressCurrentItem = BuildCurrentItemText(test.TestName);
-                PushProgressSnapshot();
-            }
-
+            // try 边界前移到整个"进入运行态"区块之前。原因：
+            // 以下 L903 起的 _runInProgress 置位、按钮改文字、其它行灰化、PushProgressSnapshot
+            // 共 ~45 行 UI 改动，如果在其中任何一处抛异常（DGV 被重建、窗体已关闭），
+            // 之前 try 从 L949 才开始 → finally 不会执行 → _runInProgress 永久卡在 true
+            // → 单条运行入口被 L897 静默吞掉，按钮"点了没反应"。
             bool wasCancelled = false;
             try
             {
+                // 进入运行态：构造 cts、置位、按钮文字改"停止"、disable 其他入口
+                _runInProgress = true;
+                _runningRowIndex = rowIndex;
+                _runCts = new CancellationTokenSource();
+                // 仅手动单条运行时 disable 一键运行 / 加载 / 切温/通道；
+                // 一键运行期间（isFromRunAll=true）跳过 disable 一键运行按钮——
+                // 该按钮此时已被 OnRunAllClicked 改成"■ 停止测试"，必须保持可点，
+                // 否则单条测试项进出 finally 会反复 disable/enable，造成按钮灰抖动。
+                if (!isFromRunAll)
+                {
+                    SetRunButtonsEnabledState(false);
+                }
+                else
+                {
+                    // 一键运行期间只 disable 加载 / 切温/通道（不禁掉"■ 停止测试"按钮）
+                    if (btnLoadTest != null) btnLoadTest.Enabled = false;
+                    if (cmbTemp != null) cmbTemp.Enabled = false;
+                    if (cmbChannel != null) cmbChannel.Enabled = false;
+                }
+
+                // 仅当前行按钮变"■ 停止"；其它所有行按钮 ReadOnly=true + 灰化，
+                // 视觉上模拟"真 disabled"（DataGridViewButtonColumn 没有 Enabled 属性）
+                actionCell.Value = "■ 停止";
+                for (int i = 0; i < dgvTests.Rows.Count; i++)
+                {
+                    if (i == rowIndex) continue;
+                    var cell = dgvTests.Rows[i].Cells[ColAction];
+                    cell.ReadOnly = true;
+                    cell.Style.ForeColor = ActionDisabledFore;
+                    cell.Style.BackColor = ActionDisabledBack;
+                    cell.Style.SelectionBackColor = ActionDisabledBack;
+                    cell.Style.SelectionForeColor = ActionDisabledFore;
+                }
+
+                statusCell.Value = "运行中…";
+                statusCell.Style.ForeColor = StatusColorRunning;
+
+                // M7：测试项「开始执行」时即更新当前项文案（而非等跑完）。
+                // 此前只在判重处赋值，导致第 N 项运行期间显示的是第 N-1 项的结果。
+                if (isFromRunAll)
+                {
+                    _currentTestName = test.TestName;
+                    _progressCurrentItem = BuildCurrentItemText(test.TestName);
+                    PushProgressSnapshot();
+                }
+
                 var progress = new Progress<string>(msg =>
                 {
                     UpdateStep(msg);

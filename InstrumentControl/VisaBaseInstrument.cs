@@ -131,8 +131,12 @@ namespace A205AutoTestSystem.InstrumentControl
                             $"或在应用启动时设置 {nameof(VisaBaseInstrument)}.{nameof(DefaultTransportFactory)}。");
                     }
                 }
-                _transport.TimeoutMilliseconds = TimeoutMs;
+                // 顺序：先 Open（此时 transport 内部 _session 还为 null，但 TimeoutMilliseconds
+                //     setter 已改为无条件缓存，不会丢值），再显式赋值 TimeoutMs 做双重保险。
+                //     这样无论 transport 的实现如何（NI VISA 还是测试侧的 Fake），
+                //     timeout 都一定会被设到。
                 _transport.Open();
+                _transport.TimeoutMilliseconds = TimeoutMs;
 
                 IsConnected = true;
                 Logger.Log($"[VISA:{GetType().Name}] connected at {Address}");
